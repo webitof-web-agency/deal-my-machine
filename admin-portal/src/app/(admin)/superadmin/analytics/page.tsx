@@ -163,6 +163,7 @@ export default function AnalyticsPage() {
   const handleExport = async () => { setExporting(true); setExportError(''); try { const response = await api.get<Blob>('/analytics/export/listings.csv', { params: toAnalyticsParams(from, to, dimensions), responseType: 'blob' }); const url = URL.createObjectURL(response.data); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `jcb-analytics-listings-${new Date().toISOString().slice(0, 10)}.csv`; document.body.appendChild(anchor); anchor.click(); anchor.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch (requestError) { console.error('Failed to export analytics listings:', requestError); setExportError('Listings CSV could not be downloaded. Please try again.'); } finally { setExporting(false); } };
 
   const listingPath = pathname.startsWith('/employee') ? '/employee/listings' : pathname.startsWith('/admin') ? '/admin/listings' : pathname.startsWith('/partner') ? '/partner/listings' : '/superadmin/listings';
+  const analyticsBasePath = pathname.startsWith('/employee') ? '/employee/analytics' : '/superadmin/analytics';
   const brandOptions = withAllOption('All brands', options?.brands || []);
   const modelOptions = withAllOption('All models', options?.models.filter((model) => !dimensions.brandId || model.brandId === dimensions.brandId) || []);
   const countryOptions = withAllOption('All countries', options?.countries.map((country) => ({ id: country.id, name: `${country.emoji || ''} ${country.name}`.trim() })) || []);
@@ -498,10 +499,13 @@ export default function AnalyticsPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
                       {paginatedTopListings.map((listing) => (
-                        <tr key={listing.id} className="hover:bg-slate-50 transition-colors">
+                        <tr key={listing.id} className="hover:bg-amber-50/30 transition-colors">
                           <td className="px-4 py-2.5">
-                            <Link href={`${listingPath}/${listing.id}`} className="font-semibold text-slate-900 hover:text-[#9a6b00] transition-colors truncate block max-w-sm">{listing.title}</Link>
-                            <p className="text-[11px] font-normal text-slate-500 leading-tight">{listing.brand?.name || '-'} • {listing.model?.name || '-'} • {listing.location || 'Location pending'}</p>
+                            <Link href={`${analyticsBasePath}/${listing.id}`} className="font-semibold text-slate-900 hover:text-[#9a6b00] transition-colors truncate block max-w-sm">{listing.title}</Link>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                              <p className="text-[11px] font-normal text-slate-500 leading-tight">{listing.brand?.name || '-'} • {listing.model?.name || '-'} • {listing.location || 'Location pending'}</p>
+                              <Link href={`${listingPath}/${listing.id}`} className="text-[10px] font-semibold text-[#9a6b00] hover:underline underline-offset-2">Open listing →</Link>
+                            </div>
                           </td>
                           <td className="px-4 py-2.5 font-medium text-slate-800 align-middle">{listing.partner}</td>
                           <td className="px-4 py-2.5 align-middle">
