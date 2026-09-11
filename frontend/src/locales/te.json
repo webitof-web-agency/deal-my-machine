@@ -527,6 +527,8 @@
       "freshersExperienced": "ఫ్రెషర్స్ / అనుభవజ్ఞులు",
       "yrs": "{count} సంవత్సరాలు",
       "yrsPlus": "{count}+ సంవత్సరాలు",
+      "yrsLabel": "సంవత్సరాలు",
+      "yrsPlusLabel": "సంవత్సరాలు+",
       "fullTime": "ఫుల్ టైమ్",
       "partTime": "పార్ట్ టైమ్",
       "contract": "కాంట్రాక్ట్",

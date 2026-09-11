@@ -39,10 +39,10 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
     const minExp = min || 0;
     const maxExp = max || null;
     if (minExp === 0 && !maxExp) return t('careers.freshersExperienced', 'Freshers / Experienced');
-    if (minExp === 0 && maxExp) return `0 - ${maxExp} ${t('careers.yrs', 'Yrs')}`;
-    if (minExp > 0 && maxExp) return `${minExp} - ${maxExp} ${t('careers.yrs', 'Yrs')}`;
-    if (minExp > 0 && !maxExp) return `${minExp}+ ${t('careers.yrs', 'Yrs')}`;
-    return `0+ ${t('careers.yrs', 'Yrs')}`;
+    if (minExp === 0 && maxExp) return `0 - ${maxExp} ${t('careers.yrsLabel', 'Yrs')}`;
+    if (minExp > 0 && maxExp) return `${minExp} - ${maxExp} ${t('careers.yrsLabel', 'Yrs')}`;
+    if (minExp > 0 && !maxExp) return `${minExp}+ ${t('careers.yrsLabel', 'Yrs')}`;
+    return `0+ ${t('careers.yrsLabel', 'Yrs')}`;
   };
 
   const formatEmploymentType = (type: string) => {
@@ -119,7 +119,9 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
             {/* Apply CTA Box in Banner */}
             <div className="bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-2xl text-center flex flex-col items-center justify-center space-y-3 w-full sm:w-auto shrink-0 shadow-lg">
               <div className="text-xs text-amber-300 font-extrabold uppercase tracking-wider text-center">
-                {job.vacancies} {job.vacancies === 1 ? t('careers.vacancyAvailable', 'Vacancy Available') : t('careers.vacanciesAvailable', 'Vacancies Available')}
+                {job.vacancies === 1
+                  ? t('careers.vacancyAvailable', '{count} Vacancy Available', { count: job.vacancies })
+                  : t('careers.vacanciesAvailable', '{count} Vacancies Available', { count: job.vacancies })}
               </div>
 
               <Link

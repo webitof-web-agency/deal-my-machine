@@ -567,6 +567,8 @@
       "freshersExperienced": "फ्रेशर्स / अनुभवी",
       "yrs": "{count} वर्ष",
       "yrsPlus": "{count}+ वर्ष",
+      "yrsLabel": "वर्ष",
+      "yrsPlusLabel": "वर्ष+",
       "fullTime": "फुल टाइम",
       "partTime": "पार्ट टाइम",
       "contract": "अनुबंध (कॉन्ट्रैक्ट)",

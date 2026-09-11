@@ -570,6 +570,8 @@
     "freshersExperienced": "Freshers / Experienced",
     "yrs": "{count} Yrs",
     "yrsPlus": "{count}+ Yrs",
+    "yrsLabel": "Yrs",
+    "yrsPlusLabel": "Yrs+",
     "fullTime": "Full Time",
     "partTime": "Part Time",
     "contract": "Contract",

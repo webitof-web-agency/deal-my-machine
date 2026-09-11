@@ -960,10 +960,13 @@ export default function SellVehicleModal({
       resetFormState();
       shouldCloseAfterSave = true;
     } catch (submitError) {
-      const submitErrorMessage = getApiErrorMessage(
-        submitError,
-        editingListingId ? t('sellModal.updateFailed') : t('sellModal.postFailed')
-      );
+      const isSessionExpired = axios.isAxiosError(submitError) && submitError.response?.status === 401;
+      const submitErrorMessage = isSessionExpired
+        ? t('sellModal.signInRequired')
+        : getApiErrorMessage(
+            submitError,
+            editingListingId ? t('sellModal.updateFailed') : t('sellModal.postFailed')
+          );
       setError(submitErrorMessage);
       showToast({
         title: editingListingId ? t('sellModal.vehicleUpdateFailed') : t('sellModal.vehicleSubmitFailed'),
@@ -1735,6 +1738,5 @@ function ListingMediaUploadBox({
     </div>
   );
 }
-
 
 

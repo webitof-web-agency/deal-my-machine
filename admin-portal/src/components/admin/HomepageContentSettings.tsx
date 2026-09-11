@@ -843,7 +843,7 @@ export default function HomepageContentSettings() {
 
                 <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
                   <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-6">
-                    <h4 className="mb-4 text-sm font-semibold text-gray-900">{t('homepageSettings.siteLogoCardTitle')}</h4>
+                    <h4 className="mb-4 text-sm font-semibold text-gray-900">{t('homepageSettings.siteLogoCardTitle', 'Light Background Logo')}</h4>
                     {logoPreviewUrl ? (
                       <div
                         className="relative mb-4 overflow-hidden rounded-xl shadow-sm ring-1 ring-gray-900/5 h-32 w-full flex items-center justify-center p-4"
@@ -870,7 +870,7 @@ export default function HomepageContentSettings() {
                         </div>
                         <div className="text-center">
                           <p className="font-semibold text-gray-800">
-                            {uploadingId === 'site-logo' ? t('homepageSettings.uploading') : t('homepageSettings.uploadLogo')}
+                            {uploadingId === 'site-logo' ? t('homepageSettings.uploading', 'Uploading...') : t('homepageSettings.uploadLogo', 'Upload logo image')}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
                             {t('homepageSettings.maxUploadSize', {
@@ -899,18 +899,18 @@ export default function HomepageContentSettings() {
                         onClick={() => void persistSiteLogoSettings({
                           nextLogoUrl: null,
                           nextLogoPreviewUrl: null,
-                          successMessage: t('homepageSettings.siteLogoRemoved'),
+                          successMessage: t('homepageSettings.siteLogoRemoved', 'Site logo removed successfully.'),
                         })}
                         className="mt-4 inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
                       >
                         <Trash2 className="h-4 w-4" />
-                        {t('homepageSettings.removeImage')}
+                        {t('homepageSettings.removeImage', 'Remove Image')}
                       </button>
                     ) : null}
                   </div>
 
                   <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-6">
-                    <h4 className="mb-4 text-sm font-semibold text-gray-900">{t('homepageSettings.darkLogoCardTitle')}</h4>
+                    <h4 className="mb-4 text-sm font-semibold text-gray-900">{t('homepageSettings.darkLogoCardTitle', 'Header & Dark Theme Logo')}</h4>
                     {darkLogoPreviewUrl ? (
                       <div
                         className="relative mb-4 overflow-hidden rounded-xl shadow-sm ring-1 ring-gray-900/5 h-32 w-full flex items-center justify-center p-4"
@@ -927,7 +927,7 @@ export default function HomepageContentSettings() {
                       <div className="rounded-full bg-gray-100 p-3 text-gray-500"><UploadCloud className="h-6 w-6" /></div>
                       <div className="text-center">
                         <p className="font-semibold text-gray-800">
-                          {uploadingId === 'site-dark-logo' ? t('homepageSettings.uploading') : t('homepageSettings.uploadDarkLogo')}
+                          {uploadingId === 'site-dark-logo' ? t('homepageSettings.uploading', 'Uploading...') : t('homepageSettings.uploadDarkLogo', 'Upload dark logo image')}
                         </p>
                         <p className="mt-1 text-xs text-gray-500">{t('homepageSettings.maxUploadSize', { size: Math.round(MAX_SITE_DARK_LOGO_IMAGE_INPUT_SIZE / (1024 * 1024)) })}</p>
                       </div>
@@ -946,11 +946,11 @@ export default function HomepageContentSettings() {
                     {darkLogoPreviewUrl ? (
                       <button
                         type="button"
-                        onClick={() => void persistSiteLogoSettings({ nextDarkLogoUrl: null, nextDarkLogoPreviewUrl: null, successMessage: t('homepageSettings.darkLogoRemoved') })}
+                        onClick={() => void persistSiteLogoSettings({ nextDarkLogoUrl: null, nextDarkLogoPreviewUrl: null, successMessage: t('homepageSettings.darkLogoRemoved', 'Dark theme logo removed successfully.') })}
                         className="mt-4 inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
                       >
                         <Trash2 className="h-4 w-4" />
-                        {t('homepageSettings.removeImage')}
+                        {t('homepageSettings.removeImage', 'Remove Image')}
                       </button>
                     ) : null}
                   </div>

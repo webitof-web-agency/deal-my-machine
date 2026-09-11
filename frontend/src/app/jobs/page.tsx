@@ -401,7 +401,7 @@ export default function JobsPage() {
 
                       <span className="flex items-center gap-1">
                         <Briefcase size={13} className="text-gray-400" />
-                        {job.minExperience} - {job.maxExperience ? `${job.maxExperience} ${t('careers.yrs', 'yrs')}` : t('careers.yrsPlus', 'yrs+')}
+                        {job.minExperience} - {job.maxExperience ? `${job.maxExperience} ${t('careers.yrsLabel', 'yrs')}` : t('careers.yrsPlusLabel', 'yrs+')}
                       </span>
                     </div>
                   </div>
