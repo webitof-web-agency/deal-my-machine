@@ -1,9 +1,13 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { BarChart3, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, RefreshCw, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
+import {
+  Activity, AlertCircle, Award, BarChart3, ChevronDown, ChevronLeft, ChevronRight,
+  Download, Eye, Filter, Layers, PackageCheck, RefreshCw, Search, ShoppingBag,
+  Sparkles, TrendingDown, TrendingUp, Users, Wallet, X, Zap,
+} from 'lucide-react';
 import api from '@/lib/api';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import BrandLoader from '@/components/ui/BrandLoader';
@@ -26,28 +30,74 @@ type AnalyticsResponse = {
   reconciliation: { status: string; missingInvoiceNumberSaleRecords: number };
 };
 
-const label = (value: string) => value.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-const formatNumber = (value: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value || 0);
-const formatCurrency = (value: number) => `\u20B9${formatNumber(value)}`;
-const getInitialDimensions = (params: URLSearchParams): AnalyticsDimensions => ({ brandId: params.get('brandId') || '', modelId: params.get('modelId') || '', categoryId: params.get('categoryId') || '', partnerId: params.get('partnerId') || '', countryId: params.get('countryId') || '', stateId: params.get('stateId') || '', cityId: params.get('cityId') || '', manufacturingYear: params.get('manufacturingYear') || '', listingStatus: params.get('listingStatus') || '', leadStatus: params.get('leadStatus') || '', listingId: params.get('listingId') || '' });
-const toAnalyticsParams = (from: string, to: string, dimensions: AnalyticsDimensions) => ({ from, to, ...Object.fromEntries(Object.entries(dimensions).filter(([, value]) => value.trim())) });
+const labelify = (v?: string | null) => (v || '—').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+const fmt = (v?: number | string | null) => v === undefined || v === null || v === '' ? '—' : new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number(v) || 0);
+const fmtCurrency = (v?: number | null) => v === undefined || v === null ? '—' : '₹' + fmt(v);
+const getInitialDimensions = (p: URLSearchParams): AnalyticsDimensions => ({ brandId: p.get('brandId') || '', modelId: p.get('modelId') || '', categoryId: p.get('categoryId') || '', partnerId: p.get('partnerId') || '', countryId: p.get('countryId') || '', stateId: p.get('stateId') || '', cityId: p.get('cityId') || '', manufacturingYear: p.get('manufacturingYear') || '', listingStatus: p.get('listingStatus') || '', leadStatus: p.get('leadStatus') || '', listingId: p.get('listingId') || '' });
+const toAnalyticsParams = (from: string, to: string, d: AnalyticsDimensions) => ({ from, to, ...Object.fromEntries(Object.entries(d).filter(([, v]) => v.trim())) });
 const withAllOption = (text: string, options: Option[]) => [{ id: '', name: text }, ...options];
 
-function KpiCard({ title, value, detail, kpi }: { title: string; value: string; detail: string; kpi?: Kpi }) {
-  const TrendIcon = kpi?.trend === 'down' ? TrendingDown : TrendingUp;
+const STATUS_STYLES: Record<string, string> = { PUBLISHED: 'border-emerald-200 bg-emerald-50 text-emerald-800', DRAFT: 'border-slate-200 bg-slate-100 text-slate-700', PENDING_APPROVAL: 'border-amber-200 bg-amber-50 text-amber-800', CHANGES_REQUESTED: 'border-orange-200 bg-orange-50 text-orange-800', PAUSED: 'border-slate-200 bg-slate-100 text-slate-600', RESERVED: 'border-blue-200 bg-blue-50 text-blue-800', SOLD: 'border-violet-200 bg-violet-50 text-violet-800', REJECTED: 'border-rose-200 bg-rose-50 text-rose-800' };
+const LEAD_STYLES: Record<string, string> = { NEW: 'border-blue-200 bg-blue-50 text-blue-800', CONTACTED: 'border-indigo-200 bg-indigo-50 text-indigo-800', INTERESTED: 'border-violet-200 bg-violet-50 text-violet-800', INSPECTION_SCHEDULED: 'border-amber-200 bg-amber-50 text-amber-800', WON: 'border-emerald-200 bg-emerald-50 text-emerald-800', LOST: 'border-rose-200 bg-rose-50 text-rose-800' };
+const LEAD_BAR: Record<string, string> = { NEW: 'bg-blue-500', CONTACTED: 'bg-indigo-500', INTERESTED: 'bg-violet-500', INSPECTION_SCHEDULED: 'bg-amber-500', WON: 'bg-emerald-500', LOST: 'bg-rose-500' };
+
+function StatusBadge({ value, type = 'listing' }: { value?: string | null; type?: 'listing' | 'lead' }) {
+  const s = type === 'lead' ? (LEAD_STYLES[value || ''] || 'border-slate-200 bg-slate-100 text-slate-700') : (STATUS_STYLES[value || ''] || 'border-slate-200 bg-slate-100 text-slate-700');
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${s}`}>{labelify(value)}</span>;
+}
+
+function SectionHeading({ icon, eyebrow, title, detail, action }: { icon: ReactNode; eyebrow?: string; title: string; detail?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
-      <div className="flex items-start justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</p>
-        {kpi && <TrendIcon className={`h-4 w-4 ${kpi.trend === 'down' ? 'text-rose-500' : 'text-emerald-500'}`} />}
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-[#9a6b00]">{icon}</span>
+        <div>
+          {eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a47400]">{eyebrow}</p> : null}
+          <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-950">{title}</h2>
+          {detail ? <div className="mt-1 text-xs leading-5 text-slate-500">{detail}</div> : null}
+        </div>
       </div>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
-      <p className="mt-1.5 text-xs font-normal text-slate-500">{detail}</p>
-      {kpi && (
-        <p className="mt-2.5 text-xs font-medium text-slate-600">
-          {kpi.percentageChange === null ? 'No comparable prior value' : `${kpi.percentageChange > 0 ? '+' : ''}${kpi.percentageChange}% vs previous period`}
-        </p>
-      )}
+      {action}
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, note, trend, change, accent = 'amber' }: { icon: ReactNode; label: string; value: string; note: string; trend?: 'up' | 'down' | 'flat'; change?: number | null; accent?: 'amber' | 'blue' | 'green' | 'violet' | 'rose'; }) {
+  const accents: Record<string, string> = { amber: 'bg-amber-50 text-[#9a6b00]', blue: 'bg-blue-50 text-blue-700', green: 'bg-emerald-50 text-emerald-700', violet: 'bg-violet-50 text-violet-700', rose: 'bg-rose-50 text-rose-700' };
+  const TrendIcon = trend === 'down' ? TrendingDown : TrendingUp;
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] transition-shadow hover:shadow-md">
+      <div className="flex items-center justify-between gap-2">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accents[accent]}`}>{icon}</span>
+        {trend && trend !== 'flat' && (<span className={`flex items-center gap-1 text-[11px] font-bold ${trend === 'up' ? 'text-emerald-600' : 'text-rose-500'}`}><TrendIcon className="h-3 w-3" />{change !== null && change !== undefined ? (change > 0 ? '+' : '') + change + '%' : null}</span>)}
+      </div>
+      <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="mt-1.5 text-2xl font-black tracking-tight text-slate-950">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{note}</p>
+    </article>
+  );
+}
+
+function EmptyRow({ cols }: { cols: number }) { return <tr><td colSpan={cols} className="py-12 text-center text-xs font-semibold text-slate-400">No data to display</td></tr>; }
+
+function PaginationFooter({ startItem, endItem, total, page, totalPages, pageSize, pageSizeOpen, paginationItems, onPageChange, onPageSizeChange, onPageSizeOpenChange, unit }: { startItem: number; endItem: number; total: number; page: number; totalPages: number; pageSize: number; pageSizeOpen: boolean; paginationItems: (number | '...')[]; unit: string; onPageChange: (p: number) => void; onPageSizeChange: (s: number) => void; onPageSizeOpenChange: (v: boolean) => void; }) {
+  return (
+    <div className="flex flex-col gap-3 border-x border-b border-slate-200 bg-white px-4 py-2.5 rounded-b-2xl sm:flex-row sm:items-center sm:justify-between text-xs text-slate-600">
+      <div className="flex flex-wrap items-center gap-3">
+        <span>Showing <strong className="font-semibold text-slate-900">{startItem}</strong> to <strong className="font-semibold text-slate-900">{endItem}</strong> of <strong className="font-semibold text-slate-900">{total}</strong> {unit}</span>
+        <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+          <span className="text-slate-500">Rows per page:</span>
+          <div className="relative">
+            <button type="button" onClick={() => onPageSizeOpenChange(!pageSizeOpen)} className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"><span>{pageSize}</span><ChevronDown className="h-3 w-3 text-slate-400" /></button>
+            {pageSizeOpen && (<div className="absolute bottom-full left-0 z-20 mb-1 w-16 rounded-lg border border-slate-200 bg-white p-1 shadow-md">{[5, 10, 25, 50].map((size) => <button key={size} type="button" onClick={() => { onPageSizeChange(size); onPageSizeOpenChange(false); }} className={`block w-full rounded-md px-2 py-1 text-left text-xs ${pageSize === size ? 'bg-[#f7b500]/20 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-50'}`}>{size}</button>)}</div>)}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <button type="button" onClick={() => onPageChange(Math.max(page - 1, 1))} disabled={page === 1} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft className="h-3.5 w-3.5" /> Prev</button>
+        <div className="flex items-center gap-1">{paginationItems.map((item, idx) => typeof item === 'number' ? (<button key={item} type="button" onClick={() => onPageChange(item)} className={`h-7 w-7 rounded-lg text-xs font-bold transition-colors ${page === item ? 'bg-[#f7b500] text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>{item}</button>) : (<span key={'el-' + idx} className="px-1 text-xs font-bold text-slate-400">...</span>))}</div>
+        <button type="button" onClick={() => onPageChange(Math.min(page + 1, totalPages))} disabled={page === totalPages} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next <ChevronRight className="h-3.5 w-3.5" /></button>
+      </div>
     </div>
   );
 }
@@ -71,568 +121,139 @@ export default function AnalyticsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(true);
-  const [isModelYearCollapsed, setIsModelYearCollapsed] = useState(false);
-  const [isListingCollapsed, setIsListingCollapsed] = useState(false);
   const [modelYearSearch, setModelYearSearch] = useState('');
   const [listingSearch, setListingSearch] = useState('');
-
-  // Pagination State for Model x Manufacturing Year Table
   const [modelYearPage, setModelYearPage] = useState(1);
   const [modelYearPageSize, setModelYearPageSize] = useState(10);
   const [openModelYearPageSizeDropdown, setOpenModelYearPageSizeDropdown] = useState(false);
-
-  // Pagination State for Listing Performance Table
   const [listingPage, setListingPage] = useState(1);
   const [listingPageSize, setListingPageSize] = useState(10);
   const [openListingPageSizeDropdown, setOpenListingPageSizeDropdown] = useState(false);
+  const [isModelYearCollapsed, setIsModelYearCollapsed] = useState(false);
+  const [isListingCollapsed, setIsListingCollapsed] = useState(false);
 
-  const modelYearRows = data?.modelYear;
-  const listingRows = data?.topListings;
+  const filteredModelYear = useMemo(() => { const rows = data?.modelYear ?? []; if (!modelYearSearch.trim()) return rows; const q = modelYearSearch.toLowerCase(); return rows.filter((r) => (r.brand + ' ' + r.model + ' ' + r.manufacturingYear).toLowerCase().includes(q)); }, [data?.modelYear, modelYearSearch]);
+  const filteredTopListings = useMemo(() => { const rows = data?.topListings ?? []; if (!listingSearch.trim()) return rows; const q = listingSearch.toLowerCase(); return rows.filter((l) => (l.title + ' ' + l.partner + ' ' + (l.partnerType || '') + ' ' + (l.brand?.name || '') + ' ' + (l.model?.name || '') + ' ' + (l.location || '') + ' ' + l.manufacturingYear).toLowerCase().includes(q)); }, [data?.topListings, listingSearch]);
 
-  const filteredModelYear = useMemo(() => {
-    if (!modelYearRows) return [];
-    if (!modelYearSearch.trim()) return modelYearRows;
-    const q = modelYearSearch.toLowerCase().trim();
-    return modelYearRows.filter((row) =>
-      `${row.brand} ${row.model} ${row.manufacturingYear}`.toLowerCase().includes(q)
-    );
-  }, [modelYearRows, modelYearSearch]);
-
-  const filteredTopListings = useMemo(() => {
-    if (!listingRows) return [];
-    if (!listingSearch.trim()) return listingRows;
-    const q = listingSearch.toLowerCase().trim();
-    return listingRows.filter((item) =>
-      `${item.title} ${item.partner} ${item.partnerType || ''} ${item.brand?.name || ''} ${item.model?.name || ''} ${item.location || ''} ${item.manufacturingYear}`
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [listingRows, listingSearch]);
-
-  // Model Year Pagination Calculations
   const totalModelYearItems = filteredModelYear.length;
   const totalModelYearPages = Math.ceil(totalModelYearItems / modelYearPageSize) || 1;
   const currentModelYearPage = Math.min(modelYearPage, totalModelYearPages);
-  const paginatedModelYear = useMemo(() => {
-    const start = (currentModelYearPage - 1) * modelYearPageSize;
-    return filteredModelYear.slice(start, start + modelYearPageSize);
-  }, [filteredModelYear, currentModelYearPage, modelYearPageSize]);
-  const modelYearPaginationItems = useMemo(
-    () => buildPaginationItems(currentModelYearPage, totalModelYearPages),
-    [currentModelYearPage, totalModelYearPages]
-  );
-  const modelYearStartItem = totalModelYearItems === 0 ? 0 : (currentModelYearPage - 1) * modelYearPageSize + 1;
-  const modelYearEndItem = Math.min(currentModelYearPage * modelYearPageSize, totalModelYearItems);
-
-  // Listing Performance Pagination Calculations
+  const paginatedModelYear = useMemo(() => filteredModelYear.slice((currentModelYearPage - 1) * modelYearPageSize, currentModelYearPage * modelYearPageSize), [filteredModelYear, currentModelYearPage, modelYearPageSize]);
+  const modelYearPaginationItems = useMemo(() => buildPaginationItems(currentModelYearPage, totalModelYearPages), [currentModelYearPage, totalModelYearPages]);
   const totalListingItems = filteredTopListings.length;
   const totalListingPages = Math.ceil(totalListingItems / listingPageSize) || 1;
   const currentListingPage = Math.min(listingPage, totalListingPages);
-  const paginatedTopListings = useMemo(() => {
-    const start = (currentListingPage - 1) * listingPageSize;
-    return filteredTopListings.slice(start, start + listingPageSize);
-  }, [filteredTopListings, currentListingPage, listingPageSize]);
-  const listingPaginationItems = useMemo(
-    () => buildPaginationItems(currentListingPage, totalListingPages),
-    [currentListingPage, totalListingPages]
-  );
-  const listingStartItem = totalListingItems === 0 ? 0 : (currentListingPage - 1) * listingPageSize + 1;
-  const listingEndItem = Math.min(currentListingPage * listingPageSize, totalListingItems);
+  const paginatedTopListings = useMemo(() => filteredTopListings.slice((currentListingPage - 1) * listingPageSize, currentListingPage * listingPageSize), [filteredTopListings, currentListingPage, listingPageSize]);
+  const listingPaginationItems = useMemo(() => buildPaginationItems(currentListingPage, totalListingPages), [currentListingPage, totalListingPages]);
 
-  const updateDimension = (key: keyof AnalyticsDimensions, value: string) => setDimensions((current) => ({ ...current, [key]: value }));
+  const updateDimension = (key: keyof AnalyticsDimensions, value: string) => setDimensions((d) => ({ ...d, [key]: value }));
 
-  useEffect(() => { let cancelled = false; void api.get<AnalyticsOptions>('/analytics/options').then((response) => { if (!cancelled) { setOptions(response.data); setOptionsError(''); } }).catch(() => { if (!cancelled) setOptionsError('Some filter options could not be loaded from the database.'); }).finally(() => { if (!cancelled) setOptionsLoading(false); }); return () => { cancelled = true; }; }, []);
-  useEffect(() => { let cancelled = false; if (!dimensions.countryId) return () => { cancelled = true; }; void api.get<Option[]>(`/locations/states/${dimensions.countryId}`).then((response) => { if (!cancelled) setStates(response.data || []); }).catch(() => { if (!cancelled) setStates([]); }); return () => { cancelled = true; }; }, [dimensions.countryId]);
-  useEffect(() => { let cancelled = false; if (!dimensions.stateId) return () => { cancelled = true; }; void api.get<Option[]>(`/locations/cities/${dimensions.stateId}`).then((response) => { if (!cancelled) setCities(response.data || []); }).catch(() => { if (!cancelled) setCities([]); }); return () => { cancelled = true; }; }, [dimensions.stateId]);
+  useEffect(() => { let cancelled = false; void api.get<AnalyticsOptions>('/analytics/options').then((r) => { if (!cancelled) { setOptions(r.data); setOptionsError(''); } }).catch(() => { if (!cancelled) setOptionsError('Some filter options could not be loaded.'); }).finally(() => { if (!cancelled) setOptionsLoading(false); }); return () => { cancelled = true; }; }, []);
+  useEffect(() => { let cancelled = false; if (!dimensions.countryId) return () => { cancelled = true; }; void api.get<Option[]>('/locations/states/' + dimensions.countryId).then((r) => { if (!cancelled) setStates(r.data || []); }).catch(() => { if (!cancelled) setStates([]); }); return () => { cancelled = true; }; }, [dimensions.countryId]);
+  useEffect(() => { let cancelled = false; if (!dimensions.stateId) return () => { cancelled = true; }; void api.get<Option[]>('/locations/cities/' + dimensions.stateId).then((r) => { if (!cancelled) setCities(r.data || []); }).catch(() => { if (!cancelled) setCities([]); }); return () => { cancelled = true; }; }, [dimensions.stateId]);
 
-  const load = async (nextFrom = from, nextTo = to, nextDimensions = dimensions) => { setLoading(true); setError(''); try { const response = await api.get<AnalyticsResponse>('/analytics/overview', { params: toAnalyticsParams(nextFrom, nextTo, nextDimensions) }); setData(response.data); } catch (requestError) { console.error('Failed to load analytics:', requestError); setError('Analytics could not be loaded. Your existing portal access is unchanged.'); } finally { setLoading(false); } };
-  // The initial request intentionally reads the URL once; subsequent refreshes are explicit.
+  const load = async (nextFrom = from, nextTo = to, nextDimensions = dimensions) => { setLoading(true); setError(''); try { const r = await api.get<AnalyticsResponse>('/analytics/overview', { params: toAnalyticsParams(nextFrom, nextTo, nextDimensions) }); setData(r.data); } catch { setError('Analytics could not be loaded. Please try again.'); } finally { setLoading(false); } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { const timer = window.setTimeout(() => { void load(searchParams.get('from') || '', searchParams.get('to') || ''); }, 0); return () => window.clearTimeout(timer); }, []);
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); router.replace(`${pathname}?${new URLSearchParams(toAnalyticsParams(from, to, dimensions)).toString()}`); void load(from, to, dimensions); };
-  const handleReset = () => {
-    const emptyDimensions = getInitialDimensions(new URLSearchParams());
-    setFrom('');
-    setTo('');
-    setStates([]);
-    setCities([]);
-    setDimensions(emptyDimensions);
-    setIsFilterCollapsed(true);
-    router.replace(pathname);
-    void load('', '', emptyDimensions);
-  };
-  const handleExport = async () => { setExporting(true); setExportError(''); try { const response = await api.get<Blob>('/analytics/export/listings.csv', { params: toAnalyticsParams(from, to, dimensions), responseType: 'blob' }); const url = URL.createObjectURL(response.data); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `jcb-analytics-listings-${new Date().toISOString().slice(0, 10)}.csv`; document.body.appendChild(anchor); anchor.click(); anchor.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch (requestError) { console.error('Failed to export analytics listings:', requestError); setExportError('Listings CSV could not be downloaded. Please try again.'); } finally { setExporting(false); } };
+  useEffect(() => { const timer = window.setTimeout(() => void load(searchParams.get('from') || '', searchParams.get('to') || ''), 0); return () => window.clearTimeout(timer); }, []);
 
-  const listingPath = pathname.startsWith('/employee') ? '/employee/listings' : pathname.startsWith('/admin') ? '/admin/listings' : pathname.startsWith('/partner') ? '/partner/listings' : '/superadmin/listings';
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); router.replace(pathname + '?' + new URLSearchParams(toAnalyticsParams(from, to, dimensions)).toString()); void load(from, to, dimensions); };
+  const handleReset = () => { const empty = getInitialDimensions(new URLSearchParams()); setFrom(''); setTo(''); setStates([]); setCities([]); setDimensions(empty); setIsFilterCollapsed(true); router.replace(pathname); void load('', '', empty); };
+  const handleExport = async () => { setExporting(true); setExportError(''); try { const r = await api.get<Blob>('/analytics/export/listings.csv', { params: toAnalyticsParams(from, to, dimensions), responseType: 'blob' }); const url = URL.createObjectURL(r.data); const a = document.createElement('a'); a.href = url; a.download = 'jcb-analytics-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { setExportError('CSV export failed. Please try again.'); } finally { setExporting(false); } };
+
+  const listingPath = pathname.startsWith('/employee') ? '/employee/listings' : pathname.startsWith('/admin') ? '/admin/listings' : '/superadmin/listings';
   const analyticsBasePath = pathname.startsWith('/employee') ? '/employee/analytics' : '/superadmin/analytics';
   const brandOptions = withAllOption('All brands', options?.brands || []);
-  const modelOptions = withAllOption('All models', options?.models.filter((model) => !dimensions.brandId || model.brandId === dimensions.brandId) || []);
-  const countryOptions = withAllOption('All countries', options?.countries.map((country) => ({ id: country.id, name: `${country.emoji || ''} ${country.name}`.trim() })) || []);
-  const listingStatusOptions = withAllOption('All listing statuses', options?.listingStatuses.map((status) => ({ id: status, name: label(status) })) || []);
+  const modelOptions = withAllOption('All models', options?.models.filter((m) => !dimensions.brandId || m.brandId === dimensions.brandId) || []);
+  const countryOptions = withAllOption('All countries', options?.countries.map((c) => ({ id: c.id, name: ((c.emoji || '') + ' ' + c.name).trim() })) || []);
+  const listingStatusOptions = withAllOption('All statuses', options?.listingStatuses.map((s) => ({ id: s, name: labelify(s) })) || []);
   const availableLeadStatuses = new Set(options?.leadStatuses || []);
-  const leadStatusOptions = withAllOption('All lead statuses', [...(availableLeadStatuses.has('NEW') ? [{ id: 'OPEN', name: 'Open' }] : []), ...(availableLeadStatuses.has('CONTACTED') || availableLeadStatuses.has('INTERESTED') || availableLeadStatuses.has('INSPECTION_SCHEDULED') ? [{ id: 'ONGOING', name: 'Ongoing' }] : []), ...(availableLeadStatuses.has('WON') || availableLeadStatuses.has('LOST') ? [{ id: 'CLOSED', name: 'Closed' }] : []), ...(options?.leadStatuses || []).map((status) => ({ id: status, name: label(status) }))]);
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (from) count++;
-    if (to) count++;
-    count += Object.values(dimensions).filter((v) => Boolean(v?.trim())).length;
-    return count;
-  }, [from, to, dimensions]);
+  const leadStatusOptions = withAllOption('All lead statuses', [...(availableLeadStatuses.has('NEW') ? [{ id: 'OPEN', name: 'Open' }] : []), ...(availableLeadStatuses.has('CONTACTED') || availableLeadStatuses.has('INTERESTED') || availableLeadStatuses.has('INSPECTION_SCHEDULED') ? [{ id: 'ONGOING', name: 'Ongoing' }] : []), ...(availableLeadStatuses.has('WON') || availableLeadStatuses.has('LOST') ? [{ id: 'CLOSED', name: 'Closed' }] : []), ...(options?.leadStatuses || []).map((s) => ({ id: s, name: labelify(s) }))]);
+  const activeFilterCount = useMemo(() => { let c = 0; if (from) c++; if (to) c++; c += Object.values(dimensions).filter((v) => Boolean(v?.trim())).length; return c; }, [from, to, dimensions]);
+  const totalLeadCount = data ? data.leadStatusBreakdown.reduce((s, b) => s + b.count, 0) : 0;
+  const totalListingCount = data ? data.listingStatusBreakdown.reduce((s, b) => s + b.count, 0) : 0;
 
   return (
-    <div className="space-y-3 pb-6">
-      {/* Top Header Section with Compact Spacing */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[#9a6b00]">
-            <BarChart3 className="h-3 w-3" /> Decision workspace
+    <main className="space-y-5 pb-10">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#9a6b00]"><Zap className="h-3 w-3" /> Decision workspace</div>
+            <h1 className="text-2xl font-black leading-tight tracking-tight text-slate-900 sm:text-3xl">{t('admin.analyticsTitle', 'Advanced Analytics')}</h1>
+            <p className="text-sm font-semibold text-slate-500">Platform-wide performance intelligence across listings, leads, and revenue.</p>
           </div>
-          <h1 className="mt-0 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-            {t('admin.analyticsTitle', 'Advanced Analytics')}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" onClick={() => void handleExport()} disabled={exporting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-900 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-amber-400"><Download className="h-3.5 w-3.5" />{exporting ? 'Preparing…' : 'Export CSV'}</button>
+            <button type="button" onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-xl bg-[#f7b500] px-4 py-2 text-xs font-bold text-slate-950 shadow-sm transition hover:bg-[#ffc928] focus:outline-none focus:ring-2 focus:ring-amber-400"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void handleExport()} disabled={exporting} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:border-[#f0b900] disabled:opacity-60 transition-colors">
-            <Download className="h-3.5 w-3.5" />
-            {exporting ? 'Preparing CSV...' : 'Export listings'}
-          </button>
-          <button type="button" onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#f7b500] px-3 py-1 text-xs font-semibold text-slate-950 hover:bg-[#ffc928] transition-colors shadow-2xs">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
-          </button>
-        </div>
-        {exportError && <p role="alert" className="text-xs font-semibold text-red-600">{exportError}</p>}
-      </div>
+        {exportError && <p role="alert" className="mt-3 text-xs font-semibold text-rose-600">{exportError}</p>}
+      </section>
 
-      {/* Collapsible Filter Workspace */}
-      <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xs transition-all">
-        {/* Date Row & Collapse Control */}
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+      <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
-            <div className="w-36 sm:w-40">
-              <input
-                type="date"
-                value={from}
-                onChange={(event) => setFrom(event.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-800 outline-none focus:border-[#f7b500] focus:ring-1 focus:ring-[#f7b500] transition-all"
-              />
-            </div>
-            <span className="text-xs text-slate-400 font-medium">to</span>
-            <div className="w-36 sm:w-40">
-              <input
-                type="date"
-                value={to}
-                onChange={(event) => setTo(event.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-800 outline-none focus:border-[#f7b500] focus:ring-1 focus:ring-[#f7b500] transition-all"
-              />
-            </div>
-            <button type="submit" className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#f7b500] px-3.5 py-1 text-xs font-semibold text-slate-900 hover:bg-[#ffc928] transition-all shadow-2xs">
-              <Search className="h-3.5 w-3.5" /> Apply Dates
-            </button>
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all sm:w-40" />
+            <span className="text-xs font-medium text-slate-400">to</span>
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all sm:w-40" />
+            <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-[#f7b500] px-4 py-1.5 text-xs font-bold text-slate-900 transition hover:bg-[#ffc928] shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"><Search className="h-3.5 w-3.5" /> Apply</button>
           </div>
-
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsFilterCollapsed(!isFilterCollapsed)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <Filter className="h-3.5 w-3.5 text-[#9a6b00]" />
-              {isFilterCollapsed ? `Show Filters ${activeFilterCount > 0 ? `(${activeFilterCount})` : ''}` : 'Hide Filters'}
-              <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition-transform ${isFilterCollapsed ? '' : 'rotate-180'}`} />
-            </button>
-            <button type="button" onClick={handleReset} className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors underline decoration-slate-300 underline-offset-4">
-              Reset all
-            </button>
+            <button type="button" onClick={() => setIsFilterCollapsed(!isFilterCollapsed)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400"><Filter className="h-3.5 w-3.5 text-[#9a6b00]" />{isFilterCollapsed ? 'Filters' + (activeFilterCount > 0 ? ' (' + activeFilterCount + ')' : '') : 'Hide Filters'}<ChevronDown className={'h-3.5 w-3.5 text-slate-400 transition-transform ' + (isFilterCollapsed ? '' : 'rotate-180')} /></button>
+            <button type="button" onClick={handleReset} className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors underline decoration-slate-300 underline-offset-4">Reset</button>
           </div>
         </div>
-
-        {/* Expanded Dimensional Dropdowns */}
         {!isFilterCollapsed && (
-          <div className="mt-2.5 border-t border-slate-100 pt-2.5">
+          <div className="mt-4 border-t border-slate-100 pt-4">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {([['brandId', brandOptions], ['modelId', modelOptions], ['categoryId', withAllOption('All categories', options?.categories || [])], ['partnerId', withAllOption('All partners', options?.partners || [])], ['manufacturingYear', withAllOption('All years', options?.years.map((year) => ({ id: year, name: String(year) })) || [])], ['listingStatus', listingStatusOptions], ['leadStatus', leadStatusOptions], ['listingId', withAllOption('All listings', options?.listings || [])]] as Array<[keyof AnalyticsDimensions, Option[]]>).map(([key, selectOptions]) => (
-                <div key={key}>
-                  <SearchableSelect options={selectOptions} value={dimensions[key]} onChange={(option) => { if (key === 'brandId') setDimensions((current) => ({ ...current, brandId: String(option.id), modelId: '' })); else updateDimension(key, String(option.id)); }} placeholder={optionsLoading ? 'Loading...' : selectOptions[0]?.name || 'Select'} disabled={optionsLoading || (key === 'modelId' && !modelOptions.length)} />
-                </div>
-              ))}
-              <div>
-                <SearchableSelect options={countryOptions} value={dimensions.countryId} onChange={(option) => { setStates([]); setCities([]); setDimensions((current) => ({ ...current, countryId: String(option.id), stateId: '', cityId: '' })); }} disabled={optionsLoading} placeholder="All countries" />
-              </div>
-              <div>
-                <SearchableSelect options={[{ id: '', name: 'All states' }, ...states]} value={dimensions.stateId} onChange={(option) => { setCities([]); setDimensions((current) => ({ ...current, stateId: String(option.id), cityId: '' })); }} disabled={!dimensions.countryId || !states.length} placeholder={dimensions.countryId ? (states.length ? 'All states' : 'None') : 'Select country'} />
-              </div>
-              <div>
-                <SearchableSelect options={[{ id: '', name: 'All cities' }, ...cities]} value={dimensions.cityId} onChange={(option) => updateDimension('cityId', String(option.id))} disabled={!dimensions.stateId || !cities.length} placeholder={dimensions.stateId ? (cities.length ? 'All cities' : 'None') : 'Select state'} />
-              </div>
+              {([['brandId', brandOptions], ['modelId', modelOptions], ['categoryId', withAllOption('All categories', options?.categories || [])], ['partnerId', withAllOption('All partners', options?.partners || [])], ['manufacturingYear', withAllOption('All years', options?.years.map((y) => ({ id: y, name: String(y) })) || [])], ['listingStatus', listingStatusOptions], ['leadStatus', leadStatusOptions], ['listingId', withAllOption('All listings', options?.listings || [])]] as Array<[keyof AnalyticsDimensions, Option[]]>).map(([key, opts]) => (<div key={key}><SearchableSelect options={opts} value={dimensions[key]} onChange={(opt) => { if (key === 'brandId') setDimensions((d) => ({ ...d, brandId: String(opt.id), modelId: '' })); else updateDimension(key, String(opt.id)); }} placeholder={optionsLoading ? 'Loading…' : opts[0]?.name || 'Select'} disabled={optionsLoading || (key === 'modelId' && !modelOptions.length)} /></div>))}
+              <div><SearchableSelect options={countryOptions} value={dimensions.countryId} onChange={(opt) => { setStates([]); setCities([]); setDimensions((d) => ({ ...d, countryId: String(opt.id), stateId: '', cityId: '' })); }} disabled={optionsLoading} placeholder="All countries" /></div>
+              <div><SearchableSelect options={[{ id: '', name: 'All states' }, ...states]} value={dimensions.stateId} onChange={(opt) => { setCities([]); setDimensions((d) => ({ ...d, stateId: String(opt.id), cityId: '' })); }} disabled={!dimensions.countryId || !states.length} placeholder={dimensions.countryId ? (states.length ? 'All states' : 'None') : 'Select country'} /></div>
+              <div><SearchableSelect options={[{ id: '', name: 'All cities' }, ...cities]} value={dimensions.cityId} onChange={(opt) => updateDimension('cityId', String(opt.id))} disabled={!dimensions.stateId || !cities.length} placeholder={dimensions.stateId ? (cities.length ? 'All cities' : 'None') : 'Select state'} /></div>
             </div>
-            {optionsError && <p className="mt-2 text-[11px] font-medium text-amber-600 bg-amber-50 p-2 rounded-lg">{optionsError}</p>}
+            {optionsError && <p className="mt-3 text-[11px] font-semibold text-amber-700 bg-amber-50 px-3 py-2 rounded-xl">{optionsError}</p>}
           </div>
         )}
       </form>
 
-      {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">{error}</div>}
-      {loading ? <BrandLoader variant="section" size="md" bg="light" text="Loading analytics workspace..." className="rounded-2xl border border-slate-200 bg-white p-10 shadow-xs" /> : null}
+      {error && <div role="alert" className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />{error}</div>}
+      {loading ? <BrandLoader variant="section" size="md" bg="light" text="Loading analytics workspace…" className="rounded-3xl border border-slate-200 bg-white p-16 shadow-sm" /> : null}
 
       {!loading && data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard title="Live inventory" value={formatNumber(data.summary.liveListings)} detail={`${formatCurrency(data.summary.liveInventoryValue)} asking value`} />
-            <KpiCard title="Lead volume" value={formatNumber(data.summary.leads.current)} detail={`${data.summary.activeLeads} active - ${data.summary.wonLeads} won`} kpi={data.summary.leads} />
-            <KpiCard title="Completed payments" value={formatCurrency(data.summary.paymentAmount)} detail={`${data.summary.paymentCount} approved/paid remittances`} />
-            <KpiCard title="Prime subscriptions" value={formatCurrency(data.summary.primeSubscriptionAmount)} detail={`${data.summary.primeSubscriptionCount} subscription payments`} />
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <KpiCard icon={<Layers className="h-4 w-4" />} label="Live listings" value={fmt(data.summary.liveListings)} note={fmtCurrency(data.summary.liveInventoryValue) + ' asking value'} accent="amber" />
+            <KpiCard icon={<Eye className="h-4 w-4" />} label="Tracked views" value={fmt(data.summary.trackedViews.current)} note="Durable event impressions" accent="blue" trend={data.summary.trackedViews.trend} change={data.summary.trackedViews.percentageChange} />
+            <KpiCard icon={<Users className="h-4 w-4" />} label="Total leads" value={fmt(data.summary.leads.current)} note={fmt(data.summary.activeLeads) + ' active · ' + fmt(data.summary.wonLeads) + ' won'} accent="violet" trend={data.summary.leads.trend} change={data.summary.leads.percentageChange} />
+            <KpiCard icon={<Award className="h-4 w-4" />} label="Conversion rate" value={data.summary.conversionRate + '%'} note="Won leads ÷ total leads" accent="green" />
+            <KpiCard icon={<Wallet className="h-4 w-4" />} label="Payment volume" value={fmtCurrency(data.summary.paymentAmount)} note={fmt(data.summary.paymentCount) + ' approved remittances'} accent="amber" />
+            <KpiCard icon={<Sparkles className="h-4 w-4" />} label="Prime revenue" value={fmtCurrency(data.summary.primeSubscriptionAmount)} note={fmt(data.summary.primeSubscriptionCount) + ' subscriptions'} accent="violet" />
+          </section>
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard icon={<Activity className="h-4 w-4" />} label="Tracked searches" value={fmt(data.summary.trackedSearches)} note="Platform search events recorded" accent="blue" />
+            <KpiCard icon={<AlertCircle className="h-4 w-4" />} label="Zero-result searches" value={fmt(data.summary.trackedZeroResultSearches)} note="Searches with no matching listings" accent="rose" />
+            <KpiCard icon={<ShoppingBag className="h-4 w-4" />} label="Sold listings" value={fmt(data.summary.soldCount)} note={fmtCurrency(data.summary.soldValue) + ' total sale value'} accent="green" />
+            <KpiCard icon={<PackageCheck className="h-4 w-4" />} label="Deposit collections" value={fmtCurrency(data.summary.depositAmount)} note={fmt(data.summary.depositCount) + ' deposits recorded'} accent="amber" />
+          </section>
+          <div className="grid gap-5 xl:grid-cols-2">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6">
+              <SectionHeading icon={<BarChart3 className="h-4 w-4" />} eyebrow="Inventory health" title="Listing status mix" detail="Actual count of listings grouped by their current review and publication state." />
+              {data.listingStatusBreakdown.length ? (<div className="space-y-4 max-h-[280px] overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{data.listingStatusBreakdown.map((item) => { const pct = totalListingCount ? Math.round((item.count / totalListingCount) * 100) : 0; return (<div key={item.status}><div className="mb-1.5 flex items-center justify-between gap-3"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-800">{fmt(item.count)} <span className="font-normal text-slate-400">({pct}%)</span></span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#f7b500] transition-all" style={{ width: pct + '%' }} /></div></div>); })}</div>) : <p className="py-8 text-center text-xs font-semibold text-slate-400">No listing status data.</p>}
+            </section>
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6">
+              <SectionHeading icon={<Users className="h-4 w-4" />} eyebrow="Lead intelligence" title="Lead status breakdown" detail={fmt(totalLeadCount) + ' total leads in selected scope.'} />
+              {data.leadStatusBreakdown.length ? (<div className="space-y-4 max-h-[280px] overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{data.leadStatusBreakdown.map((item) => { const pct = totalLeadCount ? Math.round((item.count / totalLeadCount) * 100) : 0; return (<div key={item.status}><div className="mb-1.5 flex items-center justify-between gap-3"><StatusBadge value={item.status} type="lead" /><span className="text-xs font-bold text-slate-800">{fmt(item.count)} <span className="font-normal text-slate-400">({pct}%)</span></span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={'h-full rounded-full transition-all ' + (LEAD_BAR[item.status] || 'bg-slate-400')} style={{ width: pct + '%' }} /></div></div>); })}</div>) : <p className="py-8 text-center text-xs font-semibold text-slate-400">No lead data.</p>}
+            </section>
           </div>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
-            <h2 className="text-base font-bold text-slate-900">Listing status mix</h2>
-            <p className="mt-0.5 text-xs font-normal text-slate-500">Actual records in the selected scope.</p>
-            <div className="mt-4 space-y-3">
-              {data.listingStatusBreakdown.length ? data.listingStatusBreakdown.map((item) => (
-                <div key={item.status}>
-                  <div className="mb-1 flex justify-between text-xs font-medium text-slate-700">
-                    <span>{label(item.status)}</span>
-                    <span className="font-semibold text-slate-900">{item.count}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div className="h-2 rounded-full bg-[#f7b500]" style={{ width: `${Math.min(100, (item.count / Math.max(1, data.summary.liveListings)) * 100)}%` }} />
-                  </div>
-                </div>
-              )) : <p className="py-8 text-center text-xs font-normal text-slate-500">No listing status data.</p>}
-            </div>
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6">
+            <SectionHeading icon={<Activity className="h-4 w-4" />} eyebrow="Market intelligence" title="Model × manufacturing year" detail="Demand / stock score calculated using cumulative views and period leads per inventory unit." action={<div className="flex items-center gap-2"><div className="relative"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" /><input type="text" value={modelYearSearch} onChange={(e) => { setModelYearSearch(e.target.value); setModelYearPage(1); }} placeholder="Search machines…" className="w-44 rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-7 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all sm:w-52" />{modelYearSearch && <button type="button" onClick={() => { setModelYearSearch(''); setModelYearPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>}</div><button type="button" onClick={() => setIsModelYearCollapsed(!isModelYearCollapsed)} className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">{isModelYearCollapsed ? 'Show Table' : 'Hide Table'}</button></div>} />
+            {!isModelYearCollapsed && (<><div className="overflow-x-auto rounded-t-2xl border border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500"><tr>{['Machine', 'Year', 'Supply', 'Views', 'Leads', 'Won', 'Conversion', 'Demand / Stock'].map((h) => <th key={h} className="px-4 py-3 font-bold text-slate-600">{h}</th>)}</tr></thead><tbody className="divide-y divide-slate-100 bg-white text-slate-700">{paginatedModelYear.length ? paginatedModelYear.map((row) => (<tr key={row.brand + '-' + row.model + '-' + row.manufacturingYear} className="hover:bg-amber-50/30 transition-colors"><td className="px-4 py-3"><span className="block truncate font-semibold text-slate-900">{row.brand} · {row.model}</span><span className="text-[11px] text-slate-500">{row.brand} · Year {row.manufacturingYear}</span></td><td className="px-4 py-3">{row.manufacturingYear}</td><td className="px-4 py-3">{fmt(row.inventory)}</td><td className="px-4 py-3 font-medium text-blue-700">{fmt(row.views)}</td><td className="px-4 py-3 font-medium text-violet-700">{fmt(row.leads)}</td><td className="px-4 py-3 font-medium text-emerald-700">{fmt(row.wonLeads)}</td><td className="px-4 py-3">{row.conversionRate}%</td><td className="px-4 py-3"><span className={'font-black text-lg ' + ((row.demandPerStock ?? 0) >= 5 ? 'text-[#9a6b00]' : (row.demandPerStock ?? 0) >= 2 ? 'text-amber-600' : 'text-slate-500')}>{row.demandPerStock ?? '—'}</span></td></tr>)) : <EmptyRow cols={8} />}</tbody></table></div>{totalModelYearItems > 0 && <PaginationFooter startItem={totalModelYearItems === 0 ? 0 : (currentModelYearPage - 1) * modelYearPageSize + 1} endItem={Math.min(currentModelYearPage * modelYearPageSize, totalModelYearItems)} total={totalModelYearItems} page={currentModelYearPage} totalPages={totalModelYearPages} pageSize={modelYearPageSize} pageSizeOpen={openModelYearPageSizeDropdown} paginationItems={modelYearPaginationItems} unit="entries" onPageChange={(p) => setModelYearPage(p)} onPageSizeChange={(s) => { setModelYearPageSize(s); setModelYearPage(1); }} onPageSizeOpenChange={setOpenModelYearPageSizeDropdown} />}</>)}
           </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Model x manufacturing year</h2>
-                <p className="mt-0.5 text-xs font-normal text-slate-500">Demand / stock score calculated using cumulative views and period leads.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={modelYearSearch}
-                    onChange={(e) => {
-                      setModelYearSearch(e.target.value);
-                      setModelYearPage(1);
-                    }}
-                    placeholder="Search machines..."
-                    className="w-44 sm:w-56 rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-7 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-[#f7b500] focus:ring-1 focus:ring-[#f7b500] transition-all"
-                  />
-                  {modelYearSearch && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModelYearSearch('');
-                        setModelYearPage(1);
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-                <button onClick={() => setIsModelYearCollapsed(!isModelYearCollapsed)} className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors shrink-0">
-                  {isModelYearCollapsed ? 'Show Table' : 'Hide Table'}
-                </button>
-              </div>
-            </div>
-            
-            {!isModelYearCollapsed && (
-              <div>
-                <div className="overflow-x-auto rounded-t-xl border border-slate-200 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      <tr>
-                        {['Machine', 'Year', 'Supply', 'Views', 'Leads', 'Conversion', 'Demand / stock'].map((heading) => (
-                          <th key={heading} className="px-4 py-2.5 bg-slate-50 font-semibold text-slate-600">{heading}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
-                      {paginatedModelYear.map((row) => (
-                        <tr key={`${row.brand}-${row.model}-${row.manufacturingYear}`} className="hover:bg-amber-50/30 transition-colors">
-                          <td className="px-4 py-2.5">
-                            <span className="font-semibold text-slate-900 block truncate">{row.brand} - {row.model}</span>
-                            <p className="text-[11px] font-normal text-slate-500 leading-tight">{row.brand} • Year {row.manufacturingYear}</p>
-                          </td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{row.manufacturingYear}</td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{row.inventory}</td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{formatNumber(row.views)}</td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{row.leads}</td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{row.conversionRate}%</td>
-                          <td className="px-4 py-2.5 font-semibold text-[#9a6b00] align-middle">{row.demandPerStock ?? '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {filteredModelYear.length === 0 && <p className="px-3 py-8 text-center text-xs font-normal text-slate-500">No matching model-year entries found.</p>}
-                </div>
-
-                {/* Model-Year Pagination Footer */}
-                {totalModelYearItems > 0 && (
-                  <div className="flex flex-col gap-3 border-x border-b border-slate-200 bg-white px-4 py-2.5 rounded-b-xl sm:flex-row sm:items-center sm:justify-between text-xs text-slate-600">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span>Showing <strong className="font-semibold text-slate-900">{modelYearStartItem}</strong> to <strong className="font-semibold text-slate-900">{modelYearEndItem}</strong> of <strong className="font-semibold text-slate-900">{totalModelYearItems}</strong> entries</span>
-                      <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                        <span className="text-slate-500">Rows per page:</span>
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setOpenModelYearPageSizeDropdown(!openModelYearPageSizeDropdown)}
-                            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
-                          >
-                            <span>{modelYearPageSize}</span>
-                            <ChevronDown className="h-3 w-3 text-slate-400" />
-                          </button>
-                          {openModelYearPageSizeDropdown && (
-                            <div className="absolute bottom-full left-0 z-20 mb-1 w-16 rounded-lg border border-slate-200 bg-white p-1 shadow-md">
-                              {[5, 10, 25, 50].map((size) => (
-                                <button
-                                  key={size}
-                                  type="button"
-                                  onClick={() => {
-                                    setModelYearPageSize(size);
-                                    setModelYearPage(1);
-                                    setOpenModelYearPageSizeDropdown(false);
-                                  }}
-                                  className={`block w-full rounded-md px-2 py-1 text-left text-xs ${modelYearPageSize === size ? 'bg-[#f7b500]/20 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-50'}`}
-                                >
-                                  {size}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setModelYearPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={currentModelYearPage === 1}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" /> Prev
-                      </button>
-                      <div className="flex items-center gap-1">
-                        {modelYearPaginationItems.map((item, idx) =>
-                          typeof item === 'number' ? (
-                            <button
-                              key={item}
-                              type="button"
-                              onClick={() => setModelYearPage(item)}
-                              className={`h-7 w-7 rounded-lg text-xs font-bold transition-colors ${currentModelYearPage === item ? 'bg-[#f7b500] text-slate-950 shadow-2xs' : 'text-slate-600 hover:bg-slate-100'}`}
-                            >
-                              {item}
-                            </button>
-                          ) : (
-                            <span key={`el-m-${idx}`} className="px-1 text-xs font-bold text-slate-400">...</span>
-                          )
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setModelYearPage((prev) => Math.min(prev + 1, totalModelYearPages))}
-                        disabled={currentModelYearPage === totalModelYearPages}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Next <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Listing performance</h2>
-                <p className="mt-0.5 text-xs font-normal text-slate-500">
-                  Active machine listings performance. <Link href={listingPath} className="font-semibold text-[#9a6b00] hover:underline">Open listings</Link>
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={listingSearch}
-                    onChange={(e) => {
-                      setListingSearch(e.target.value);
-                      setListingPage(1);
-                    }}
-                    placeholder="Search listings..."
-                    className="w-44 sm:w-56 rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-7 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-[#f7b500] focus:ring-1 focus:ring-[#f7b500] transition-all"
-                  />
-                  {listingSearch && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setListingSearch('');
-                        setListingPage(1);
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-                <button onClick={() => setIsListingCollapsed(!isListingCollapsed)} className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors shrink-0">
-                  {isListingCollapsed ? 'Show Table' : 'Hide Table'}
-                </button>
-              </div>
-            </div>
-            
-            {!isListingCollapsed && (
-              <div>
-                <div className="overflow-x-auto rounded-t-xl border border-slate-200 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  <table className="w-full min-w-[920px] text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      <tr>
-                        {['Listing', 'Partner', 'Type', 'Status', 'Year', 'Views', 'Leads', 'Price'].map((heading) => (
-                          <th key={heading} className="px-4 py-2.5 bg-slate-50 font-semibold text-slate-600">{heading}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
-                      {paginatedTopListings.map((listing) => {
-                        const locationParts = (listing.location || '').split(', ');
-                        const locationCity = locationParts[0] || undefined;
-                        const analyticsDetailPath = `${analyticsBasePath}/${listing.id}`;
-                        const listingDetailPath = generateAdminListingDetailPath(listingPath, { id: listing.id, title: listing.title, manufacturingYear: listing.manufacturingYear, locationCity });
-                        return (
-                          <tr
-                            key={listing.id}
-                            className="hover:bg-amber-50/40 cursor-pointer transition-colors"
-                            onClick={() => router.push(analyticsDetailPath)}
-                          >
-                            <td className="px-4 py-2.5">
-                              <span className="font-semibold text-slate-900 truncate block max-w-sm group-hover:text-[#9a6b00]">{listing.title}</span>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                                <p className="text-[11px] font-normal text-slate-500 leading-tight">{listing.brand?.name || '-'} • {listing.model?.name || '-'} • {listing.location || 'Location pending'}</p>
-                                <Link
-                                  href={listingDetailPath}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-[10px] font-semibold text-[#9a6b00] hover:underline underline-offset-2"
-                                >
-                                  Open listing →
-                                </Link>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5 font-medium text-slate-800 align-middle">{listing.partner}</td>
-                            <td className="px-4 py-2.5 align-middle">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-                                  listing.isPrime || listing.partnerType === 'Prime Customer'
-                                    ? 'bg-amber-100 text-amber-950 border-amber-300 font-semibold shadow-2xs'
-                                    : listing.partnerType === 'Authorized Place'
-                                    ? 'bg-sky-50 text-sky-800 border-sky-200'
-                                    : listing.partnerType === 'Broker'
-                                    ? 'bg-purple-50 text-purple-800 border-purple-200'
-                                    : 'bg-slate-100 text-slate-700 border-slate-200'
-                                }`}
-                              >
-                                {listing.partnerType || 'Authorized Place'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5 align-middle">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/70">{label(listing.status)}</span>
-                            </td>
-                            <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{listing.manufacturingYear}</td>
-                            <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{formatNumber(listing.views)}</td>
-                            <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{listing.leads}</td>
-                            <td className="px-4 py-2.5 font-semibold text-slate-900 align-middle">{formatCurrency(listing.price)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {filteredTopListings.length === 0 && <p className="px-3 py-8 text-center text-xs font-normal text-slate-500">No matching listings found.</p>}
-                </div>
-
-                {/* Listing Performance Pagination Footer */}
-                {totalListingItems > 0 && (
-                  <div className="flex flex-col gap-3 border-x border-b border-slate-200 bg-white px-4 py-2.5 rounded-b-xl sm:flex-row sm:items-center sm:justify-between text-xs text-slate-600">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span>Showing <strong className="font-semibold text-slate-900">{listingStartItem}</strong> to <strong className="font-semibold text-slate-900">{listingEndItem}</strong> of <strong className="font-semibold text-slate-900">{totalListingItems}</strong> listings</span>
-                      <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                        <span className="text-slate-500">Rows per page:</span>
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setOpenListingPageSizeDropdown(!openListingPageSizeDropdown)}
-                            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
-                          >
-                            <span>{listingPageSize}</span>
-                            <ChevronDown className="h-3 w-3 text-slate-400" />
-                          </button>
-                          {openListingPageSizeDropdown && (
-                            <div className="absolute bottom-full left-0 z-20 mb-1 w-16 rounded-lg border border-slate-200 bg-white p-1 shadow-md">
-                              {[5, 10, 25, 50].map((size) => (
-                                <button
-                                  key={size}
-                                  type="button"
-                                  onClick={() => {
-                                    setListingPageSize(size);
-                                    setListingPage(1);
-                                    setOpenListingPageSizeDropdown(false);
-                                  }}
-                                  className={`block w-full rounded-md px-2 py-1 text-left text-xs ${listingPageSize === size ? 'bg-[#f7b500]/20 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-50'}`}
-                                >
-                                  {size}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setListingPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={currentListingPage === 1}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" /> Prev
-                      </button>
-                      <div className="flex items-center gap-1">
-                        {listingPaginationItems.map((item, idx) =>
-                          typeof item === 'number' ? (
-                            <button
-                              key={item}
-                              type="button"
-                              onClick={() => setListingPage(item)}
-                              className={`h-7 w-7 rounded-lg text-xs font-bold transition-colors ${currentListingPage === item ? 'bg-[#f7b500] text-slate-950 shadow-2xs' : 'text-slate-600 hover:bg-slate-100'}`}
-                            >
-                              {item}
-                            </button>
-                          ) : (
-                            <span key={`el-l-${idx}`} className="px-1 text-xs font-bold text-slate-400">...</span>
-                          )
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setListingPage((prev) => Math.min(prev + 1, totalListingPages))}
-                        disabled={currentListingPage === totalListingPages}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Next <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6">
+            <SectionHeading icon={<ShoppingBag className="h-4 w-4" />} eyebrow="Listing intelligence" title="Listing performance" detail={<>Active machine listings ranked by engagement. <Link href={listingPath} className="font-bold text-[#9a6b00] hover:underline underline-offset-2">Open listings →</Link></>} action={<div className="flex items-center gap-2"><div className="relative"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" /><input type="text" value={listingSearch} onChange={(e) => { setListingSearch(e.target.value); setListingPage(1); }} placeholder="Search listings…" className="w-44 rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-7 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all sm:w-52" />{listingSearch && <button type="button" onClick={() => { setListingSearch(''); setListingPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>}</div><button type="button" onClick={() => setIsListingCollapsed(!isListingCollapsed)} className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">{isListingCollapsed ? 'Show Table' : 'Hide Table'}</button></div>} />
+            {!isListingCollapsed && (<><div className="overflow-x-auto rounded-t-2xl border border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><table className="w-full min-w-[960px] text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500"><tr>{['Listing', 'Partner', 'Type', 'Status', 'Year', 'Views', 'Leads', 'Price', 'Analytics'].map((h) => <th key={h} className="px-4 py-3 font-bold text-slate-600">{h}</th>)}</tr></thead><tbody className="divide-y divide-slate-100 bg-white text-slate-700">{paginatedTopListings.length ? paginatedTopListings.map((listing) => { const locationCity = (listing.location || '').split(', ')[0] || undefined; const analyticsDetailPath = generateAdminListingDetailPath(analyticsBasePath, { id: listing.id, title: listing.title, manufacturingYear: listing.manufacturingYear, locationCity }); const listingDetailPath = generateAdminListingDetailPath(listingPath, { id: listing.id, title: listing.title, manufacturingYear: listing.manufacturingYear, locationCity }); return (<tr key={listing.id} className="group hover:bg-amber-50/40 cursor-pointer transition-colors" onClick={() => router.push(analyticsDetailPath)}><td className="px-4 py-3"><span className="block max-w-xs truncate font-bold text-slate-900 group-hover:text-[#9a6b00] transition-colors">{listing.title}</span><div className="mt-0.5 flex flex-wrap items-center gap-2"><span className="text-[11px] text-slate-500">{listing.brand?.name || '—'} · {listing.model?.name || '—'} · {listing.location || 'Location pending'}</span><Link href={listingDetailPath} onClick={(e) => e.stopPropagation()} className="text-[10px] font-bold text-[#9a6b00] hover:underline underline-offset-2">Open →</Link></div></td><td className="px-4 py-3 font-medium text-slate-800 align-middle">{listing.partner}</td><td className="px-4 py-3 align-middle"><span className={'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ' + (listing.isPrime || listing.partnerType === 'Prime Customer' ? 'bg-amber-100 text-amber-950 border-amber-300' : listing.partnerType === 'Broker' ? 'bg-purple-50 text-purple-800 border-purple-200' : 'bg-sky-50 text-sky-800 border-sky-200')}>{listing.partnerType || 'Authorized Place'}</span></td><td className="px-4 py-3 align-middle"><StatusBadge value={listing.status} /></td><td className="px-4 py-3 text-slate-600 align-middle">{listing.manufacturingYear}</td><td className="px-4 py-3 font-medium text-blue-700 align-middle">{fmt(listing.views)}</td><td className="px-4 py-3 font-medium text-violet-700 align-middle">{fmt(listing.leads)}</td><td className="px-4 py-3 font-black text-slate-900 align-middle">{fmtCurrency(listing.price)}</td><td className="px-4 py-3 align-middle"><Link href={analyticsDetailPath} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1 text-[11px] font-bold text-[#9a6b00] transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400"><BarChart3 className="h-3 w-3" /> Details</Link></td></tr>); }) : <EmptyRow cols={9} />}</tbody></table></div>{totalListingItems > 0 && <PaginationFooter startItem={totalListingItems === 0 ? 0 : (currentListingPage - 1) * listingPageSize + 1} endItem={Math.min(currentListingPage * listingPageSize, totalListingItems)} total={totalListingItems} page={currentListingPage} totalPages={totalListingPages} pageSize={listingPageSize} pageSizeOpen={openListingPageSizeDropdown} paginationItems={listingPaginationItems} unit="listings" onPageChange={(p) => setListingPage(p)} onPageSizeChange={(s) => { setListingPageSize(s); setListingPage(1); }} onPageSizeOpenChange={setOpenListingPageSizeDropdown} />}</>)}
           </section>
         </>
       )}
-    </div>
+    </main>
   );
 }

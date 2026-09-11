@@ -481,6 +481,9 @@ export default function AdminLayout({
   };
   const getPageTitle = () => {
     if (pageTitleMap[pathname]) return pageTitleMap[pathname];
+    if (pathname.startsWith('/superadmin/analytics/') || pathname.startsWith('/admin/analytics/') || pathname.startsWith('/employee/analytics/')) {
+      return t('admin.analyticsDetail', 'Listing Analytics');
+    }
     if (pathname.startsWith('/superadmin/enquiries/') || pathname.startsWith('/employee/enquiries/')) return t('admin.enquiryDetails');
     if (pathname.startsWith('/superadmin/partners/') || pathname.startsWith('/employee/partners/')) {
       if (pathname.endsWith('/edit')) return t('admin.editPartnerProfile');

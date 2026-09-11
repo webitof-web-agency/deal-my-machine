@@ -3,6 +3,11 @@ import { API_BASE_URL } from './api';
 const ANONYMOUS_ID_KEY = 'jcb_analytics_anonymous_id';
 const SESSION_ID_KEY = 'jcb_analytics_session_id';
 
+export type PublicAnalyticsIdentity = {
+  anonymousId: string;
+  sessionId: string;
+};
+
 const getOrCreateId = (storage: Storage, key: string) => {
   const existing = storage.getItem(key);
   if (existing) return existing;
@@ -27,14 +32,29 @@ export type PublicAnalyticsEvent = {
   source?: string;
 };
 
+export const getPublicAnalyticsIdentity = (): PublicAnalyticsIdentity | null => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    return {
+      anonymousId: getOrCreateId(window.localStorage, ANONYMOUS_ID_KEY),
+      sessionId: getOrCreateId(window.sessionStorage, SESSION_ID_KEY),
+    };
+  } catch {
+    return null;
+  }
+};
+
 export const trackPublicAnalyticsEvent = (event: PublicAnalyticsEvent) => {
   if (typeof window === 'undefined') return;
 
   try {
+    const identity = getPublicAnalyticsIdentity();
+    if (!identity) return;
+
     const payload = {
       ...event,
-      anonymousId: getOrCreateId(window.localStorage, ANONYMOUS_ID_KEY),
-      sessionId: getOrCreateId(window.sessionStorage, SESSION_ID_KEY),
+      ...identity,
     };
 
     void fetch(`${API_BASE_URL}/analytics/events`, {
@@ -47,4 +67,3 @@ export const trackPublicAnalyticsEvent = (event: PublicAnalyticsEvent) => {
     // Analytics must never block or surface errors in marketplace browsing.
   }
 };
-

@@ -41,6 +41,7 @@ import { useAuthStore } from '@/store/authStore';
 import CustomerPrimePaymentModal, { type CustomerPrimeFeature } from '@/components/payments/CustomerPrimePaymentModal';
 import ListingBuyNowModal from '@/components/payments/ListingBuyNowModal';
 import { createPublicContactEnquiry } from '@/lib/enquiries';
+import { getPublicAnalyticsIdentity } from '@/lib/analytics';
 import { useToastStore } from '@/store/toastStore';
 import { API_BASE_URL } from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -270,8 +271,11 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
     // Only increment view once per load
     const incrementView = async () => {
       try {
+        const identity = getPublicAnalyticsIdentity();
         const response = await fetch(`${API_BASE_URL}/master/public-listings/${listing.id}/view`, {
           method: 'POST',
+          headers: identity ? { 'Content-Type': 'application/json' } : undefined,
+          body: identity ? JSON.stringify(identity) : undefined,
         });
         const data = await response.json();
         if (data.success && data.data?.views) {

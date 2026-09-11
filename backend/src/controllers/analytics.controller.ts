@@ -416,6 +416,27 @@ const safeEventCount = async (where: Record<string, unknown>) => {
   }
 };
 
+const safeUniqueListingViewCount = async (listingId: string) => {
+  try {
+    const result = await prismaAny.$queryRaw<Array<{ count: bigint | number }>>`
+      SELECT COUNT(DISTINCT COALESCE(
+        NULLIF("actorUserId", ''),
+        NULLIF("anonymousId", ''),
+        NULLIF("sessionId", ''),
+        NULLIF("dedupeKey", '')
+      )) AS count
+      FROM "AnalyticsEvent"
+      WHERE "eventType" = 'LISTING_VIEW'
+        AND "listingId" = ${listingId}
+    `;
+
+    return Number(result[0]?.count || 0);
+  } catch (error) {
+    console.error('Unique listing view aggregate unavailable:', error);
+    return 0;
+  }
+};
+
 const safeEventFirstDate = async () => {
   try {
     const first = await prismaAny.analyticsEvent.findFirst({
@@ -883,19 +904,63 @@ export const getAnalyticsListingDetail = async (req: Request, res: Response, nex
         title: true,
         status: true,
         price: true,
+        isNegotiable: true,
         views: true,
         manufacturingYear: true,
+        operatingHours: true,
+        address: true,
+        condition: true,
+        description: true,
+        additionalDescription: true,
+        grossPower: true,
+        contactMode: true,
         locationCity: true,
         locationState: true,
         createdAt: true,
+        updatedAt: true,
+        soldAt: true,
+        category: { select: { id: true, name: true } },
         brand: { select: { name: true } },
         model: { select: { name: true } },
+        partner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            partnerProfile: {
+              select: {
+                businessName: true,
+                ownerName: true,
+                partnerType: true,
+                contactPreference: true,
+              },
+            },
+          },
+        },
+        media: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, url: true, type: true, slot: true, isFeatured: true },
+        },
         leads: {
           orderBy: { createdAt: 'desc' },
           take: 100,
           select: { id: true, status: true, enquiryType: true, createdAt: true, updatedAt: true },
         },
         saleRecord: { select: { soldPrice: true, soldAt: true, invoiceNo: true } },
+        paymentSubmissions: {
+          orderBy: { submittedAt: 'desc' },
+          take: 100,
+          select: {
+            id: true,
+            method: true,
+            status: true,
+            amount: true,
+            transactionRef: true,
+            submittedAt: true,
+            reviewedAt: true,
+          },
+        },
       },
     });
 
@@ -903,7 +968,41 @@ export const getAnalyticsListingDetail = async (req: Request, res: Response, nex
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
-    const trackedViews = await safeEventCount({ eventType: 'LISTING_VIEW', listingId });
+    const [trackedViews, uniqueViews, trackedViewEvents, leadStatusGroups] = await Promise.all([
+      safeEventCount({ eventType: 'LISTING_VIEW', listingId }),
+      safeUniqueListingViewCount(listingId),
+      prismaAny.analyticsEvent.findMany({
+        where: { eventType: 'LISTING_VIEW', listingId },
+        orderBy: { occurredAt: 'asc' },
+        take: 366,
+        select: { occurredAt: true },
+      }),
+      prismaAny.lead.groupBy({
+        by: ['status'],
+        where: { listingId },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const trackedViewTimeline = trackedViewEvents.reduce((timeline: Record<string, number>, event: { occurredAt: Date }) => {
+      const day = new Date(event.occurredAt).toISOString().slice(0, 10);
+      timeline[day] = (timeline[day] || 0) + 1;
+      return timeline;
+    }, {});
+
+    const leadStatusBreakdown = leadStatusGroups
+      .map((item: { status: string; _count?: { _all?: number } }) => ({
+        status: item.status,
+        count: item._count?._all || 0,
+      }))
+      .sort((left: { count: number }, right: { count: number }) => right.count - left.count);
+
+    const totalLeadCount = leadStatusBreakdown.reduce((sum: number, item: { count: number }) => sum + item.count, 0);
+    const activeLeadCount = leadStatusBreakdown
+      .filter((item: { status: string }) => ['NEW', 'CONTACTED', 'INTERESTED', 'INSPECTION_SCHEDULED'].includes(item.status))
+      .reduce((sum: number, item: { count: number }) => sum + item.count, 0);
+    const wonLeadCount = leadStatusBreakdown.find((item: { status: string }) => item.status === 'WON')?.count || 0;
+
     return res.json({
       listing: {
         ...listing,
@@ -915,9 +1014,23 @@ export const getAnalyticsListingDetail = async (req: Request, res: Response, nex
           : null,
         leads: listing.leads,
       },
+      leadSummary: {
+        total: totalLeadCount,
+        active: activeLeadCount,
+        won: wonLeadCount,
+        conversionRate: calculateConversionRate(wonLeadCount, totalLeadCount),
+      },
+      leadStatusBreakdown,
+      payments: listing.paymentSubmissions.map((payment: any) => ({
+        ...payment,
+        amount: Number(payment.amount || 0),
+      })),
+      trackedViewTimeline: Object.entries(trackedViewTimeline).map(([date, count]) => ({ date, count })),
       availability: {
-        uniqueViews: 'unavailable-before-durable-event-tracking',
+        uniqueViews,
         historicalImpressions: 'unavailable-from-data',
+        sampledTrackedViewEvents: trackedViewEvents.length,
+        trackedViewTimelineDays: Object.keys(trackedViewTimeline).length,
       },
     });
   } catch (error) {

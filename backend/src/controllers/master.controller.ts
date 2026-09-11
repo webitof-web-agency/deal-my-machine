@@ -1465,6 +1465,12 @@ export const incrementListingView = async (req: Request, res: Response, next: Ne
 
     const userAgent = (req.headers['user-agent'] as string) || '';
     const ip = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || 'unknown';
+    const requestBody = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const anonymousId = typeof requestBody.anonymousId === 'string' ? requestBody.anonymousId.trim().slice(0, 128) : '';
+    const sessionId = typeof requestBody.sessionId === 'string' ? requestBody.sessionId.trim().slice(0, 128) : '';
+    const normalizedIp = ip.split(',')[0]?.trim() || 'unknown';
+    const fallbackVisitorId = `ip:${hashDedupeKey(normalizedIp)}`;
+    const visitorId = anonymousId || sessionId || fallbackVisitorId;
 
     // 1. Bot Protection
     if (isBot(userAgent)) {
@@ -1472,8 +1478,8 @@ export const incrementListingView = async (req: Request, res: Response, next: Ne
       return res.status(200).json({ success: true, data: { views: listing?.views || 0 } });
     }
 
-    // 2. IP / Unique View Tracking (24 hour limit)
-    const cacheKey = `${ip}_${id}`;
+    // 2. Visitor / IP unique view tracking (24 hour limit)
+    const cacheKey = `${visitorId}_${id}`;
     const lastViewed = viewCache.get(cacheKey);
     const now = Date.now();
 
@@ -1512,7 +1518,9 @@ export const incrementListingView = async (req: Request, res: Response, next: Ne
       categoryId: listing.categoryId,
       manufacturingYear: listing.manufacturingYear,
       source: 'public_listing_detail',
-      dedupeKey: hashDedupeKey(`${id}:${ip}:${new Date().toISOString().slice(0, 10)}`),
+      anonymousId: anonymousId || (!sessionId ? fallbackVisitorId : null),
+      sessionId: sessionId || null,
+      dedupeKey: hashDedupeKey(`${id}:${visitorId}:${new Date().toISOString().slice(0, 10)}`),
     });
 
     res.status(200).json({
