@@ -9,6 +9,7 @@ import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect'
 import BrandLoader from '@/components/ui/BrandLoader';
 import { useTranslation } from '@/hooks/useTranslation';
 import { buildPaginationItems } from '@/lib/paginationUtils';
+import { generateAdminListingDetailPath } from '@/lib/routePaths';
 
 type Kpi = { current: number; previous: number; difference: number; percentageChange: number | null; trend: 'up' | 'down' | 'flat' };
 type ModelYearRow = { brand: string; model: string; manufacturingYear: number; inventory: number; views: number; leads: number; wonLeads: number; conversionRate: number; demandPerStock: number | null };
@@ -498,40 +499,56 @@ export default function AnalyticsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
-                      {paginatedTopListings.map((listing) => (
-                        <tr key={listing.id} className="hover:bg-amber-50/30 transition-colors">
-                          <td className="px-4 py-2.5">
-                            <Link href={`${analyticsBasePath}/${listing.id}`} className="font-semibold text-slate-900 hover:text-[#9a6b00] transition-colors truncate block max-w-sm">{listing.title}</Link>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                              <p className="text-[11px] font-normal text-slate-500 leading-tight">{listing.brand?.name || '-'} • {listing.model?.name || '-'} • {listing.location || 'Location pending'}</p>
-                              <Link href={`${listingPath}/${listing.id}`} className="text-[10px] font-semibold text-[#9a6b00] hover:underline underline-offset-2">Open listing →</Link>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5 font-medium text-slate-800 align-middle">{listing.partner}</td>
-                          <td className="px-4 py-2.5 align-middle">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-                                listing.isPrime || listing.partnerType === 'Prime Customer'
-                                  ? 'bg-amber-100 text-amber-950 border-amber-300 font-semibold shadow-2xs'
-                                  : listing.partnerType === 'Authorized Place'
-                                  ? 'bg-sky-50 text-sky-800 border-sky-200'
-                                  : listing.partnerType === 'Broker'
-                                  ? 'bg-purple-50 text-purple-800 border-purple-200'
-                                  : 'bg-slate-100 text-slate-700 border-slate-200'
-                              }`}
-                            >
-                              {listing.partnerType || 'Authorized Place'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 align-middle">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/70">{label(listing.status)}</span>
-                          </td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{listing.manufacturingYear}</td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{formatNumber(listing.views)}</td>
-                          <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{listing.leads}</td>
-                          <td className="px-4 py-2.5 font-semibold text-slate-900 align-middle">{formatCurrency(listing.price)}</td>
-                        </tr>
-                      ))}
+                      {paginatedTopListings.map((listing) => {
+                        const locationParts = (listing.location || '').split(', ');
+                        const locationCity = locationParts[0] || undefined;
+                        const analyticsDetailPath = `${analyticsBasePath}/${listing.id}`;
+                        const listingDetailPath = generateAdminListingDetailPath(listingPath, { id: listing.id, title: listing.title, manufacturingYear: listing.manufacturingYear, locationCity });
+                        return (
+                          <tr
+                            key={listing.id}
+                            className="hover:bg-amber-50/40 cursor-pointer transition-colors"
+                            onClick={() => router.push(analyticsDetailPath)}
+                          >
+                            <td className="px-4 py-2.5">
+                              <span className="font-semibold text-slate-900 truncate block max-w-sm group-hover:text-[#9a6b00]">{listing.title}</span>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                <p className="text-[11px] font-normal text-slate-500 leading-tight">{listing.brand?.name || '-'} • {listing.model?.name || '-'} • {listing.location || 'Location pending'}</p>
+                                <Link
+                                  href={listingDetailPath}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-[10px] font-semibold text-[#9a6b00] hover:underline underline-offset-2"
+                                >
+                                  Open listing →
+                                </Link>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800 align-middle">{listing.partner}</td>
+                            <td className="px-4 py-2.5 align-middle">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+                                  listing.isPrime || listing.partnerType === 'Prime Customer'
+                                    ? 'bg-amber-100 text-amber-950 border-amber-300 font-semibold shadow-2xs'
+                                    : listing.partnerType === 'Authorized Place'
+                                    ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                    : listing.partnerType === 'Broker'
+                                    ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {listing.partnerType || 'Authorized Place'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 align-middle">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/70">{label(listing.status)}</span>
+                            </td>
+                            <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{listing.manufacturingYear}</td>
+                            <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{formatNumber(listing.views)}</td>
+                            <td className="px-4 py-2.5 font-normal text-slate-600 align-middle">{listing.leads}</td>
+                            <td className="px-4 py-2.5 font-semibold text-slate-900 align-middle">{formatCurrency(listing.price)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   {filteredTopListings.length === 0 && <p className="px-3 py-8 text-center text-xs font-normal text-slate-500">No matching listings found.</p>}
