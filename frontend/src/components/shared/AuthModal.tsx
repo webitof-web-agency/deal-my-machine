@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { useAuthStore } from '@/store/authStore';
+import { useToastStore } from '@/store/toastStore';
 import { X, Mail, Lock, User, Eye, EyeOff, Smartphone } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -41,6 +42,7 @@ type MobileOtpConfigResponse = {
 export default function AuthModal() {
   const { t } = useTranslation();
   const { isAuthModalOpen, setAuthModalOpen, setAuth } = useAuthStore();
+  const showToast = useToastStore((state) => state.showToast);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,10 +69,22 @@ export default function AuthModal() {
     !!googleClientId && !googleClientId.startsWith('YOUR_');
   const canRenderGoogleLogin = isGoogleConfigured;
 
-  const completeAuth = useCallback((token: string, user: AuthResponseUser) => {
+  const showLoginSuccessToast = useCallback((userName?: string | null, email?: string | null) => {
+    const displayName = userName?.trim() || email?.split('@')[0] || 'User';
+    showToast({
+      title: `Welcome back, ${displayName}! 👋`,
+      description: `Logged in successfully. Explore active JCB and heavy equipment listings.`,
+      variant: 'success',
+    });
+  }, [showToast]);
+
+  const completeAuth = useCallback((token: string, user: AuthResponseUser, shouldNotify = true) => {
     setAuth(token, user);
     setAuthModalOpen(false);
-  }, [setAuth, setAuthModalOpen]);
+    if (shouldNotify) {
+      showLoginSuccessToast(user.name, user.email);
+    }
+  }, [setAuth, setAuthModalOpen, showLoginSuccessToast]);
 
   const handleGoogleCredential = useCallback(async (credential?: string) => {
     if (!credential) {
@@ -84,7 +98,7 @@ export default function AuthModal() {
     try {
       const response = await api.post('/auth/google', { credential });
       const { token, user } = response.data as { token: string; user: AuthResponseUser };
-      completeAuth(token, user);
+      completeAuth(token, user, true);
     } catch (err: unknown) {
       const errorMessage =
         err && typeof err === 'object' && 'response' in err
@@ -179,7 +193,7 @@ export default function AuthModal() {
       if (isLogin) {
         const response = await api.post('/auth/login', { email, password });
         const { token, user } = response.data as { token: string; user: AuthResponseUser };
-        completeAuth(token, user);
+        completeAuth(token, user, true);
       } else {
         if (password.length < 8) {
           setError(t('auth.passwordLength'));
@@ -254,7 +268,7 @@ export default function AuthModal() {
         otp,
       });
       const { token, user } = response.data as { token: string; user: AuthResponseUser };
-      completeAuth(token, user);
+      completeAuth(token, user, true);
     } catch (err: unknown) {
       const errorMessage =
         err && typeof err === 'object' && 'response' in err

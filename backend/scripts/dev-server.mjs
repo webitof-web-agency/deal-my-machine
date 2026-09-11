@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { request } from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -249,6 +249,17 @@ if (!(await canListen(port))) {
 }
 
 removeStaleSourceArtifacts(sourceDir);
+
+const generateResult = spawnSync('npx', ['prisma', 'generate'], {
+  cwd: rootDir,
+  env: { ...process.env, PORT: port },
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+});
+
+if (generateResult.status !== 0) {
+  process.exit(generateResult.status ?? 1);
+}
 
 const tsxCliPath = resolve(rootDir, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 

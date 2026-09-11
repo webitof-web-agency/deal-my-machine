@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
-import { getAppSettings } from '../utils/appSettings';
+import { detectRazorpayModeFromKeyId, getAppSettings } from '../utils/appSettings';
 import { getSoldListingCutoff } from '../utils/soldListingRetention';
 import {
   getMarketplaceSellerPresentation,
@@ -8,6 +8,7 @@ import {
   getPublicMarketplaceListingWhere,
   isPublicMarketplaceListingVisible,
 } from '../utils/publicListingVisibility';
+import { hashDedupeKey, recordAnalyticsEvent } from '../services/analytics.service';
 
 const prismaAny = prisma as any;
 
@@ -41,6 +42,28 @@ const getPublicListingPrice = (listing: {
 
   return Number.isFinite(basePrice) ? basePrice : 0;
 };
+
+const isBuyNowPaymentConfigured = (settings: Awaited<ReturnType<typeof getAppSettings>>['listingPayment']) =>
+  Boolean(
+    (
+      settings.rtgs.enabled &&
+      settings.rtgs.beneficiaryName &&
+      settings.rtgs.bankName &&
+      settings.rtgs.accountNumber &&
+      settings.rtgs.ifscCode
+    ) ||
+    (
+      settings.razorpay.enabled &&
+      detectRazorpayModeFromKeyId(settings.razorpay.keyId) &&
+      settings.razorpay.keySecret
+    ) ||
+    (
+      settings.phonepe.enabled &&
+      settings.phonepe.clientId &&
+      settings.phonepe.clientSecret &&
+      settings.phonepe.clientVersion
+    ),
+  );
 
 const buildPublicMarketplaceFeedWhere = ({
   status,
@@ -853,6 +876,7 @@ export const getSiteLogo = async (req: Request, res: Response, next: NextFunctio
       success: true,
       data: {
         imageUrl: settings.siteLogo.imageUrl,
+        darkLogoUrl: settings.siteLogo.darkLogoUrl,
         faviconUrl: settings.siteLogo.faviconUrl,
         manifestIconUrl: settings.siteLogo.manifestIconUrl,
         updatedAt: settings.siteLogo.updatedAt,
@@ -1387,6 +1411,7 @@ export const getPublicListingById = async (req: Request, res: Response, next: Ne
         workingHours: listing.partner?.partnerProfile?.workingHours,
       },
       publicContact,
+      buyNowPaymentAvailable: listing.status !== 'SOLD' && isBuyNowPaymentConfigured(settings.listingPayment),
       media: listing.media,
       featuredImage:
         listing.media.find((media: any) => media.type === 'IMAGE' && media.isFeatured)?.url ||
@@ -1433,7 +1458,7 @@ const isBot = (userAgent: string) => {
 
 export const incrementListingView = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || '');
     if (!id) {
       return res.status(400).json({ success: false, error: 'Listing ID is required.' });
     }
@@ -1468,7 +1493,26 @@ export const incrementListingView = async (req: Request, res: Response, next: Ne
           increment: 1,
         },
       },
-      select: { views: true },
+      select: {
+        views: true,
+        partnerId: true,
+        brandId: true,
+        modelId: true,
+        categoryId: true,
+        manufacturingYear: true,
+      },
+    });
+
+    void recordAnalyticsEvent({
+      eventType: 'LISTING_VIEW',
+      listingId: id,
+      partnerId: listing.partnerId,
+      brandId: listing.brandId,
+      modelId: listing.modelId,
+      categoryId: listing.categoryId,
+      manufacturingYear: listing.manufacturingYear,
+      source: 'public_listing_detail',
+      dedupeKey: hashDedupeKey(`${id}:${ip}:${new Date().toISOString().slice(0, 10)}`),
     });
 
     res.status(200).json({
@@ -1480,6 +1524,18 @@ export const incrementListingView = async (req: Request, res: Response, next: Ne
     if ((error as any).code === 'P2025') {
       return res.status(404).json({ success: false, error: 'Listing not found.' });
     }
+    next(error);
+  }
+};
+
+export const getPublicInvoiceSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAppSettings();
+    res.json({
+      invoice: settings.companyInvoice,
+      siteLogo: settings.siteLogo.imageUrl,
+    });
+  } catch (error) {
     next(error);
   }
 };

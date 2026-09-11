@@ -38,6 +38,7 @@ export type MachineListingDetail = {
   isNegotiable: boolean;
   manufacturingYear: number | null;
   operatingHours: number | null;
+  address?: string | null;
   locationCity: string | null;
   locationState: string | null;
   condition: string | null;
@@ -65,6 +66,7 @@ export type MachineListingDetail = {
     routingMode: 'SUPER_ADMIN' | 'SELLER';
     fallbackApplied: boolean;
   };
+  buyNowPaymentAvailable?: boolean;
   media: ListingMedia[];
   featuredImage: string | null;
   mediaCount: number;

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import api from '@/lib/api';
+import BrandLoader from '@/components/ui/BrandLoader';
 import { resolvePartnerId } from '@/lib/routeResolvers';
 import { generateAdminPartnerEditPath } from '@/lib/routePaths';
 import { FileUploadField } from '@/components/upload/FileUploadField';
@@ -1312,11 +1313,7 @@ export default function KycOnboardingClient({ partnerId }: { partnerId?: string 
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-sm text-gray-600 shadow-sm">
-          Loading onboarding workspace...
-        </div>
-      </div>
+      <BrandLoader variant="section" size="md" bg="light" text="Loading onboarding workspace..." />
     );
   }
 

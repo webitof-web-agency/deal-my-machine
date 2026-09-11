@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Package, Calendar, MapPin, ExternalLink, Image as ImageIcon, Edit, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import api, { getAbsoluteMediaUrl } from '@/lib/api';
+import BrandLoader from '@/components/ui/BrandLoader';
 import SellVehicleModal, { type EditableListing } from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
 import { useToastStore } from '@/store/toastStore';
@@ -13,6 +14,7 @@ import { generateMachineSlugPath } from '@/lib/seoUtils';
 import { generateProfileListingDetailPath } from '@/lib/privateRoutePaths';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatListingLocation } from '@/lib/listingLocation';
 
 type ListingItem = {
   id: string;
@@ -28,6 +30,7 @@ type ListingItem = {
   status?: string | null;
   isPubliclyVisible?: boolean;
   manufacturingYear?: number | null;
+  address?: string | null;
   locationCity?: string | null;
   locationState?: string | null;
   price?: string | number | null;
@@ -89,6 +92,7 @@ export default function MyListingsTab() {
   const { t } = useTranslation();
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -106,10 +110,12 @@ export default function MyListingsTab() {
   const fetchListings = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get<{ listings?: ListingItem[] }>('/listings');
       setListings(response.data.listings || []);
     } catch (error) {
       console.error('Failed to fetch listings', error);
+      setError('Unable to load your listings right now.');
     } finally {
       setLoading(false);
     }
@@ -204,7 +210,7 @@ export default function MyListingsTab() {
   if (loading && listings.length === 0) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#FFC107] border-t-transparent" />
+        <BrandLoader size="md" variant="section" bg="light" />
       </div>
     );
   }
@@ -225,7 +231,19 @@ export default function MyListingsTab() {
           </button>
         </div>
 
-        {listings.length === 0 ? (
+        {error ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-6 py-12 text-center">
+            <h3 className="text-lg font-bold text-rose-900">Unable to load listings</h3>
+            <p className="mt-2 max-w-sm text-sm text-rose-700">{error}</p>
+            <button
+              type="button"
+              onClick={() => void fetchListings()}
+              className="mt-5 rounded-lg bg-[#FFC107] px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-yellow-400"
+            >
+              Retry
+            </button>
+          </div>
+        ) : listings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-50">
               <Package className="h-8 w-8 text-gray-400" />
@@ -236,12 +254,18 @@ export default function MyListingsTab() {
             </p>
           </div>
         ) : (
-          <div className="max-h-[65vh] overflow-y-auto pr-2">
+          <div
+            className="max-h-[65vh] overflow-y-auto [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
             {listings.map((listing) => {
               const title = getListingTitle(listing);
               const imageCandidates = getListingImageCandidates(listing);
-              const locationLabel = [listing.locationCity, listing.locationState].filter(Boolean).join(', ');
+              const locationLabel = formatListingLocation(listing, {
+                includeAddress: true,
+                fallback: t('machines.locationNotSpecified'),
+              });
               const isReadOnlySoldListing = isCustomerUser && isSoldListing(listing.status);
 
               return (
@@ -273,7 +297,7 @@ export default function MyListingsTab() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-400" />
-                        <span className="truncate">{locationLabel || t('machines.locationNotSpecified')}</span>
+                        <span className="truncate">{locationLabel}</span>
                       </div>
                     </div>
 

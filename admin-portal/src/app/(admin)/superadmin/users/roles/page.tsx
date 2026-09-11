@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, Plus, ArrowLeft, Trash2, Loader2, MoreVertical, Pencil } from 'lucide-react';
 import axios from 'axios';
 import api from '../../../../../lib/api';
+import BrandLoader from '@/components/ui/BrandLoader';
 import { useAuthStore } from '@/store/authStore';
 import { useHeaderStore } from '@/store/headerStore';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -52,9 +53,84 @@ const PERMISSION_DATA: Record<string, Array<{ groupName: string; permissions: Ar
         { id: 'listings.read', label: 'View All Listings' },
         { id: 'listings.update', label: 'Edit Listing' },
         { id: 'listings.approve', label: 'Approve Listing' },
+        { id: 'listings.verify_payment', label: 'Payment Verification' },
         { id: 'listings.delete', label: 'Delete Listing' },
       ],
     },
+  ],
+  'Recruitment': [
+    {
+      groupName: 'Recruitment Dashboard',
+      permissions: [
+        { id: 'recruitment.dashboard.read', label: 'View Recruitment Dashboard' },
+      ],
+    },
+    {
+      groupName: 'Departments',
+      permissions: [
+        { id: 'recruitment.departments.read', label: 'View Departments' },
+        { id: 'recruitment.departments.create', label: 'Create Departments' },
+        { id: 'recruitment.departments.update', label: 'Edit Departments' },
+        { id: 'recruitment.departments.delete', label: 'Delete Departments' },
+      ],
+    },
+    {
+      groupName: 'Jobs',
+      permissions: [
+        { id: 'recruitment.jobs.read', label: 'View Jobs' },
+        { id: 'recruitment.jobs.create', label: 'Create Jobs' },
+        { id: 'recruitment.jobs.update', label: 'Edit Jobs' },
+        { id: 'recruitment.jobs.delete', label: 'Delete Jobs' },
+        { id: 'recruitment.jobs.duplicate', label: 'Duplicate Jobs' },
+        { id: 'recruitment.jobs.change_status', label: 'Change Job Status' },
+      ],
+    },
+    {
+      groupName: 'Applications',
+      permissions: [
+        { id: 'recruitment.applications.read', label: 'View Applications' },
+        { id: 'recruitment.applications.update_stage', label: 'Change Application Stage' },
+        { id: 'recruitment.applications.assign', label: 'Assign Applications' },
+        { id: 'recruitment.applications.delete', label: 'Delete Applications' },
+        { id: 'recruitment.applications.notes.create', label: 'Add Application Notes' },
+        { id: 'recruitment.applications.notes.update', label: 'Edit Application Notes' },
+        { id: 'recruitment.applications.notes.delete', label: 'Delete Application Notes' },
+        { id: 'recruitment.applications.ratings.create', label: 'Add Candidate Ratings' },
+        { id: 'recruitment.applications.ratings.update', label: 'Edit Candidate Ratings' },
+        { id: 'recruitment.applications.ratings.delete', label: 'Delete Candidate Ratings' },
+      ],
+    },
+
+    {
+      groupName: 'Interviews',
+      permissions: [
+        { id: 'recruitment.interviews.read', label: 'View Interviews' },
+        { id: 'recruitment.interviews.create', label: 'Schedule Interviews' },
+        { id: 'recruitment.interviews.update', label: 'Edit Interview Details' },
+        { id: 'recruitment.interviews.delete', label: 'Delete Interviews' },
+        { id: 'recruitment.interviews.scorecard', label: 'Manage Interview Scorecards' },
+      ],
+    },
+    {
+      groupName: 'Offers',
+      permissions: [
+        { id: 'recruitment.offers.read', label: 'View Offers' },
+        { id: 'recruitment.offers.create', label: 'Create Offers' },
+        { id: 'recruitment.offers.update', label: 'Edit Offers' },
+        { id: 'recruitment.offers.delete', label: 'Delete Offers' },
+        { id: 'recruitment.offers.change_status', label: 'Change Offer Status' },
+      ],
+    },
+    {
+      groupName: 'Pipeline Stages',
+      permissions: [
+        { id: 'recruitment.pipeline.read', label: 'View Pipeline Stages' },
+        { id: 'recruitment.pipeline.create', label: 'Create Pipeline Stages' },
+        { id: 'recruitment.pipeline.update', label: 'Edit Pipeline Stages' },
+        { id: 'recruitment.pipeline.delete', label: 'Delete Pipeline Stages' },
+      ],
+    },
+
   ],
   'Partners': [
     {
@@ -149,6 +225,14 @@ const PERMISSION_DATA: Record<string, Array<{ groupName: string; permissions: Ar
         { id: 'dashboard.view', label: 'View Dashboard Metrics' },
       ],
     }
+  ],
+  'Analytics': [
+    {
+      groupName: 'Analytics',
+      permissions: [
+        { id: 'analytics.read', label: 'View Advanced Analytics' },
+      ],
+    },
   ],
 };
 
@@ -448,11 +532,17 @@ export default function RolesPage() {
                                   className="h-4 w-4 rounded border-gray-300 text-[#FFC107] focus:ring-[#FFC107]"
                                 />
                               </div>
-                              <div>
-                                <div className={`text-sm font-medium ${selectedPerms.has(perm.id) ? 'text-gray-900' : 'text-gray-700'}`}>
+                              <div className="min-w-0 flex-1">
+                                <div 
+                                  className={`truncate text-sm font-medium ${selectedPerms.has(perm.id) ? 'text-gray-900' : 'text-gray-700'}`}
+                                  title={perm.label}
+                                >
                                   {perm.label}
                                 </div>
-                                <div className="mt-1 text-xs text-gray-400 font-mono">
+                                <div 
+                                  className="mt-1 truncate text-xs text-gray-400 font-mono"
+                                  title={perm.id}
+                                >
                                   {perm.id}
                                 </div>
                               </div>
@@ -541,8 +631,7 @@ export default function RolesPage() {
               {loading ? (
                 <tr>
                   <td colSpan={5} className="p-6 sm:p-8 text-center text-gray-500">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin mb-2" />
-                    {t('roleManagement.loadingRoles')}
+                    <BrandLoader variant="inline" size="sm" bg="light" text={t('roleManagement.loadingRoles')} />
                   </td>
                 </tr>
               ) : roles.length === 0 ? (

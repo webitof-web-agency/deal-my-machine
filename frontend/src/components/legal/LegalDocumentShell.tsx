@@ -6,7 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 
 type LegalDocumentShellProps = {
-  titleKey: 'legalPages.privacyPolicy' | 'legalPages.termsAndConditions' | 'legalPages.disclaimer';
+  titleKey: 'legalPages.privacyPolicy' | 'legalPages.termsAndConditions' | 'legalPages.disclaimer' | 'legalPages.refundAndReturnPolicy';
   children: ReactNode;
 };
 

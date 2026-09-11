@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, ChevronDown, LogOut, Package, User, Menu, X, Home, Truck, PlusCircle, CheckCircle2, Store } from 'lucide-react';
+import { Bell, ChevronDown, LogOut, Package, User, Menu, X, Home, Truck, PlusCircle, CheckCircle2, Store, Briefcase } from 'lucide-react';
 import SellVehicleModal from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
@@ -267,7 +267,7 @@ export default function Navbar() {
         }`}
       >
         <div className="flex flex-col">
-          <div className="flex w-full items-center justify-between border-b border-white/10 px-3 sm:px-4 md:px-6 py-3 md:py-4 relative">
+          <div className="flex w-full items-center justify-between border-b border-white/10 px-3 sm:px-4 md:px-6 py-2 md:py-2.5 relative">
             <div className="flex items-center">
               <button
                 className="mr-2 sm:mr-3 xl:hidden text-gray-300 hover:text-white transition-colors"
@@ -295,6 +295,12 @@ export default function Navbar() {
               <Link href="/sold-vehicles" className="transition-colors hover:text-white">
                 {t('navbar.soldVehicles')}
               </Link>
+              <Link
+                href="/jobs"
+                className={`transition-colors hover:text-white ${pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'text-[#FFC107] font-bold' : ''}`}
+              >
+                Careers
+              </Link>
             </nav>
 
             <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
@@ -316,43 +322,52 @@ export default function Navbar() {
                 </button>
 
                 {isDropdownOpen ? (
-                  <div className="fixed top-[60px] right-2 left-2 sm:absolute sm:top-auto sm:right-0 sm:left-auto z-50 mt-0 sm:mt-3 sm:w-80 overflow-hidden rounded-lg border border-gray-100 bg-white text-gray-800 shadow-xl">
-                    <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
-                      <h3 className="text-sm font-bold text-gray-900">{t('common.notifications')}</h3>
+                  <div className="fixed top-[52px] right-2 left-2 sm:absolute sm:top-auto sm:right-0 sm:left-auto z-50 mt-0 sm:mt-3 sm:w-88 overflow-hidden rounded-2xl border border-gray-100/90 bg-white text-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-200 ease-out">
+                    <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/80 px-4 py-3.5 backdrop-blur-sm">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-extrabold text-gray-900">{t('common.notifications')}</h3>
+                        {unreadCount > 0 && (
+                          <span className="rounded-full bg-[#FFC107] px-2 py-0.5 text-[10px] font-bold text-black shadow-xs">
+                            {unreadCount} {t('common.new', 'new')}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3">
                         {notifications.length > 0 ? (
                           <button
                             type="button"
                             onClick={() => void markAllNotificationsAsRead()}
-                            className="text-xs font-semibold text-[#9A7600] hover:text-[#7A5F00]"
+                            className="text-[11px] font-bold text-amber-700 hover:text-amber-900 transition-colors"
                           >
                             {t('common.markAllRead')}
                           </button>
                         ) : null}
-                        <Link
-                          href={notifications[0]?.link || '/machines'}
-                          onClick={() => {
-                            if (notifications[0]) {
-                              void markNotificationAsRead(notifications[0].id);
-                            }
-                            setIsDropdownOpen(false);
-                          }}
-                          className="text-xs font-semibold text-blue-600 hover:underline"
+                        <button
+                          type="button"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+                          aria-label="Close notifications"
                         >
-                          {t('common.viewAll')}
-                        </Link>
+                          <X size={16} />
+                        </button>
                       </div>
                     </div>
-                    <div className="max-h-[350px] overflow-y-auto">
+                    <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100">
                       {!isAuthenticated || user?.role !== 'CUSTOMER' ? (
-                        <div className="p-6 text-center text-sm text-gray-500">
-                          <Package className="mx-auto mb-2 h-8 w-8 opacity-20" />
-                          {t('common.loginToViewNotifications')}
+                        <div className="p-8 text-center text-sm text-gray-500">
+                          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+                            <Bell className="h-6 w-6" />
+                          </div>
+                          <p className="font-bold text-gray-900 mb-1">Stay Updated</p>
+                          <p className="text-xs text-gray-500">{t('common.loginToViewNotifications')}</p>
                         </div>
                       ) : notifications.length === 0 ? (
-                        <div className="p-6 text-center text-sm text-gray-500">
-                          <Package className="mx-auto mb-2 h-8 w-8 opacity-20" />
-                          {t('common.noNotifications')}
+                        <div className="p-8 text-center text-sm text-gray-500">
+                          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                            <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                          </div>
+                          <p className="font-bold text-gray-900 mb-1">All Caught Up!</p>
+                          <p className="text-xs text-gray-500">{t('common.noNotifications')}</p>
                         </div>
                       ) : (
                         notifications.map((notification) => (
@@ -363,19 +378,34 @@ export default function Navbar() {
                               void markNotificationAsRead(notification.id);
                               setIsDropdownOpen(false);
                             }}
-                            className="flex items-start gap-3 border-b border-gray-50 bg-[#FFF9E6] p-3 transition-colors hover:bg-gray-50"
+                            className={`flex items-start gap-3.5 p-3.5 transition-all duration-150 ${
+                              !notification.isRead
+                                ? 'bg-amber-50/70 border-l-4 border-amber-500 hover:bg-amber-50'
+                                : 'bg-white hover:bg-gray-50/80'
+                            }`}
                           >
-                            <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#FFF3CD] text-[#9A7600]">
+                            <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${
+                              !notification.isRead
+                                ? 'bg-amber-100 text-amber-900 border-amber-200'
+                                : 'bg-gray-100 text-gray-500 border-gray-200'
+                            }`}>
                               <Package size={16} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="line-clamp-1 text-xs font-bold text-gray-900">{notification.title}</p>
-                              <p className="mt-0.5 line-clamp-2 text-[11px] text-gray-600">{notification.message}</p>
-                              <div className="mt-1 flex items-center justify-between">
-                                <p className="text-[10px] text-gray-400">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className={`text-xs font-bold truncate ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                                  {notification.title}
+                                </p>
+                                {!notification.isRead && (
+                                  <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500"></span>
+                                )}
+                              </div>
+                              <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-gray-600">{notification.message}</p>
+                              <div className="mt-1.5 flex items-center justify-between">
+                                <p className="text-[10px] font-medium text-gray-400">
                                   {formatDateTime(notification.createdAt, locale)}
                                 </p>
-                                <span className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-0.5">
+                                <span className="text-[10px] font-bold text-amber-700 hover:text-amber-900 flex items-center gap-0.5 transition-colors">
                                   {t('common.viewAll')} &rarr;
                                 </span>
                               </div>
@@ -384,6 +414,17 @@ export default function Navbar() {
                         ))
                       )}
                     </div>
+                    {isAuthenticated && user?.role === 'CUSTOMER' && notifications.length > 0 && (
+                      <div className="border-t border-gray-100 bg-gray-50/90 px-4 py-2.5 text-center">
+                        <Link
+                          href="/machines"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="text-xs font-bold text-amber-700 hover:text-amber-900 transition-colors"
+                        >
+                          Explore All Machines & Inventory &rarr;
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -566,17 +607,6 @@ export default function Navbar() {
             <span>{t('navbar.machines')}</span>
           </Link>
 
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              handleOpenSellVehicle();
-            }}
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-300 transition-colors hover:bg-white/5 hover:text-white text-left"
-          >
-            <PlusCircle size={18} className="text-[#FFC107]" />
-            <span>{t('navbar.sellVehicle')}</span>
-          </button>
-
           <Link
             href="/sold-vehicles"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -586,6 +616,17 @@ export default function Navbar() {
           >
             <CheckCircle2 size={18} className={pathname === '/sold-vehicles' ? 'text-[#FFC107]' : 'text-gray-400'} />
             <span>{t('navbar.soldVehicles')}</span>
+          </Link>
+
+          <Link
+            href="/jobs"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
+              pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'bg-[#FFC107]/15 text-[#FFC107]' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Briefcase size={18} className={pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'text-[#FFC107]' : 'text-gray-400'} />
+            <span>Careers</span>
           </Link>
 
           <Link

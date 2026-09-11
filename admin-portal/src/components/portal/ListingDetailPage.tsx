@@ -29,8 +29,11 @@ import {
   UserCheck,
   ChevronLeft,
   ChevronRight,
+  Camera,
+  Play,
 } from 'lucide-react';
 import api from '@/lib/api';
+import BrandLoader from '@/components/ui/BrandLoader';
 import SafeRemoteImage from '@/components/ui/SafeRemoteImage';
 import {
   getAbsoluteFileUrl,
@@ -48,6 +51,14 @@ import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect'
 import { useHeaderStore } from '@/store/headerStore';
 import { resolveListingId } from '@/lib/routeResolvers';
 import { generateAdminListingDetailPath } from '@/lib/routePaths';
+import { YEAR_SELECT_OPTIONS } from '@/lib/listingDateOptions';
+import {
+  isValidDigitsOnlyValue,
+  isValidPinCodeValue,
+  isValidYearValue,
+  sanitizeListingFieldValue,
+  sanitizeListingFormData,
+} from '@/lib/listingFormSanitizers';
 
 type ListingDetail = {
   id: string;
@@ -86,6 +97,7 @@ type ListingDetail = {
   fuelType?: string;
   transmission?: string;
   insuranceExpiry?: string;
+  address?: string;
   pinCode?: string;
   nearbyLandmark?: string;
   dealer?: string;
@@ -116,6 +128,7 @@ type ParsedListingDetails = {
   previousOwners: string;
   fuelType: string;
   transmission: string;
+  address: string;
   district: string;
   pinCode: string;
   nearbyLandmark: string;
@@ -145,7 +158,7 @@ type ListingEditForm = {
   selectedStateId: string;
   locationCity: string;
   selectedCityId: string;
-  district: string;
+  address: string;
   pinCode: string;
   nearbyLandmark: string;
   condition: string;
@@ -170,6 +183,7 @@ const createEmptyParsedListingDetails = (): ParsedListingDetails => ({
   previousOwners: '',
   fuelType: '',
   transmission: '',
+  address: '',
   district: '',
   pinCode: '',
   nearbyLandmark: '',
@@ -201,6 +215,7 @@ const parseListingDescription = (description?: string | null): ParsedListingDeta
       case 'owners': parsed.previousOwners = value; break;
       case 'fuel': parsed.fuelType = value; break;
       case 'transmission': parsed.transmission = value; break;
+      case 'address': parsed.address = value; break;
       case 'district': parsed.district = value; break;
       case 'pin':
       case 'pin code': parsed.pinCode = value; break;
@@ -266,7 +281,6 @@ const buildListingDescription = (form: ListingEditForm) => {
     ['Owners', form.previousOwners],
     ['Fuel', form.fuelType],
     ['Transmission', form.transmission],
-    ['District', form.district],
     ['Pin Code', form.pinCode],
     ['Landmark', form.nearbyLandmark],
     ['Insurance Expiry', form.insuranceExpiry],
@@ -295,6 +309,38 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   }
 
   return fallback;
+};
+
+const getListingSectionValidationError = (section: DetailSection, form: ListingEditForm) => {
+  if (section === 'pricing') {
+    if (!isValidDigitsOnlyValue(form.price)) {
+      return 'Price must contain digits only.';
+    }
+
+    if (!isValidYearValue(form.manufacturingYear)) {
+      return 'Manufacturing year must be a 4-digit year.';
+    }
+  }
+
+  if (section === 'sellerLocation' && !isValidPinCodeValue(form.pinCode)) {
+    return 'Pin code must be exactly 6 digits.';
+  }
+
+  if (section === 'technical') {
+    if (!isValidDigitsOnlyValue(form.operatingHours)) {
+      return 'Operating hours must contain digits only.';
+    }
+
+    if (!isValidYearValue(form.registrationYear)) {
+      return 'Registration year must be a 4-digit year.';
+    }
+
+    if (!isValidDigitsOnlyValue(form.previousOwners)) {
+      return 'Previous owners must contain digits only.';
+    }
+  }
+
+  return '';
 };
 
 const listingStatusToAvailability = (value?: string | null) => {
@@ -336,7 +382,7 @@ const availabilityToListingStatus = (availability: string, currentStatus: string
 const createEditForm = (listing: ListingDetail): ListingEditForm => {
   const parsed = parseListingDescription(listing.description);
 
-  return {
+  return sanitizeListingFormData({
     title: listing.title || '',
     status: listing.status || 'DRAFT',
     availability: listingStatusToAvailability(listing.status),
@@ -353,7 +399,7 @@ const createEditForm = (listing: ListingDetail): ListingEditForm => {
     selectedStateId: '',
     locationCity: listing.locationCity || '',
     selectedCityId: '',
-    district: parsed.district || '',
+    address: listing.address || parsed.address || parsed.district || '',
     pinCode: parsed.pinCode || '',
     nearbyLandmark: parsed.nearbyLandmark || '',
     condition: listing.condition || '',
@@ -361,13 +407,13 @@ const createEditForm = (listing: ListingDetail): ListingEditForm => {
     operatingHours: listing.operatingHours ? String(listing.operatingHours) : '',
     fuelType: parsed.fuelType || '',
     transmission: parsed.transmission || '',
-    grossPower: listing.grossPower || '',
+    grossPower: (listing.grossPower || '').replace(/\s*(hp|HP|kw|kW|kWh|w|W).*$/i, '').trim(),
     chassisOrSerialNo: parsed.chassisOrSerialNo || '',
     registrationNo: parsed.registrationNo || '',
     registrationYear: parsed.registrationYear || '',
     insuranceExpiry: parsed.insuranceExpiry || '',
     previousOwners: parsed.previousOwners || '',
-  };
+  });
 };
 
 const toComparableValue = (value: unknown) => String(value ?? '').trim();
@@ -377,7 +423,7 @@ const sectionHasChanges = (section: DetailSection, current: ListingEditForm, bas
     header: ['title', 'availability'],
     overview: ['overview', 'additionalDescription'],
     pricing: ['price', 'isNegotiable', 'categoryId', 'categoryName', 'brandName', 'modelName', 'manufacturingYear'],
-    sellerLocation: ['locationState', 'locationCity', 'district', 'pinCode', 'nearbyLandmark', 'condition'],
+    sellerLocation: ['locationState', 'locationCity', 'address', 'pinCode', 'nearbyLandmark', 'condition'],
     technical: [
       'variant',
       'operatingHours',
@@ -427,6 +473,14 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollThumbnails = (direction: 'left' | 'right') => {
+    if (thumbnailStripRef.current) {
+      const scrollAmount = direction === 'left' ? -220 : 220;
+      thumbnailStripRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
   const isEmployee = currentUserRole === 'EMPLOYEE';
@@ -624,7 +678,14 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
   );
 
   const updateForm = useCallback(<K extends keyof ListingEditForm>(field: K, value: ListingEditForm[K]) => {
-    setForm((current) => (current ? { ...current, [field]: value } : current));
+    setForm((current) =>
+      current
+        ? {
+            ...current,
+            [field]: typeof value === 'string' ? sanitizeListingFieldValue(field, value) : value,
+          }
+        : current
+    );
   }, []);
 
   const markMediaUnavailable = useCallback((mediaId: string) => {
@@ -676,7 +737,7 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
         next.selectedStateId = baseForm.selectedStateId;
         next.locationCity = baseForm.locationCity;
         next.selectedCityId = baseForm.selectedCityId;
-        next.district = baseForm.district;
+        next.address = baseForm.address;
         next.pinCode = baseForm.pinCode;
         next.nearbyLandmark = baseForm.nearbyLandmark;
         next.condition = baseForm.condition;
@@ -714,38 +775,50 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
       return;
     }
 
+    const sanitizedForm = sanitizeListingFormData(form);
+    const validationError = getListingSectionValidationError(section, sanitizedForm);
+
+    if (validationError) {
+      setError(validationError);
+      setForm(sanitizedForm);
+      return;
+    }
+
+    setForm(sanitizedForm);
+
     const payload: Record<string, unknown> = {};
 
     if (section === 'header') {
-      payload.title = form.title.trim();
-      payload.status = availabilityToListingStatus(form.availability, listing.status);
+      payload.title = sanitizedForm.title.trim();
+      payload.status = availabilityToListingStatus(sanitizedForm.availability, listing.status);
     }
 
     if (section === 'overview') {
-      payload.description = buildListingDescription(form);
-      payload.additionalDescription = form.additionalDescription.trim();
+      payload.description = buildListingDescription(sanitizedForm);
+      payload.additionalDescription = sanitizedForm.additionalDescription.trim();
     }
 
     if (section === 'pricing') {
-      payload.price = form.price.trim();
-      payload.isNegotiable = form.isNegotiable;
-      payload.categoryId = form.categoryId;
-      payload.brandName = form.brandName.trim();
-      payload.modelName = form.modelName.trim();
-      payload.manufacturingYear = form.manufacturingYear.trim();
+      payload.price = sanitizedForm.price.trim();
+      payload.isNegotiable = sanitizedForm.isNegotiable;
+      payload.categoryId = sanitizedForm.categoryId;
+      payload.brandName = sanitizedForm.brandName.trim();
+      payload.modelName = sanitizedForm.modelName.trim();
+      payload.manufacturingYear = sanitizedForm.manufacturingYear.trim();
     }
 
     if (section === 'sellerLocation') {
-      payload.locationState = form.locationState.trim();
-      payload.locationCity = form.locationCity.trim();
-      payload.condition = form.condition.trim();
-      payload.description = buildListingDescription(form);
+      payload.locationState = sanitizedForm.locationState.trim();
+      payload.locationCity = sanitizedForm.locationCity.trim();
+      payload.address = sanitizedForm.address.trim();
+      payload.condition = sanitizedForm.condition.trim();
+      payload.description = buildListingDescription(sanitizedForm);
     }
 
     if (section === 'technical') {
-      payload.operatingHours = form.operatingHours.trim();
-      payload.grossPower = form.grossPower.trim();
-      payload.description = buildListingDescription(form);
+      payload.operatingHours = sanitizedForm.operatingHours.trim();
+      payload.grossPower = sanitizedForm.grossPower.trim();
+      payload.description = buildListingDescription(sanitizedForm);
     }
 
     try {
@@ -942,10 +1015,7 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#FFC107] border-t-transparent"></div>
-        <p className="mt-4 text-sm font-medium text-gray-500">{t('listingDetails.loadingVehicleDetails')}</p>
-      </div>
+      <BrandLoader variant="section" size="md" bg="light" text={t('listingDetails.loadingVehicleDetails')} />
     );
   }
 
@@ -1100,48 +1170,113 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
                       }
                     />
                   )}
+
+                  {availableMedia.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMediaIndex((prev) => (prev > 0 ? prev - 1 : availableMedia.length - 1));
+                        }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-xs transition-all hover:bg-black/80 hover:scale-110"
+                        aria-label="Previous media"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMediaIndex((prev) => (prev < availableMedia.length - 1 ? prev + 1 : 0));
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-xs transition-all hover:bg-black/80 hover:scale-110"
+                        aria-label="Next media"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </>
+                  )}
+
+                  {availableMedia.length > 0 && (
+                    <div className="absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-gray-800 shadow-sm backdrop-blur-sm pointer-events-none z-10">
+                      <Camera className="h-3.5 w-3.5" />
+                      <span>{displayedActiveMediaIndex + 1} / {availableMedia.length}</span>
+                    </div>
+                  )}
+
                   {activeMedia?.isFeatured ? (
-                    <div className="absolute left-4 top-4 rounded-full bg-[#FFC107] px-3 py-1 text-xs font-bold text-black shadow">{t('listingDetails.coverImage')}</div>
+                    <div className="absolute left-4 top-4 rounded-full bg-[#FFC107] px-3 py-1 text-xs font-bold text-black shadow z-10">{t('listingDetails.coverImage')}</div>
                   ) : null}
                 </div>
 
-                <div 
-                  className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden w-full"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  {availableMedia.map((mediaItem, index) => (
+                <div className="relative border-t border-gray-100 p-2 sm:p-3">
+                  {availableMedia.length > 3 && (
                     <button
-                      key={mediaItem.id}
                       type="button"
-                      onClick={() => setActiveMediaIndex(index)}
-                      className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                        index === displayedActiveMediaIndex ? 'border-[#FFC107] ring-2 ring-[#FFC107]/20' : 'border-transparent hover:border-gray-300'
-                      }`}
+                      onClick={() => scrollThumbnails('left')}
+                      className="absolute left-1 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-700 shadow-md border border-gray-200 transition-all hover:bg-amber-50 hover:text-black hover:border-amber-300"
+                      aria-label="Scroll thumbnails left"
                     >
-                      {mediaItem.type === 'VIDEO' ? (
-                        <div className="relative flex h-full w-full items-center justify-center bg-gray-900 text-white">
-                          <video
-                            src={getAbsoluteFileUrl(mediaItem.url)}
-                            className="absolute inset-0 h-full w-full object-cover opacity-50"
-                            onError={() => markMediaUnavailable(mediaItem.id)}
-                          />
-                          <AlertCircle className="relative z-10 h-6 w-6" />
-                        </div>
-                      ) : (
-                        <SafeRemoteImage
-                          src={getAbsoluteFileUrl(mediaItem.url)}
-                          alt={t('listingDetails.thumbnailAlt')}
-                          className="h-full w-full object-cover"
-                          onError={() => markMediaUnavailable(mediaItem.id)}
-                          fallback={
-                            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
-                              <ImageIcon className="h-5 w-5" />
-                            </div>
-                          }
-                        />
-                      )}
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
-                  ))}
+                  )}
+
+                  <div 
+                    ref={thumbnailStripRef}
+                    className="flex overflow-x-auto gap-2 sm:gap-3 snap-x [&::-webkit-scrollbar]:hidden w-full scroll-smooth px-7"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {availableMedia.map((mediaItem, index) => (
+                      <button
+                        key={mediaItem.id}
+                        type="button"
+                        onClick={() => setActiveMediaIndex(index)}
+                        className={`relative aspect-[4/3] w-[80px] sm:h-20 sm:w-32 shrink-0 overflow-hidden rounded-lg border-2 transition-all snap-center ${
+                          index === displayedActiveMediaIndex
+                            ? 'border-[#FFC107] ring-2 ring-[#FFC107]/20 scale-[0.98]'
+                            : 'border-transparent hover:border-gray-300 opacity-90 hover:opacity-100'
+                        }`}
+                      >
+                        {mediaItem.type === 'VIDEO' ? (
+                          <div className="relative flex h-full w-full items-center justify-center bg-gray-900 text-white group">
+                            <video
+                              src={getAbsoluteFileUrl(mediaItem.url)}
+                              className="absolute inset-0 h-full w-full object-cover opacity-60"
+                              onError={() => markMediaUnavailable(mediaItem.id)}
+                            />
+                            <div className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white shadow-md">
+                              <Play className="h-3.5 w-3.5 fill-white ml-0.5" />
+                            </div>
+                          </div>
+                        ) : (
+                          <SafeRemoteImage
+                            src={getAbsoluteFileUrl(mediaItem.url)}
+                            alt={t('listingDetails.thumbnailAlt')}
+                            className="h-full w-full object-cover"
+                            onError={() => markMediaUnavailable(mediaItem.id)}
+                            fallback={
+                              <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
+                                <ImageIcon className="h-5 w-5" />
+                              </div>
+                            }
+                          />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {availableMedia.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => scrollThumbnails('right')}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-700 shadow-md border border-gray-200 transition-all hover:bg-amber-50 hover:text-black hover:border-amber-300"
+                      aria-label="Scroll thumbnails right"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1365,7 +1500,14 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
 
               <Field label={t('listingDetails.year')}>
                 {isEditing ? (
-                  <input value={form.manufacturingYear} onChange={(event) => updateForm('manufacturingYear', event.target.value)} className={inputClassName} />
+                  <SearchableSelect
+                    options={YEAR_SELECT_OPTIONS}
+                    value={form.manufacturingYear}
+                    displayValue={form.manufacturingYear}
+                    onChange={(option) => updateForm('manufacturingYear', String(option.id))}
+                    placeholder={t('listingDetails.selectManufacturingYear', 'Select year')}
+                    searchable={false}
+                  />
                 ) : (
                   <div className="font-semibold text-gray-900">{listing.manufacturingYear || t('listingDetails.na')}</div>
                 )}
@@ -1443,8 +1585,8 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
                             disabled={!effectiveSelectedStateId}
                           />
                         </Field>
-                        <Field label={t('listingDetails.district')}>
-                          <input value={form.district} onChange={(event) => updateForm('district', event.target.value)} className={inputClassName} />
+                        <Field label={t('listingDetails.address', 'Address')}>
+                          <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} className={inputClassName} />
                         </Field>
                         <Field label={t('listingDetails.pinCode')}>
                           <input value={form.pinCode} onChange={(event) => updateForm('pinCode', event.target.value)} className={inputClassName} />
@@ -1456,7 +1598,7 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
                     ) : (
                       <>
                         <p className="text-sm font-semibold text-gray-900">
-                          {[listing.locationCity, parsedDetails.district, listing.locationState].filter(Boolean).join(', ')}
+                          {[listing.address || parsedDetails.address || parsedDetails.district, listing.locationCity, listing.locationState].filter(Boolean).join(', ')}
                           {parsedDetails.pinCode ? ` - ${parsedDetails.pinCode}` : ''}
                         </p>
                         {parsedDetails.nearbyLandmark ? (
@@ -1551,7 +1693,19 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
                   />
                 </Field>
                 <Field label={t('listingDetails.grossPower')}>
-                  <input value={form.grossPower} onChange={(event) => updateForm('grossPower', event.target.value)} className={inputClassName} />
+                  <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-[#F8FAFC] focus-within:border-[#FFC107] transition">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={form.grossPower}
+                      onChange={(event) => updateForm('grossPower', event.target.value.replace(/[^0-9]/g, ''))}
+                      onKeyDown={(event) => { if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab|Home|End/.test(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault(); }}
+                      className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 outline-none"
+                      placeholder="e.g. 170"
+                    />
+                    <span className="shrink-0 border-l border-gray-200 bg-gray-100 px-3 py-2.5 text-xs font-bold text-gray-500 select-none">HP</span>
+                  </div>
                 </Field>
                 <Field label={t('listingDetails.chassisSerialNo')}>
                   <input value={form.chassisOrSerialNo} onChange={(event) => updateForm('chassisOrSerialNo', event.target.value)} className={inputClassName} />
@@ -1560,10 +1714,17 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
                   <input value={form.registrationNo} onChange={(event) => updateForm('registrationNo', event.target.value)} className={inputClassName} />
                 </Field>
                 <Field label={t('listingDetails.registrationYear')}>
-                  <input value={form.registrationYear} onChange={(event) => updateForm('registrationYear', event.target.value)} className={inputClassName} />
+                  <SearchableSelect
+                    options={YEAR_SELECT_OPTIONS}
+                    value={form.registrationYear}
+                    displayValue={form.registrationYear}
+                    onChange={(option) => updateForm('registrationYear', String(option.id))}
+                    placeholder={t('listingDetails.selectRegistrationYear', 'Select registration year')}
+                    searchable={false}
+                  />
                 </Field>
                 <Field label={t('listingDetails.insuranceExpiry')}>
-                  <input value={form.insuranceExpiry} onChange={(event) => updateForm('insuranceExpiry', event.target.value)} className={inputClassName} />
+                  <input type="date" value={form.insuranceExpiry} onChange={(event) => updateForm('insuranceExpiry', event.target.value)} className={inputClassName} />
                 </Field>
                 <Field label={t('listingDetails.numberOfOwners')}>
                   <input value={form.previousOwners} onChange={(event) => updateForm('previousOwners', event.target.value)} className={inputClassName} />
@@ -1589,7 +1750,7 @@ export default function ListingDetailPage({ listingId }: { listingId: string }) 
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-50 py-2">
                   <span className="flex items-center gap-2 text-sm text-gray-500"><Wrench className="h-4 w-4 text-gray-400" /> {t('listingDetails.grossPower')}</span>
-                  <span className="text-sm font-semibold text-gray-900">{listing.grossPower || t('listingDetails.na')}</span>
+                  <span className="text-sm font-semibold text-gray-900">{listing.grossPower ? `${listing.grossPower.replace(/\s*(hp|HP|kw|kW|kWh|w|W).*$/i, '').trim()} HP` : t('listingDetails.na')}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-50 py-2">
                   <span className="flex items-center gap-2 text-sm text-gray-500"><Hash className="h-4 w-4 text-gray-400" /> {t('listingDetails.chassisSerialNo')}</span>

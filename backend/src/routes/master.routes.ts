@@ -25,6 +25,7 @@ import {
   incrementListingView,
   getDealerById,
   getDealerListings,
+  getPublicInvoiceSettings,
 } from '../controllers/master.controller';
 import {
   getTranslationOverrides,
@@ -95,5 +96,6 @@ router.post('/public-listings/:id/view', incrementListingView);
 router.get('/public-categories', getPublicCategories);
 router.get('/public-search-filters', getPublicSearchFilters);
 router.get('/recent-listings', getRecentListings);
+router.get('/invoice-settings', getPublicInvoiceSettings);
 
 export default router;

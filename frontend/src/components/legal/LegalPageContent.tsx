@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 
 type LegalPageContentProps = {
-  pageKey: 'privacyPolicy' | 'termsConditions' | 'disclaimer';
+  pageKey: 'privacyPolicy' | 'termsConditions' | 'disclaimer' | 'refundReturnPolicy';
   fallbackHtml: React.ReactNode;
 };
 

@@ -14,6 +14,7 @@ import {
   savePartnerOnboarding,
   submitPartnerOnboarding,
   getCustomerPrimeAccess,
+  getCustomerPrimeHistory,
   submitCustomerPrimeSubscription,
   sendLoginOtp,
   verifyLoginOtp,
@@ -34,6 +35,7 @@ router.get('/profile', requireAuth, getProfile);
 router.patch('/profile', requireAuth, updateProfile);
 router.patch('/profile/password', requireAuth, updatePassword);
 router.get('/customer-prime/access', requireAuth, getCustomerPrimeAccess);
+router.get('/customer-prime/history', requireAuth, getCustomerPrimeHistory);
 router.post('/customer-prime/subscribe', requireAuth, submitCustomerPrimeSubscription);
 router.get('/partner/onboarding', requireAuth, getPartnerOnboarding);
 router.put('/partner/onboarding', requireAuth, savePartnerOnboarding);

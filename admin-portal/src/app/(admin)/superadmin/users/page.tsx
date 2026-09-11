@@ -122,7 +122,7 @@ export default function SuperAdminUsersPage() {
     const fetchInitialData = async () => {
       try {
         const [usersResponse, rolesResponse] = await Promise.allSettled([
-          api.get<{ users: ManagedUser[] }>('/superadmin/users'),
+          api.get<{ users: ManagedUser[] }>('/superadmin/users?compact=true'),
           api.get<{ roles?: EmployeeRole[] } | EmployeeRole[]>('/superadmin/roles'),
         ]);
 
@@ -170,7 +170,7 @@ export default function SuperAdminUsersPage() {
   }, [t]);
 
   const refreshUsers = async () => {
-    const response = await api.get<{ users: ManagedUser[] }>('/superadmin/users');
+    const response = await api.get<{ users: ManagedUser[] }>('/superadmin/users?compact=true');
     setUsers(response.data.users);
   };
 

@@ -4,9 +4,6 @@ const DEV_WEB_PORT = 3000;
 const DEV_API_PORT = 5000;
 const DEV_LAN_HOST = '10.0.2.2';
 
-export const RELEASE_WEB_URL = 'https://pucindia.com';
-export const RELEASE_API_URL = 'https://api.pucindia.com';
-
 function parseHost(scriptUrl) {
   if (!scriptUrl) {
     return '';

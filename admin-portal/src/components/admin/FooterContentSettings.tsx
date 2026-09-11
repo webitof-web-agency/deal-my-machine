@@ -5,6 +5,7 @@ import type { AxiosError } from 'axios';
 import { Link as LinkIcon, Mail, MapPin, Phone, Plus, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '@/lib/api';
+import BrandLoader from '@/components/ui/BrandLoader';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -27,6 +28,7 @@ type FooterLegalPages = {
   privacyPolicy?: string | null;
   termsConditions?: string | null;
   disclaimer?: string | null;
+  refundReturnPolicy?: string | null;
 };
 
 type FooterResponse = {
@@ -92,6 +94,23 @@ const DEFAULT_DISCLAIMER = `<h2>1. Facilitator Notice</h2>
 <h2>3. Limitation of Liability</h2>
 <p>JCB Exchange is not liable for secondary damages, operational breakdown, or misrepresentation by independent third-party sellers on the platform.</p>`;
 
+const DEFAULT_REFUND_RETURN_POLICY = `<h2>1. Marketplace Nature</h2>
+<p><strong>JCB Exchange</strong> primarily acts as a marketplace and lead-generation platform connecting equipment buyers and sellers. Unless expressly stated otherwise in a specific paid service or invoice, machinery transactions happen directly between buyer and seller.</p>
+
+<h2>2. Refund Eligibility</h2>
+<p>Fees paid for platform subscriptions, premium access, featured listings, or related digital services may be considered for refund only when:</p>
+<ul>
+  <li>A duplicate payment is successfully charged for the same service.</li>
+  <li>A technical error on our platform causes a paid feature to remain unavailable and the issue cannot be resolved within a reasonable period.</li>
+  <li>A refund is otherwise required under applicable Indian consumer protection law.</li>
+</ul>
+
+<h2>3. Non-Refundable Cases</h2>
+<p>Refunds are generally not available for completed lead-generation services, approved premium activations, listing boosts already delivered, or disputes arising between independent buyers and sellers after contact has been shared.</p>
+
+<h2>4. Return & Resolution Process</h2>
+<p>If you believe a refund review is required, contact the JCB Exchange support team with your payment proof, registered mobile number, and transaction details. Approved refunds, if applicable, are processed back to the original payment source within the applicable banking timeline.</p>`;
+
 const LEGAL_ALLOWED_TAGS = new Set(['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h2', 'h3', 'span', 'div']);
 const LEGAL_ALLOWED_CLASS_NAMES = new Set(['legal-callout']);
 const LEGAL_ALLOWED_STYLE_PROPERTIES = new Set([
@@ -118,7 +137,7 @@ const createEmptySocialLink = (): FooterSocialLink => ({
   displayOrder: 0,
 });
 
-const getLegalPageField = (tab: 'privacy' | 'terms' | 'disclaimer'): keyof FooterLegalPages => {
+const getLegalPageField = (tab: 'privacy' | 'terms' | 'disclaimer' | 'refund'): keyof FooterLegalPages => {
   if (tab === 'privacy') {
     return 'privacyPolicy';
   }
@@ -127,16 +146,24 @@ const getLegalPageField = (tab: 'privacy' | 'terms' | 'disclaimer'): keyof Foote
     return 'termsConditions';
   }
 
+  if (tab === 'refund') {
+    return 'refundReturnPolicy';
+  }
+
   return 'disclaimer';
 };
 
-const getDefaultLegalPageContent = (tab: 'privacy' | 'terms' | 'disclaimer') => {
+const getDefaultLegalPageContent = (tab: 'privacy' | 'terms' | 'disclaimer' | 'refund') => {
   if (tab === 'privacy') {
     return DEFAULT_PRIVACY_POLICY;
   }
 
   if (tab === 'terms') {
     return DEFAULT_TERMS_CONDITIONS;
+  }
+
+  if (tab === 'refund') {
+    return DEFAULT_REFUND_RETURN_POLICY;
   }
 
   return DEFAULT_DISCLAIMER;
@@ -268,11 +295,12 @@ export default function FooterContentSettings() {
     privacyPolicy: '',
     termsConditions: '',
     disclaimer: '',
+    refundReturnPolicy: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'social' | 'contact' | 'useful'>('social');
-  const [activeUsefulSubTab, setActiveUsefulSubTab] = useState<'privacy' | 'terms' | 'disclaimer'>('privacy');
+  const [activeUsefulSubTab, setActiveUsefulSubTab] = useState<'privacy' | 'terms' | 'disclaimer' | 'refund'>('privacy');
   const [editorViewMode, setEditorViewMode] = useState<'editor' | 'preview'>('editor');
   const [selectedFontSize, setSelectedFontSize] = useState('16');
   const [selectedTextBlock, setSelectedTextBlock] = useState('P');
@@ -312,6 +340,7 @@ export default function FooterContentSettings() {
           privacyPolicy: sanitizeLegalHtml(response.data.legalPages?.privacyPolicy || DEFAULT_PRIVACY_POLICY),
           termsConditions: sanitizeLegalHtml(response.data.legalPages?.termsConditions || DEFAULT_TERMS_CONDITIONS),
           disclaimer: sanitizeLegalHtml(response.data.legalPages?.disclaimer || DEFAULT_DISCLAIMER),
+          refundReturnPolicy: sanitizeLegalHtml(response.data.legalPages?.refundReturnPolicy || DEFAULT_REFUND_RETURN_POLICY),
         });
       } catch (error) {
         if (!cancelled) {
@@ -519,6 +548,7 @@ export default function FooterContentSettings() {
           privacyPolicy: sanitizeLegalHtml(legalPages.privacyPolicy || DEFAULT_PRIVACY_POLICY),
           termsConditions: sanitizeLegalHtml(legalPages.termsConditions || DEFAULT_TERMS_CONDITIONS),
           disclaimer: sanitizeLegalHtml(legalPages.disclaimer || DEFAULT_DISCLAIMER),
+          refundReturnPolicy: sanitizeLegalHtml(legalPages.refundReturnPolicy || DEFAULT_REFUND_RETURN_POLICY),
         },
       });
 
@@ -539,6 +569,7 @@ export default function FooterContentSettings() {
         privacyPolicy: sanitizeLegalHtml(response.data.legalPages?.privacyPolicy || DEFAULT_PRIVACY_POLICY),
         termsConditions: sanitizeLegalHtml(response.data.legalPages?.termsConditions || DEFAULT_TERMS_CONDITIONS),
         disclaimer: sanitizeLegalHtml(response.data.legalPages?.disclaimer || DEFAULT_DISCLAIMER),
+        refundReturnPolicy: sanitizeLegalHtml(response.data.legalPages?.refundReturnPolicy || DEFAULT_REFUND_RETURN_POLICY),
       });
       toast.success(response.data.message);
     } catch (error) {
@@ -629,9 +660,7 @@ export default function FooterContentSettings() {
             </div>
 
             {loading ? (
-              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-sm text-gray-500">
-                {t('footerSettings.loading', 'Loading footer settings...')}
-              </div>
+              <BrandLoader variant="section" size="sm" bg="light" text={t('footerSettings.loading', 'Loading footer settings...')} className="rounded-xl border border-dashed border-gray-300 bg-white" />
             ) : socialLinks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-sm text-gray-500">
                 {t('footerSettings.noSocialLinks', 'No social links added yet. Click "Add Social Link" above.')}
@@ -806,6 +835,18 @@ export default function FooterContentSettings() {
                 >
                   {t('legalPages.disclaimer', 'Disclaimer')}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveUsefulSubTab('refund')}
+                  className={`rounded-lg px-3 sm:px-4 py-2 text-xs font-semibold transition flex-1 sm:flex-initial text-center ${
+                    activeUsefulSubTab === 'refund'
+                      ? 'bg-[#FFC107] font-bold text-black shadow-xs'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {t('legalPages.refundAndReturnPolicy', 'Refund & Return Policy')}
+                </button>
               </div>
 
               <div className="flex items-center space-x-1.5 rounded-lg border border-gray-200 bg-gray-100 p-1 w-full sm:w-auto justify-center">
@@ -928,6 +969,8 @@ export default function FooterContentSettings() {
                       ? t('footerSettings.privacyPageContent', 'Privacy Policy Page Content')
                       : activeUsefulSubTab === 'terms'
                         ? t('footerSettings.termsPageContent', 'Terms & Conditions Page Content')
+                        : activeUsefulSubTab === 'refund'
+                          ? t('footerSettings.refundPageContent', 'Refund & Return Policy Page Content')
                         : t('footerSettings.disclaimerPageContent', 'Disclaimer Page Content')}
                   </span>
 
@@ -952,7 +995,7 @@ export default function FooterContentSettings() {
               <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xs">
                 <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-amber-600">
-                    {t('footerSettings.livePreviewLabel', 'Live Document Preview')} ({activeUsefulSubTab === 'privacy' ? t('legalPages.privacyPolicy', 'Privacy Policy') : activeUsefulSubTab === 'terms' ? t('legalPages.termsAndConditions', 'Terms & Conditions') : t('legalPages.disclaimer', 'Disclaimer')})
+                    {t('footerSettings.livePreviewLabel', 'Live Document Preview')} ({activeUsefulSubTab === 'privacy' ? t('legalPages.privacyPolicy', 'Privacy Policy') : activeUsefulSubTab === 'terms' ? t('legalPages.termsAndConditions', 'Terms & Conditions') : activeUsefulSubTab === 'refund' ? t('legalPages.refundAndReturnPolicy', 'Refund & Return Policy') : t('legalPages.disclaimer', 'Disclaimer')})
                   </span>
                   <span className="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                     {t('footerSettings.exactFrontendStyle', 'Exact Frontend Style')}
@@ -967,6 +1010,8 @@ export default function FooterContentSettings() {
                         ? legalPages.privacyPolicy || DEFAULT_PRIVACY_POLICY
                         : activeUsefulSubTab === 'terms'
                           ? legalPages.termsConditions || DEFAULT_TERMS_CONDITIONS
+                          : activeUsefulSubTab === 'refund'
+                            ? legalPages.refundReturnPolicy || DEFAULT_REFUND_RETURN_POLICY
                           : legalPages.disclaimer || DEFAULT_DISCLAIMER,
                   }}
                 />

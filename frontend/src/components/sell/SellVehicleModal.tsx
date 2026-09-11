@@ -36,7 +36,7 @@ type ListingFormState = {
   title: string;
   price: string;
   state: string;
-  district: string;
+  address: string;
   city: string;
   pinCode: string;
   nearbyLandmark: string;
@@ -80,6 +80,7 @@ type ListingRecord = {
   additionalDescription?: string;
   grossPower?: string;
   isNegotiable?: boolean;
+  address?: string | null;
   media: Array<{
     id: string;
     url: string;
@@ -124,6 +125,7 @@ type ParsedListingDetails = {
   previousOwners: string;
   fuelType: string;
   transmission: string;
+  address: string;
   district: string;
   pinCode: string;
   nearbyLandmark: string;
@@ -135,6 +137,7 @@ export type EditableListing = {
   title?: string | null;
   price?: string | number | null;
   manufacturingYear?: number | null;
+  address?: string | null;
   locationState?: string | null;
   locationCity?: string | null;
   status?: string | null;
@@ -184,7 +187,7 @@ const initialForm: ListingFormState = {
   title: '',
   price: '',
   state: '',
-  district: '',
+  address: '',
   city: '',
   pinCode: '',
   nearbyLandmark: '',
@@ -391,6 +394,7 @@ const createEmptyParsedListingDetails = (): ParsedListingDetails => ({
   previousOwners: '',
   fuelType: '',
   transmission: '',
+  address: '',
   district: '',
   pinCode: '',
   nearbyLandmark: '',
@@ -445,6 +449,9 @@ const parseListingDescription = (description?: string | null): ParsedListingDeta
       case 'transmission':
         parsed.transmission = value;
         break;
+      case 'address':
+        parsed.address = value;
+        break;
       case 'district':
         parsed.district = value;
         break;
@@ -478,7 +485,6 @@ const buildListingDescription = (form: ListingFormState) =>
     form.previousOwners ? `Owners: ${form.previousOwners}` : '',
     form.fuelType ? `Fuel: ${form.fuelType}` : '',
     form.transmission ? `Transmission: ${form.transmission}` : '',
-    form.district ? `District: ${form.district}` : '',
     form.pinCode ? `PIN: ${form.pinCode}` : '',
     form.nearbyLandmark ? `Landmark: ${form.nearbyLandmark}` : '',
     form.insuranceExpiry ? `Insurance expiry: ${form.insuranceExpiry}` : '',
@@ -750,13 +756,13 @@ export default function SellVehicleModal({
       title: listing.title || '',
       price: String(listing.price || ''),
       state: listing.locationState || '',
-      district: parsedDetails.district,
+      address: listing.address || parsedDetails.address || parsedDetails.district,
       city: listing.locationCity || '',
       pinCode: parsedDetails.pinCode,
       nearbyLandmark: parsedDetails.nearbyLandmark,
       description: parsedDetails.rawDescription,
       additionalDescription: listing.additionalDescription || '',
-      grossPower: listing.grossPower || '',
+      grossPower: (listing.grossPower || '').replace(/\s*(hp|HP|kw|kW|kWh|w|W).*$/i, '').trim(),
       isNegotiable: Boolean(listing.isNegotiable),
       insuranceExpiry: parsedDetails.insuranceExpiry,
       selectedStateId: '', // To be handled optimally if we only have names
@@ -886,6 +892,7 @@ export default function SellVehicleModal({
         operatingHours: form.operatingHours,
         locationState: form.state,
         locationCity: form.city,
+        address: form.address.trim() || undefined,
         condition: form.condition,
         description: buildListingDescription(form),
         additionalDescription: form.additionalDescription,
@@ -1067,7 +1074,19 @@ export default function SellVehicleModal({
                       <input value={form.variant} onChange={(event) => updateField('variant', event.target.value)} className={fieldClassName} />
                     </Field>
                     <Field label={t('sellModal.grossPower')}>
-                      <input value={form.grossPower} onChange={(event) => updateField('grossPower', event.target.value)} className={fieldClassName} placeholder={t('sellModal.grossPowerPlaceholder')} />
+                      <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-[#F8FAFC] focus-within:border-[#FFC107] transition">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={form.grossPower}
+                          onChange={(event) => updateField('grossPower', event.target.value.replace(/[^0-9]/g, ''))}
+                          onKeyDown={(event) => { if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab|Home|End/.test(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault(); }}
+                          className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 outline-none"
+                          placeholder="e.g. 170"
+                        />
+                        <span className="shrink-0 border-l border-gray-200 bg-gray-100 px-3 py-2.5 text-xs font-bold text-gray-500 select-none">HP</span>
+                      </div>
                     </Field>
                     <Field label={t('sellModal.manufactureYear')}>
                       <input type="number" value={form.manufacturingYear} onChange={(event) => updateField('manufacturingYear', event.target.value)} className={fieldClassName} />
@@ -1311,8 +1330,8 @@ export default function SellVehicleModal({
                         className="bg-[#F8FAFC]"
                       />
                     </Field>
-                    <Field label={t('sellModal.district')}>
-                      <input value={form.district} onChange={(event) => updateField('district', event.target.value)} className={fieldClassName} />
+                    <Field label={t('sellModal.address', 'Address')}>
+                      <input value={form.address} onChange={(event) => updateField('address', event.target.value)} className={fieldClassName} />
                     </Field>
                     <Field label={t('sellModal.city')}>
                       <SearchableSelect
@@ -1466,7 +1485,7 @@ export default function SellVehicleModal({
                           <DetailItem label={t('sellModal.fuelType')} value={parsedDetails.fuelType || t('sellModal.na')} />
                           <DetailItem label={t('sellModal.transmission')} value={parsedDetails.transmission || t('sellModal.na')} />
                           <DetailItem label={t('sellModal.grossPower')} value={viewListing.grossPower || t('sellModal.na')} />
-                          <DetailItem label={t('sellModal.district')} value={parsedDetails.district || t('sellModal.na')} />
+                          <DetailItem label={t('sellModal.address', 'Address')} value={viewListing.address || parsedDetails.address || parsedDetails.district || t('sellModal.na')} />
                           <DetailItem label={t('sellModal.pinCode')} value={parsedDetails.pinCode || t('sellModal.na')} />
                           <DetailItem label={t('sellModal.nearbyLandmark')} value={parsedDetails.nearbyLandmark || t('sellModal.na')} />
                         </div>
@@ -1716,8 +1735,6 @@ function ListingMediaUploadBox({
     </div>
   );
 }
-
-
 
 
 

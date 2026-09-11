@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Award,
@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Clock,
   Cog,
+  CreditCard,
   Cpu,
   Fuel,
   GitBranch,
@@ -27,6 +28,7 @@ import {
   Truck,
   Zap,
   Video,
+  Play,
   UserCircle,
   X,
   ChevronLeft,
@@ -37,6 +39,7 @@ import { formatPartnerTypeLabel } from '@/lib/partnerType';
 import { generateMachineSlugPath } from '@/lib/seoUtils';
 import { useAuthStore } from '@/store/authStore';
 import CustomerPrimePaymentModal, { type CustomerPrimeFeature } from '@/components/payments/CustomerPrimePaymentModal';
+import ListingBuyNowModal from '@/components/payments/ListingBuyNowModal';
 import { createPublicContactEnquiry } from '@/lib/enquiries';
 import { useToastStore } from '@/store/toastStore';
 import { API_BASE_URL } from '@/lib/api';
@@ -58,7 +61,12 @@ const getLocationLabel = (listing: MachineListingDetail, fallback: string) =>
 
 const getWhatsappUrl = (phoneNumber?: string | null) => {
   const normalizedDigits = phoneNumber?.replace(/\D/g, '') || '';
-  return normalizedDigits ? `https://wa.me/${normalizedDigits}` : null;
+  if (!normalizedDigits) {
+    return null;
+  }
+
+  const fullNumber = normalizedDigits.length === 10 ? `91${normalizedDigits}` : normalizedDigits;
+  return `https://wa.me/${fullNumber}`;
 };
 
 const getDialNumber = (phoneNumber?: string | null) => {
@@ -82,6 +90,7 @@ type ParsedListingDetails = {
   previousOwners: string;
   fuelType: string;
   transmission: string;
+  address: string;
   district: string;
   area: string;
   pinCode: string;
@@ -121,6 +130,7 @@ const createEmptyParsedListingDetails = (): ParsedListingDetails => ({
   previousOwners: '',
   fuelType: '',
   transmission: '',
+  address: '',
   district: '',
   area: '',
   pinCode: '',
@@ -177,6 +187,9 @@ const parseListingDescription = (description?: string | null): ParsedListingDeta
         break;
       case 'transmission':
         parsed.transmission = value;
+        break;
+      case 'address':
+        parsed.address = value;
         break;
       case 'district':
         parsed.district = value;
@@ -241,8 +254,17 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
   const [expandedSections, setExpandedSections] = useState<string[]>(['machine', 'seller']);
   const [views, setViews] = useState<number>(listing.views || 0);
   const [pendingFeature, setPendingFeature] = useState<CustomerPrimeFeature | null>(null);
+  const [isBuyNowOpen, setIsBuyNowOpen] = useState(false);
   const { user, setAuthModalOpen } = useAuthStore();
   const showToast = useToastStore((state) => state.showToast);
+  const thumbnailStripRef = useRef<HTMLDivElement>(null);
+
+  const scrollThumbnails = (direction: 'left' | 'right') => {
+    if (thumbnailStripRef.current) {
+      const scrollAmount = direction === 'left' ? -220 : 220;
+      thumbnailStripRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     // Only increment view once per load
@@ -335,15 +357,28 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
     if (typeof window === 'undefined') return;
 
     if (navigator.share) {
-      await navigator.share({
-        title: listing.title,
-        url: window.location.href,
-      });
-      return;
+      try {
+        await navigator.share({
+          title: listing.title,
+          text: `Check out ${listing.title} on JCB Exchange`,
+          url: window.location.href,
+        });
+        return;
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
+          return;
+        }
+        console.error('Native share failed, falling back to clipboard:', err);
+      }
     }
 
     if (navigator.clipboard) {
-      await navigator.clipboard.writeText(window.location.href);
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast({ title: t('machineDetails.linkCopied', 'Link copied to clipboard!'), variant: 'success' });
+      } catch (err) {
+        console.error('Clipboard copy failed:', err);
+      }
     }
   };
 
@@ -370,20 +405,28 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
 
   const executeProtectedAction = async (feature: CustomerPrimeFeature) => {
     try {
-      await createPublicContactEnquiry({
-        listingId: listing.id,
-        enquiryType: feature === 'WHATSAPP' ? 'WHATSAPP' : 'CALL',
-      });
+      if (feature === 'BUY_NOW') {
+        setIsBuyNowOpen(true);
+        return;
+      }
 
       if (feature === 'CALL' && contactNumber) {
         window.location.href = `tel:${contactNumber}`;
       }
 
       if (feature === 'WHATSAPP' && whatsappUrl) {
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        window.open(whatsappUrl, '_blank');
       }
+
+      // Log enquiry asynchronously in background
+      void createPublicContactEnquiry({
+        listingId: listing.id,
+        enquiryType: feature === 'WHATSAPP' ? 'WHATSAPP' : 'CALL',
+      }).catch((error) => {
+        console.error('Failed to create public contact enquiry', error);
+      });
     } catch (error) {
-      console.error('Failed to create public contact enquiry', error);
+      console.error('Failed to execute protected action', error);
       showToast({
         title: t('dealers.enquiryNotCreated'),
         description: t('dealers.enquiryNotCreatedDescription'),
@@ -392,6 +435,24 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
     } finally {
       setPendingFeature(null);
     }
+  };
+
+  const handleBuyNowClick = () => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    if (user.role !== 'CUSTOMER') {
+      showToast({
+        title: 'Customer login required',
+        description: 'Buy Now payment is available for customer accounts.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    handleProtectedAction('BUY_NOW');
   };
 
   return (
@@ -440,6 +501,34 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
                   </div>
                 )}
 
+                {images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+                      }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-xs transition-all hover:bg-black/80 hover:scale-110"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-xs transition-all hover:bg-black/80 hover:scale-110"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </>
+                )}
+
                 {images.length > 0 && (
                   <div className="absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-gray-800 shadow-sm backdrop-blur-sm">
                     <Camera size={14} />
@@ -448,20 +537,31 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
                 )}
               </div>
 
-              {images.length > 1 && (
-                <div 
-                  className="flex overflow-x-auto gap-2 sm:gap-3 border-t border-gray-100 p-3 sm:p-4 snap-x [&::-webkit-scrollbar]:hidden w-full"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  {images.map((image, index) => (
+              {(images.length > 1 || videos.length > 0) && (
+                <div className="relative border-t border-gray-100 p-2 sm:p-3">
+                  <button
+                    type="button"
+                    onClick={() => scrollThumbnails('left')}
+                    className="absolute left-1 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-700 shadow-md border border-gray-200 transition-all hover:bg-amber-50 hover:text-black hover:border-amber-300"
+                    aria-label="Scroll thumbnails left"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  <div 
+                    ref={thumbnailStripRef}
+                    className="flex overflow-x-auto gap-2 sm:gap-3 snap-x [&::-webkit-scrollbar]:hidden w-full scroll-smooth px-7"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {images.map((image, index) => (
                       <button
                         key={image.id}
                         type="button"
                         onClick={() => setActiveImageIndex(index)}
                         className={`relative aspect-[4/3] w-[80px] sm:h-20 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all snap-center ${
                           activeImageIndex === index
-                            ? 'border-jcb-yellow'
-                            : 'border-transparent hover:border-gray-200'
+                            ? 'border-jcb-yellow shadow-xs scale-[0.98]'
+                            : 'border-transparent hover:border-gray-200 opacity-90 hover:opacity-100'
                         }`}
                       >
                         <Image
@@ -472,7 +572,40 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
                           className="object-cover"
                         />
                       </button>
-                  ))}
+                    ))}
+
+                    {videos.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const section = document.getElementById('videos-section');
+                          if (section) {
+                            section.scrollIntoView({ behavior: 'smooth' });
+                            const videoEl = section.querySelector('video');
+                            if (videoEl) {
+                              videoEl.play().catch(() => {});
+                            }
+                          }
+                        }}
+                        className="relative aspect-[4/3] w-[80px] sm:h-20 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border-2 border-red-500/80 bg-slate-900 text-white flex flex-col items-center justify-center gap-1 transition-all hover:scale-[1.03] shadow-sm group snap-center"
+                        title="Watch Machine Video"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600 group-hover:bg-red-700 transition-colors shadow-md">
+                          <Play size={12} className="fill-white text-white ml-0.5" />
+                        </div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-red-100">Video</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollThumbnails('right')}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-700 shadow-md border border-gray-200 transition-all hover:bg-amber-50 hover:text-black hover:border-amber-300"
+                    aria-label="Scroll thumbnails right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
               )}
             </div>
@@ -531,6 +664,17 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 mb-6">
+                    {listing.buyNowPaymentAvailable ? (
+                      <button
+                        type="button"
+                        onClick={handleBuyNowClick}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#111827] px-4 py-3 font-bold text-white shadow-sm transition-colors hover:bg-black"
+                      >
+                        <CreditCard size={18} />
+                        Buy Now
+                      </button>
+                    ) : null}
+
                     {contactNumber ? (
                       <button
                         type="button"
@@ -695,7 +839,7 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
             )}
 
             {videos.length > 0 && (
-              <section className="mb-10">
+              <section id="videos-section" className="mb-10">
                 <h2 className="mb-5 text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <Video className="text-jcb-yellow" size={24} />
                   {t('machineDetails.videos')}
@@ -750,7 +894,7 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
                     items={[
                       { icon: <Fuel className="h-4 w-4" />, label: t('machineDetails.fuelTypeLabel'), value: parsedDetails.fuelType || t('machineDetails.na') },
                       { icon: <Cog className="h-4 w-4" />, label: t('machineDetails.transmissionLabel'), value: parsedDetails.transmission || t('machineDetails.na') },
-                      { icon: <MapPin className="h-4 w-4" />, label: t('machineDetails.districtLabel'), value: parsedDetails.district || listing.partner?.district || t('machineDetails.na') },
+                      { icon: <MapPin className="h-4 w-4" />, label: t('machineDetails.addressLabel', 'Address'), value: listing.address || parsedDetails.address || parsedDetails.district || t('machineDetails.na') },
                       { icon: <Navigation className="h-4 w-4" />, label: t('machineDetails.nearbyLandmarkLabel'), value: parsedDetails.nearbyLandmark || t('machineDetails.na') },
                       { icon: <Globe className="h-4 w-4" />, label: t('machineDetails.locationLabel'), value: locationLabel },
                     ]}
@@ -770,6 +914,15 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
           }}
         />
       ) : null}
+
+      <ListingBuyNowModal
+        isOpen={isBuyNowOpen}
+        listingId={listing.id}
+        fallbackTitle={listing.title}
+        fallbackAmount={listing.price}
+        buyer={user}
+        onClose={() => setIsBuyNowOpen(false)}
+      />
 
       {isLightboxOpen && mainImage && (
         <div 

@@ -20,6 +20,8 @@ import {
 import DualRangeSlider from '@/components/ui/DualRangeSlider';
 import { generateMachineSlugPath } from '@/lib/seoUtils';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatListingLocation } from '@/lib/listingLocation';
+import { trackPublicAnalyticsEvent } from '@/lib/analytics';
 
 interface MachineListing {
   id: string;
@@ -28,6 +30,7 @@ interface MachineListing {
   isNegotiable: boolean;
   manufacturingYear: number;
   operatingHours: number | null;
+  address?: string | null;
   locationCity: string;
   locationState: string;
   condition: string | null;
@@ -318,6 +321,50 @@ function MachinesPageContent({
 
     return nextItems;
   }, [machines, parsedMaxPrice, parsedMinPrice, maxAvailablePrice, searchQuery, selectedBrands, selectedCategories, selectedConditions, selectedLocations, sortBy, t]);
+
+  const lastTrackedSearch = useRef('');
+
+  useEffect(() => {
+    if (machines.length === 0) return;
+
+    const normalizedQuery = searchQuery.trim();
+    const hasSearchIntent = normalizedQuery.length >= 2 || activeFilterCount > 0;
+    if (!hasSearchIntent) return;
+
+    const signature = JSON.stringify({
+      query: normalizedQuery.toLowerCase(),
+      brands: selectedBrands,
+      categories: selectedCategories,
+      locations: selectedLocations,
+      conditions: selectedConditions,
+      minPrice: parsedMinPrice,
+      maxPrice: parsedMaxPrice,
+      sortBy,
+    });
+
+    if (lastTrackedSearch.current === signature) return;
+
+    const timer = window.setTimeout(() => {
+      lastTrackedSearch.current = signature;
+      trackPublicAnalyticsEvent({
+        eventType: normalizedQuery.length >= 2 ? 'SEARCH' : 'FILTER_APPLIED',
+        query: normalizedQuery || undefined,
+        filterPayload: {
+          brands: selectedBrands,
+          categories: selectedCategories,
+          locations: selectedLocations,
+          conditions: selectedConditions,
+          minPrice: parsedMinPrice,
+          maxPrice: parsedMaxPrice,
+          sortBy,
+        },
+        resultCount: filteredMachines.length,
+        source: 'machines_browser_filter',
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [activeFilterCount, filteredMachines.length, machines.length, parsedMaxPrice, parsedMinPrice, searchQuery, selectedBrands, selectedCategories, selectedConditions, selectedLocations, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMachines.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -610,7 +657,10 @@ function MachinesPageContent({
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                   {paginatedMachines.map((machine) => {
                     const imageUrl = getMediaUrl(machine.featuredImage);
-                    const locationLabel = [machine.locationCity, machine.locationState].filter(Boolean).join(', ');
+                    const locationLabel = formatListingLocation(machine, {
+                      includeAddress: true,
+                      fallback: t('machines.locationNotSpecified'),
+                    });
 
                     return (
                       <Link key={machine.id} href={generateMachineSlugPath(machine)} className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-gray-200">
@@ -638,7 +688,7 @@ function MachinesPageContent({
 
                           <div className="mt-auto pt-4 flex items-center gap-1.5 text-xs text-gray-500 border-t border-gray-50">
                             <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="truncate">{locationLabel || t('machines.locationNotSpecified')}</span>
+                            <span className="truncate">{locationLabel}</span>
                           </div>
                         </div>
                       </Link>

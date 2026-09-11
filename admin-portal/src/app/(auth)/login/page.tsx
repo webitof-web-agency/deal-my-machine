@@ -2,14 +2,18 @@
 import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'react-toastify';
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
+import BrandLoader from '@/components/ui/BrandLoader';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ACCOUNT_INACTIVE_CODE, ACCOUNT_REVOKED_CODE } from '@/lib/sessionAccess';
 import { getEmployeeLandingPath, resolveEmployeeRouteRedirect } from '@/lib/portalRoutes';
 import PortalBrand from '@/components/layout/PortalBrand';
+
+import { formatPortalLabel } from '@/lib/partnerPortal';
 
 type AuthenticatedPortalUser = {
   id: string;
@@ -34,25 +38,53 @@ function LoginPageInner() {
   const [isFirstSetup, setIsFirstSetup] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const showLoginSuccessToast = useCallback((user?: AuthenticatedPortalUser) => {
+    const displayName = user?.name?.trim() || 'User';
+    const roleLabel = user?.role ? formatPortalLabel(user.role) : 'PORTAL';
+
+    toast.success(
+      <div className="flex flex-col gap-0.5 min-w-0 pr-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-bold text-gray-900 truncate">
+            Welcome, {displayName}! 👋
+          </span>
+          <span className="inline-flex rounded-md bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-800 border border-amber-200">
+            {roleLabel}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 font-medium mt-0.5">
+          Logged in successfully.
+        </p>
+      </div>,
+      {
+        toastId: 'portal-login-success',
+      }
+    );
+  }, []);
+
   const redirectAfterLogin = useCallback((token: string, user: AuthenticatedPortalUser, nextRoute?: string | null) => {
     setAuth(token, user);
 
     if (user.role === 'SUPER_ADMIN') {
+      showLoginSuccessToast(user);
       router.push(nextRoute || '/superadmin/dashboard');
       return;
     }
 
     if (user.role === 'ADMIN') {
+      showLoginSuccessToast(user);
       router.push(nextRoute || '/admin/dashboard');
       return;
     }
 
     if (user.role === 'EMPLOYEE') {
+      showLoginSuccessToast(user);
       router.push(resolveEmployeeRouteRedirect(nextRoute || '', user.permissions) || getEmployeeLandingPath(user.permissions));
       return;
     }
 
     if (user.role === 'PARTNER') {
+      showLoginSuccessToast(user);
       if (
         user.accountStatus === 'ACTIVE' &&
         user.onboardingStatus === 'APPROVED' &&
@@ -71,8 +103,7 @@ function LoginPageInner() {
     }
 
     setError(t('authPortal.portalAccessOnly'));
-  }, [router, setAuth, t]);
-
+  }, [router, setAuth, showLoginSuccessToast, t]);
   useEffect(() => {
     const handoffToken = searchParams.get('token');
     const nextRoute = searchParams.get('next');
@@ -271,11 +302,7 @@ function LoginPageInner() {
 function LoadingFallback() {
   const { t } = useTranslation();
 
-  return (
-    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center text-white">
-      {t('common.loading')}
-    </div>
-  );
+  return <BrandLoader variant="fullscreen" size="lg" bg="dark" text={t('common.loading')} />;
 }
 
 export default function LoginPage() {

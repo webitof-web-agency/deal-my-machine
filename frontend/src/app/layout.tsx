@@ -136,9 +136,20 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-gray-50 text-gray-900 antialiased">
+        {(branding.darkLogoUrl || branding.logoUrl) && (
+          <link rel="preload" as="image" href={branding.darkLogoUrl || branding.logoUrl || undefined} />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__JCB_SITE_LOGO__=${JSON.stringify({
+              logoUrl: branding.logoUrl,
+              darkLogoUrl: branding.darkLogoUrl,
+            }).replace(/</g, '\\u003c')};`,
+          }}
         />
         <LocaleSync />
         <Navbar />
@@ -149,7 +160,7 @@ export default async function RootLayout({
         <AuthModal />
         <ToastViewport />
         <PushNotificationManager />
-        <ToastContainer position="bottom-right" />
+        <ToastContainer position="top-center" style={{ zIndex: 999999 }} />
       </body>
     </html>
   );

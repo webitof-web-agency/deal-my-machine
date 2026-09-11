@@ -4,7 +4,7 @@ import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, ChevronDown, ArrowRight, Package } from 'lucide-react';
+import { Search, MapPin, ChevronDown, ArrowRight, Package, Briefcase, Sparkles, Building2, Users } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import api, { API_ORIGIN } from '@/lib/api';
 import { generateMachineSlugPath } from '@/lib/seoUtils';
@@ -44,6 +44,18 @@ type PublicSearchLocation = {
 type PublicSearchFilters = {
   categories: PublicCategory[];
   locations: PublicSearchLocation[];
+};
+
+type FeaturedJobItem = {
+  id: string;
+  title: string;
+  slug: string;
+  locationCity: string;
+  locationState: string;
+  employmentType: string;
+  workMode: string;
+  vacancies: number;
+  department?: { name: string };
 };
 
 const getListingStatusBadge = (status?: string | null) => {
@@ -97,6 +109,7 @@ export default function Home() {
   const [browseCategories, setBrowseCategories] = React.useState<PublicCategory[]>([]);
   const [searchCategories, setSearchCategories] = React.useState<PublicCategory[]>([]);
   const [searchLocations, setSearchLocations] = React.useState<PublicSearchLocation[]>([]);
+  const [featuredJobs, setFeaturedJobs] = React.useState<FeaturedJobItem[]>([]);
 
   // Hero Search States
   const router = useRouter();
@@ -157,12 +170,13 @@ export default function Home() {
 
     const loadData = async () => {
       try {
-        const [financeRes, heroRes, inspectionRes, categoriesRes, filtersRes] = await Promise.all([
+        const [financeRes, heroRes, inspectionRes, categoriesRes, filtersRes, jobsRes] = await Promise.all([
           api.get<{ success: boolean; data: FinanceSupportItem[] }>('/master/finance-support').catch(() => null),
           api.get<{ success: boolean; data: { imageUrl: string | null; headline?: string | null } }>('/master/hero-image').catch(() => null),
           api.get<{ success: boolean; data: InspectionSectionContent }>('/master/inspection-section').catch(() => null),
           api.get<{ success: boolean; data: PublicCategory[] }>('/master/public-categories').catch(() => null),
           api.get<{ success: boolean; data: PublicSearchFilters }>('/master/public-search-filters').catch(() => null),
+          api.get<{ success: boolean; jobs: FeaturedJobItem[] }>('/recruitment/public/jobs?limit=4').catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -201,6 +215,12 @@ export default function Home() {
         } else {
           setSearchCategories([]);
           setSearchLocations([]);
+        }
+
+        if (jobsRes?.data?.success) {
+          setFeaturedJobs(jobsRes.data.jobs || []);
+        } else {
+          setFeaturedJobs([]);
         }
       } catch {
         if (!cancelled) {
@@ -607,16 +627,16 @@ export default function Home() {
       </section>
 
       {/* 5. CERTIFIED & INSPECTED BY EXPERTS */}
-      <section className="py-16 px-6 bg-[#FFF9ED] w-full">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
+      <section className="py-8 sm:py-10 px-4 sm:px-6 bg-[#FFF9ED] w-full">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 lg:gap-10 items-center">
           <div className="lg:w-1/2 text-center lg:text-left">
             {inspectionContent?.title ? (
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold sm:font-extrabold text-gray-900 mb-4 leading-tight">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold sm:font-extrabold text-gray-900 mb-3 leading-tight">
                 {inspectionContent.title}
               </h2>
             ) : null}
             {inspectionContent?.description ? (
-              <p className="text-gray-600 font-medium mb-8 sm:mb-10 text-sm sm:text-[15px] leading-relaxed max-w-lg mx-auto lg:mx-0 whitespace-pre-line">
+              <p className="text-gray-600 font-medium mb-4 sm:mb-6 text-xs sm:text-sm leading-relaxed max-w-lg mx-auto lg:mx-0 whitespace-pre-line">
                 {inspectionContent.description}
               </p>
             ) : null}
@@ -625,7 +645,7 @@ export default function Home() {
 
           <div className="lg:w-1/2 relative">
             {/* The generated image */}
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
+            <div className="relative rounded-xl overflow-hidden shadow-lg border-2 border-white max-h-[340px]">
               <Image
                 src={inspectionContent?.imageUrl ? (getMediaUrl(inspectionContent.imageUrl) || inspectionContent.imageUrl) : "/images/inspection.png"}
                 alt={inspectionContent?.title || 'Heavy equipment inspection support'}
@@ -636,17 +656,104 @@ export default function Home() {
                 className="object-cover transition-transform duration-700 hover:scale-105"
               />
             </div>
-            {/* Decorative dot pattern or floating badge could go here if needed, but keeping it clean for now */}
           </div>
         </div>
-        <div className="mx-auto mt-8 max-w-7xl px-0">
+        <div className="mx-auto mt-4 max-w-7xl px-0 text-center lg:text-left">
           <Link
             href="/dealers"
-            className="inline-flex items-center gap-2 text-sm font-bold text-gray-900 hover:text-jcb-yellow"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-900 hover:text-jcb-yellow"
           >
             Explore verified dealers
             <ArrowRight size={16} />
           </Link>
+        </div>
+      </section>
+
+      {/* 6. CAREERS & OPEN POSITIONS SECTION */}
+      <section className="py-8 sm:py-10 px-4 sm:px-6 bg-gray-50/80 text-gray-900 w-full border-t border-gray-200/80">
+        <div className="max-w-7xl mx-auto space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/80 pb-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                <Sparkles size={12} className="text-amber-600" />
+                <span>{t('careers.badge', 'Careers at JCB Exchange')}</span>
+              </div>
+              <h2 className="text-base sm:text-xl font-bold tracking-tight text-gray-900">
+                {t('careers.homeHeading', "Join India's Leading Heavy Equipment Network")}
+              </h2>
+            </div>
+
+            <Link
+              href="/jobs"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#FFC107] hover:bg-[#e5ad06] text-black font-extrabold text-xs rounded-xl transition-all shadow-xs shrink-0 self-start sm:self-auto"
+            >
+              <span>{t('careers.viewAllPositions', 'View All Open Positions')}</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {featuredJobs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {featuredJobs.map((job) => (
+                <Link
+                  key={job.id}
+                  href={`/jobs/${job.slug}`}
+                  className="group bg-white hover:bg-amber-50/20 border border-gray-200/80 hover:border-amber-400 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between shadow-xs hover:shadow-md"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 text-[10px] font-bold truncate max-w-[130px]">
+                        {job.department?.name || t('careers.department', 'Department')}
+                      </span>
+                      <span className="text-[9px] text-gray-600 font-semibold uppercase bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
+                        {job.workMode === 'REMOTE' ? t('careers.remote', 'Remote') : job.workMode === 'HYBRID' ? t('careers.hybrid', 'Hybrid') : t('careers.onSite', 'On-site')}
+                      </span>
+                    </div>
+
+                    <h3 className="text-sm font-bold text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-1">
+                      {job.title}
+                    </h3>
+
+                    <div className="space-y-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={12} className="text-gray-400 shrink-0" />
+                        <span className="truncate">{job.locationCity}, {job.locationState}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase size={12} className="text-gray-400 shrink-0" />
+                        <span>
+                          {job.employmentType === 'FULL_TIME' ? t('careers.fullTime', 'Full Time') : job.employmentType === 'PART_TIME' ? t('careers.partTime', 'Part Time') : job.employmentType === 'CONTRACT' ? t('careers.contract', 'Contract') : job.employmentType === 'INTERNSHIP' ? t('careers.internship', 'Internship') : job.employmentType === 'FREELANCE' ? t('careers.freelance', 'Freelance') : job.employmentType.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                    <span className="text-gray-500 text-[11px] font-medium">
+                      {job.vacancies} {job.vacancies === 1 ? t('careers.opening', 'Opening') : t('careers.openings', 'Openings')}
+                    </span>
+                    <span className="text-amber-600 text-xs font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      {t('careers.applyNow', 'Apply Now')} &rarr;
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200/80 p-6 text-center space-y-3 shadow-xs">
+              <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-100">
+                <Briefcase size={20} />
+              </div>
+              <h3 className="text-sm font-bold text-gray-900">{t('careers.constantlyHiringTitle', "We're Constantly Hiring Talent")}</h3>
+              <Link
+                href="/jobs"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FFC107] hover:bg-[#e5ad06] text-black font-bold text-xs rounded-xl transition-all shadow-xs"
+              >
+                <span>{t('careers.browsePortal', 'Browse Careers Portal')}</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

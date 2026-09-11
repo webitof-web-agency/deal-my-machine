@@ -1,4 +1,4 @@
-import { AdminPermissionKey, ListingStatus, Role } from '@prisma/client';
+import { ListingStatus, Role } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
@@ -12,6 +12,7 @@ import {
 import {
   FinanceSupportItem,
   FooterSocialLink,
+  ListingPaymentSettings,
   getAppSettings,
   updatePlatformRuntimeSettings,
   updateFinanceSupportSettings,
@@ -28,8 +29,27 @@ import {
   rejectCustomerPrimeSubscription,
   syncExpiredCustomerPrimeSubscriptions,
 } from '../utils/customerPrimeSubscriptions';
+import { finalizeListingPaymentSale } from '../utils/listingPaymentFinalization';
+import { allowedAdminPermissions } from '../utils/adminPermissions';
 
 const prismaAny = prisma as any;
+const MASKED_SECRET = '********';
+
+const maskSecret = (value?: string | null) => (value ? MASKED_SECRET : '');
+const isMaskedSecret = (value?: string | null) => /^\*+$/.test(String(value || '').trim());
+
+const serializeListingPaymentSettingsForAdmin = (settings: ListingPaymentSettings) => ({
+  ...settings,
+  razorpay: {
+    ...settings.razorpay,
+    keySecret: maskSecret(settings.razorpay.keySecret),
+    webhookSecret: maskSecret(settings.razorpay.webhookSecret),
+  },
+  phonepe: {
+    ...settings.phonepe,
+    clientSecret: maskSecret(settings.phonepe.clientSecret),
+  },
+});
 
 const normalizePhoneNumber = (value?: string | null) => {
   const trimmedValue = value?.trim();
@@ -87,21 +107,6 @@ const allowedListingStatuses = new Set<ListingStatus>([
   'RESERVED',
   'SOLD',
   'REJECTED',
-]);
-
-const allowedAdminPermissions = new Set([
-  'MANAGE_PARTNERS',
-  'REVIEW_KYC',
-  'REVIEW_LISTINGS',
-  'MANAGE_LEADS',
-  'MANAGE_FINANCE',
-  'MANAGE_REFUNDS',
-  'MANAGE_SUPPORT',
-  'MANAGE_CMS',
-  'MANAGE_SEO',
-  'VIEW_REPORTS',
-  'MANAGE_SETTINGS',
-  'MANAGE_ADMINS',
 ]);
 
 const allowedPartnerTypes = new Set([
@@ -177,6 +182,62 @@ const managedUserInclude = {
   _count: {
     select: {
       listings: true,
+    },
+  },
+  customerPrimeSubscriptions: {
+    where: {
+      status: {
+        in: ['ACTIVE', 'PENDING'],
+      },
+    },
+    orderBy: {
+      submittedAt: 'desc',
+    },
+    select: {
+      id: true,
+      status: true,
+      startedAt: true,
+      expiresAt: true,
+      submittedAt: true,
+    },
+  },
+} as const;
+
+const managedUserCompactInclude = {
+  adminProfile: {
+    select: {
+      title: true,
+      isRootAdmin: true,
+    },
+  },
+  adminPermissions: {
+    select: {
+      permission: true,
+    },
+  },
+  customRole: {
+    select: {
+      id: true,
+      name: true,
+      permissions: true,
+    },
+  },
+  partnerProfile: {
+    select: {
+      businessName: true,
+      partnerType: true,
+      kycStatus: true,
+      onboardingStatus: true,
+      accountStatus: true,
+      district: true,
+    },
+  },
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
     },
   },
   customerPrimeSubscriptions: {
@@ -411,8 +472,20 @@ export const getDashboardSummary = async (req: Request, res: Response, next: Nex
             isNot: null,
           },
         },
-        include: {
-          partnerProfile: true,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          mobile: true,
+          createdAt: true,
+          partnerProfile: {
+            select: {
+              businessName: true,
+              partnerType: true,
+              kycStatus: true,
+              onboardingStatus: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: 5,
@@ -433,12 +506,28 @@ export const getDashboardSummary = async (req: Request, res: Response, next: Nex
       prisma.listing.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
-        include: { category: true, brand: true },
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          status: true,
+          createdAt: true,
+          category: { select: { name: true } },
+          brand: { select: { name: true } },
+        },
       }),
       prisma.lead.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
-        include: { listing: true, customer: true },
+        select: {
+          id: true,
+          enquiryType: true,
+          status: true,
+          listingTitleSnapshot: true,
+          createdAt: true,
+          listing: { select: { title: true } },
+          customer: { select: { name: true, mobile: true } },
+        },
       }),
     ]);
 
@@ -479,9 +568,6 @@ export const getDashboardSummary = async (req: Request, res: Response, next: Nex
         value: stat._count.id,
       };
     });
-
-    console.log("CATEGORY STATS:", categoryStats);
-    console.log("CATEGORY BREAKDOWN:", categoryBreakdown);
 
     res.json({
       stats: {
@@ -564,6 +650,8 @@ export const getPlatformSettings = async (req: Request, res: Response, next: Nex
       financeSupport: {
         items: settings.financeSupport.items,
       },
+      listingPayment: serializeListingPaymentSettingsForAdmin(settings.listingPayment),
+      companyInvoice: settings.companyInvoice,
     });
   } catch (error) {
     next(error);
@@ -572,7 +660,7 @@ export const getPlatformSettings = async (req: Request, res: Response, next: Nex
 
 export const updatePlatformSettings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { googleClientId, googleAuthEnabled, mobileOtp, publicLeadRouting, customerPrime } = req.body as {
+    const { googleClientId, googleAuthEnabled, mobileOtp, publicLeadRouting, customerPrime, listingPayment, companyInvoice } = req.body as {
       googleClientId?: string;
       googleAuthEnabled?: boolean;
       mobileOtp?: {
@@ -592,9 +680,27 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
         validityValue?: number;
         validityUnit?: 'DAYS' | 'MONTHS' | 'days' | 'months';
       };
+      listingPayment?: Partial<ListingPaymentSettings>;
+      companyInvoice?: {
+        companyName?: string;
+        gstin?: string;
+        address?: string;
+        state?: string;
+        city?: string;
+        defaultGstRate?: number;
+        termsAndConditions?: string;
+      };
     };
 
-    if (googleClientId === undefined && googleAuthEnabled === undefined && !mobileOtp && !publicLeadRouting && !customerPrime) {
+    if (
+      googleClientId === undefined &&
+      googleAuthEnabled === undefined &&
+      !mobileOtp &&
+      !publicLeadRouting &&
+      !customerPrime &&
+      !listingPayment &&
+      !companyInvoice
+    ) {
       return res.status(400).json({
         error: 'No platform setting changes were provided.',
       });
@@ -645,6 +751,44 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
       };
     }
 
+    if (listingPayment) {
+      const currentSettings = await getAppSettings();
+      settingsPayload.listingPayment = {
+        ...(listingPayment.rtgs ? { rtgs: listingPayment.rtgs } : {}),
+        ...(listingPayment.razorpay
+          ? { razorpay: {
+            ...listingPayment.razorpay,
+            keySecret: isMaskedSecret(listingPayment.razorpay.keySecret)
+              ? currentSettings.listingPayment.razorpay.keySecret
+              : listingPayment.razorpay.keySecret,
+            webhookSecret: isMaskedSecret(listingPayment.razorpay.webhookSecret)
+              ? currentSettings.listingPayment.razorpay.webhookSecret
+              : listingPayment.razorpay.webhookSecret,
+          } }
+          : {}),
+        ...(listingPayment.phonepe
+          ? { phonepe: {
+            ...listingPayment.phonepe,
+            clientSecret: isMaskedSecret(listingPayment.phonepe.clientSecret)
+              ? currentSettings.listingPayment.phonepe.clientSecret
+              : listingPayment.phonepe.clientSecret,
+          } }
+          : {}),
+      };
+    }
+
+    if (companyInvoice) {
+      settingsPayload.companyInvoice = {
+        ...(companyInvoice.companyName !== undefined ? { companyName: companyInvoice.companyName } : {}),
+        ...(companyInvoice.gstin !== undefined ? { gstin: companyInvoice.gstin } : {}),
+        ...(companyInvoice.address !== undefined ? { address: companyInvoice.address } : {}),
+        ...(companyInvoice.state !== undefined ? { state: companyInvoice.state } : {}),
+        ...(companyInvoice.city !== undefined ? { city: companyInvoice.city } : {}),
+        ...(companyInvoice.defaultGstRate !== undefined ? { defaultGstRate: Number(companyInvoice.defaultGstRate) || 18 } : {}),
+        ...(companyInvoice.termsAndConditions !== undefined ? { termsAndConditions: companyInvoice.termsAndConditions } : {}),
+      };
+    }
+
     const [settings, defaultSuperAdminContact, recentPrimePayments] = await Promise.all([
       updatePlatformRuntimeSettings(settingsPayload),
       getDefaultSuperAdminContact(),
@@ -679,6 +823,8 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
         ...settings.customerPrime,
         recentPayments: recentPrimePayments,
       },
+      listingPayment: serializeListingPaymentSettingsForAdmin(settings.listingPayment),
+      companyInvoice: settings.companyInvoice,
     });
   } catch (error) {
     next(error);
@@ -760,6 +906,188 @@ export const updateCustomerPrimePaymentStatus = async (req: Request, res: Respon
   }
 };
 
+const mapListingPaymentSubmission = (payment: any) => ({
+  id: payment.id,
+  listingId: payment.listingId,
+  buyerId: payment.buyerId,
+  partnerId: payment.partnerId,
+  method: payment.method,
+  status: payment.status,
+  amount: Number(payment.amount || 0),
+  transactionRef: payment.transactionRef,
+  paymentNote: payment.paymentNote,
+  receiptUrl: payment.receiptUrl,
+  submittedAt: payment.submittedAt,
+  reviewedAt: payment.reviewedAt,
+  rejectionReason: payment.rejectionReason,
+  buyer: payment.buyer,
+  partner: payment.partner,
+  listing: payment.listing
+    ? {
+      id: payment.listing.id,
+      title: payment.listing.title,
+      status: payment.listing.status,
+      price: Number(payment.listing.price || 0),
+    }
+    : null,
+});
+
+const listingPaymentSubmissionSelect = {
+  id: true,
+  listingId: true,
+  buyerId: true,
+  partnerId: true,
+  method: true,
+  status: true,
+  amount: true,
+  transactionRef: true,
+  paymentNote: true,
+  receiptUrl: true,
+  submittedAt: true,
+  reviewedAt: true,
+  rejectionReason: true,
+  buyer: { select: { id: true, name: true, mobile: true, email: true } },
+  partner: {
+    select: {
+      id: true,
+      name: true,
+      mobile: true,
+      email: true,
+      partnerProfile: { select: { partnerType: true } },
+    },
+  },
+  listing: { select: { id: true, title: true, price: true, status: true } },
+} as const;
+
+export const getListingPaymentSubmissions = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const requestedStatus = String(req.query.status || '').trim().toUpperCase();
+    const requestedId = req.query.id ? String(req.query.id).trim() : '';
+    const requestedPrefix = req.query.prefix ? String(req.query.prefix).trim() : '';
+    const where: any = {};
+
+    if (requestedStatus && ['PENDING_VERIFICATION', 'APPROVED', 'REJECTED', 'FAILED', 'PAID'].includes(requestedStatus)) {
+      where.status = requestedStatus;
+    }
+
+    if (requestedId) {
+      where.id = requestedId;
+    } else if (requestedPrefix) {
+      where.id = { startsWith: requestedPrefix };
+    }
+
+    if (String(req.query.summary || '').toLowerCase() === 'true') {
+      const count = await prismaAny.listingPaymentSubmission.count({ where });
+      return res.json({ count });
+    }
+
+    const payments = await prismaAny.listingPaymentSubmission.findMany({
+      where,
+      orderBy: { submittedAt: 'desc' },
+      take: 100,
+      select: listingPaymentSubmissionSelect,
+    });
+
+    res.json({ payments: payments.map(mapListingPaymentSubmission) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getListingPaymentSubmissionById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id || '').trim();
+
+    if (!id) {
+      return res.status(400).json({ error: 'Payment id is required.' });
+    }
+
+    const payment = await prismaAny.listingPaymentSubmission.findUnique({
+      where: { id },
+      select: listingPaymentSubmissionSelect,
+    });
+
+    if (!payment) {
+      return res.status(404).json({ error: 'Listing payment submission not found.' });
+    }
+
+    res.json({ payment: mapListingPaymentSubmission(payment) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateListingPaymentSubmissionStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const status = String(req.body?.status || '').trim().toUpperCase();
+    const rejectionReason = String(req.body?.rejectionReason || '').trim();
+
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Valid payment status is required.' });
+    }
+
+    const payment = await prismaAny.listingPaymentSubmission.update({
+      where: { id },
+      data: {
+        status,
+        reviewedByUserId: req.user?.id || null,
+        reviewedAt: new Date(),
+        rejectionReason: status === 'REJECTED' ? rejectionReason || 'Payment proof could not be verified.' : null,
+      },
+      select: listingPaymentSubmissionSelect,
+    });
+
+    if (status === 'APPROVED') {
+      await finalizeListingPaymentSale(payment.id);
+    }
+
+    try {
+      const listingTitle = payment.listing?.title || 'Vehicle Listing';
+      const formattedAmount = payment.amount ? `₹${Number(payment.amount).toLocaleString('en-IN')}` : '';
+
+      if (payment.buyerId) {
+        const title = status === 'APPROVED' ? 'Payment Receipt Approved' : 'Payment Receipt Rejected';
+        const message = status === 'APPROVED'
+          ? `Your payment submission ${formattedAmount ? `of ${formattedAmount} ` : ''}for listing "${listingTitle}" has been verified and approved!`
+          : `Your payment submission ${formattedAmount ? `of ${formattedAmount} ` : ''}for listing "${listingTitle}" was rejected. ${payment.rejectionReason ? `Reason: ${payment.rejectionReason}` : ''}`;
+
+        await createPartnerNotification({
+          userId: payment.buyerId,
+          title,
+          message,
+          link: '/profile',
+          type: status === 'APPROVED' ? 'PAYMENT_VERIFIED' : 'PAYMENT_REJECTED',
+        });
+      }
+
+      if (payment.partnerId && payment.partnerId !== payment.buyerId) {
+        const title = status === 'APPROVED' ? 'Buyer Payment Approved' : 'Buyer Payment Rejected';
+        const message = status === 'APPROVED'
+          ? `Payment verification ${formattedAmount ? `of ${formattedAmount} ` : ''}for your listing "${listingTitle}" has been approved!`
+          : `Payment verification for your listing "${listingTitle}" was rejected by Superadmin.`;
+
+        await createPartnerNotification({
+          userId: payment.partnerId,
+          title,
+          message,
+          link: '/profile',
+          type: status === 'APPROVED' ? 'PAYMENT_VERIFIED' : 'PAYMENT_REJECTED',
+        });
+      }
+    } catch (notifErr) {
+      console.error('Failed to dispatch payment status notification:', notifErr);
+    }
+
+    res.json({
+      message: status === 'APPROVED' ? 'Payment receipt approved successfully.' : 'Payment receipt rejected successfully.',
+      payment: mapListingPaymentSubmission(payment),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getFinanceSupportContent = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const settings = await getAppSettings();
@@ -824,6 +1152,7 @@ export const getSiteLogoContent = async (req: Request, res: Response, next: Next
 
     res.json({
       imageUrl: settings.siteLogo.imageUrl,
+      darkLogoUrl: settings.siteLogo.darkLogoUrl,
       faviconUrl: settings.siteLogo.faviconUrl,
       manifestIconUrl: settings.siteLogo.manifestIconUrl,
       updatedAt: settings.siteLogo.updatedAt,
@@ -893,11 +1222,13 @@ export const updateInspectionSectionContent = async (req: Request, res: Response
 export const updateSiteLogoContent = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const imageUrl = req.body?.imageUrl;
+    const darkLogoUrl = req.body?.darkLogoUrl;
     const faviconUrl = req.body?.faviconUrl;
     const manifestIconUrl = req.body?.manifestIconUrl;
 
     const settings = await updateSiteLogoSettings({
       imageUrl,
+      darkLogoUrl,
       faviconUrl,
       manifestIconUrl,
       updatedByUserId: req.user?.id || null,
@@ -943,13 +1274,14 @@ export const updateFooterContent = async (req: Request, res: Response, next: Nex
 
 export const getAdminUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const compact = String(req.query.compact || '').toLowerCase() === 'true';
     const users = await prisma.user.findMany({
       where: {
         role: {
           in: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'],
         },
       },
-      include: managedUserInclude as any,
+      include: (compact ? managedUserCompactInclude : managedUserInclude) as any,
       orderBy: [{ createdAt: 'desc' }],
     });
 
@@ -963,11 +1295,16 @@ export const getAdminUsers = async (req: Request, res: Response, next: NextFunct
 
 export const getAdminPartners = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const requestedId = req.query.id ? String(req.query.id).trim() : '';
+    const requestedPrefix = req.query.prefix ? String(req.query.prefix).trim() : '';
+    const compact = String(req.query.compact || '').toLowerCase() === 'true';
     const partners = await prisma.user.findMany({
       where: {
         role: 'PARTNER',
+        ...(requestedId ? { id: requestedId } : {}),
+        ...(!requestedId && requestedPrefix ? { id: { startsWith: requestedPrefix } } : {}),
       } as any,
-      include: managedUserInclude as any,
+      include: (compact ? managedUserCompactInclude : managedUserInclude) as any,
       orderBy: [{ createdAt: 'desc' }],
     });
 
@@ -981,7 +1318,13 @@ export const getAdminPartners = async (req: Request, res: Response, next: NextFu
 
 export const getCustomerVisitors = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await syncExpiredCustomerPrimeSubscriptions();
+    const requestedId = req.query.id ? String(req.query.id).trim() : '';
+    const requestedPrefix = req.query.prefix ? String(req.query.prefix).trim() : '';
+    const compact = String(req.query.compact || '').toLowerCase() === 'true';
+
+    if (!requestedId && !requestedPrefix) {
+      await syncExpiredCustomerPrimeSubscriptions();
+    }
 
     const visitors = await prisma.user.findMany({
       where: {
@@ -989,8 +1332,10 @@ export const getCustomerVisitors = async (req: Request, res: Response, next: Nex
         status: {
           not: 'CLOSED',
         },
+        ...(requestedId ? { id: requestedId } : {}),
+        ...(!requestedId && requestedPrefix ? { id: { startsWith: requestedPrefix } } : {}),
       },
-      include: managedUserInclude as any,
+      include: (compact ? managedUserCompactInclude : managedUserInclude) as any,
       orderBy: [{ createdAt: 'desc' }],
     });
 
@@ -1085,9 +1430,14 @@ export const updateManagedUserAccount = async (req: Request, res: Response, next
         }
       }
 
-      const normalizedPermissions: AdminPermissionKey[] = Array.isArray(permissions)
-        ? permissions.filter((permission): permission is AdminPermissionKey => allowedAdminPermissions.has(permission))
-        : [];
+      // A missing permissions field means this update is unrelated to access
+      // control. Preserve existing direct permissions instead of silently
+      // revoking them during a partial account update.
+      const normalizedPermissions: string[] = Array.isArray(permissions)
+        ? permissions.filter((permission): permission is string => allowedAdminPermissions.has(permission))
+        : ((targetUser.adminPermissions || []) as Array<{ permission: string }>)
+          .map((item) => item.permission)
+          .filter((permission: string) => allowedAdminPermissions.has(permission));
 
       await prisma.user.update({
         where: { id },
@@ -1107,9 +1457,14 @@ export const updateManagedUserAccount = async (req: Request, res: Response, next
         where: { adminUserId: id },
       });
 
-      if (normalizedPermissions.length > 0) {
+      // A custom role is the authoritative permission source for employees.
+      // Avoid duplicating the same permissions in AdminPermission, which also
+      // keeps role assignments independent from the legacy permission column.
+      const directPermissions = normalizedCustomRoleId ? [] : normalizedPermissions;
+
+      if (directPermissions.length > 0) {
         await prisma.adminPermission.createMany({
-          data: normalizedPermissions.map((permission) => ({
+          data: directPermissions.map((permission) => ({
             adminUserId: id,
             permission,
           })),
@@ -1355,11 +1710,11 @@ export const createManagedUser = async (req: Request, res: Response, next: NextF
             isRootAdmin: false,
           },
         },
-        adminPermissions: normalizedPermissions.length > 0
-          ? {
+        adminPermissions: normalizedCustomRoleId || normalizedPermissions.length === 0
+          ? undefined
+          : {
             create: normalizedPermissions.map((permission) => ({ permission })),
-          }
-          : undefined,
+          },
       } as any,
       include: managedUserInclude as any,
     });
@@ -1575,8 +1930,21 @@ export const getVerificationDetail = async (req: Request, res: Response, next: N
 export const getAdminListings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const partnerId = req.query.partnerId ? String(req.query.partnerId) : undefined;
+    const requestedId = req.query.id ? String(req.query.id).trim() : '';
+    const requestedPrefix = req.query.prefix ? String(req.query.prefix).trim() : '';
+    const compact = String(req.query.compact || '').toLowerCase() === 'true';
+    const where: Record<string, string | { startsWith: string }> = {};
+    if (partnerId) {
+      where.partnerId = partnerId;
+    }
+    if (requestedId) {
+      where.id = requestedId;
+    } else if (requestedPrefix) {
+      where.id = { startsWith: requestedPrefix };
+    }
+
     const listings = await prisma.listing.findMany({
-      ...(partnerId ? { where: { partnerId } } : {}),
+      ...(Object.keys(where).length > 0 ? { where } : {}),
       include: {
         partner: {
           select: {
@@ -1613,6 +1981,7 @@ export const getAdminListings = async (req: Request, res: Response, next: NextFu
           select: { id: true, name: true },
         },
         media: {
+          ...(compact ? { where: { type: 'IMAGE' }, take: 1 } : {}),
           select: {
             id: true,
             url: true,

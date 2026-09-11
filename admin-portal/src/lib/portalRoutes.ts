@@ -3,6 +3,10 @@ export const employeeRolesPermissions = ['roles.read', 'roles.create', 'roles.up
 export const employeeBrandsPermissions = ['brands.read', 'brands.create', 'brands.update', 'brands.delete'];
 export const employeeFooterPermissions = ['footer.manage'];
 
+import {
+  recruitmentAnyPermissions,
+} from '@/lib/recruitmentPermissions';
+
 export type EmployeeRoutePermission = {
   superadminPath: string;
   employeePath: string;
@@ -11,14 +15,14 @@ export type EmployeeRoutePermission = {
 
 export const employeeRoutePermissions: EmployeeRoutePermission[] = [
   {
-    superadminPath: '/superadmin/users/roles',
-    employeePath: '/employee/users/roles',
-    permissions: employeeRolesPermissions,
+    superadminPath: '/superadmin/dashboard',
+    employeePath: '/employee/dashboard',
+    permissions: ['dashboard.view'],
   },
   {
-    superadminPath: '/superadmin/users',
-    employeePath: '/employee/users',
-    permissions: employeeUsersPermissions,
+    superadminPath: '/superadmin/verifications',
+    employeePath: '/employee/verifications',
+    permissions: ['kyc.manage'],
   },
   {
     superadminPath: '/superadmin/enquiries',
@@ -26,9 +30,9 @@ export const employeeRoutePermissions: EmployeeRoutePermission[] = [
     permissions: ['enquiries.manage'],
   },
   {
-    superadminPath: '/superadmin/verifications',
-    employeePath: '/employee/verifications',
-    permissions: ['kyc.manage'],
+    superadminPath: '/superadmin/listings',
+    employeePath: '/employee/listings',
+    permissions: ['listings.read'],
   },
   {
     superadminPath: '/superadmin/partners',
@@ -51,24 +55,19 @@ export const employeeRoutePermissions: EmployeeRoutePermission[] = [
     permissions: employeeBrandsPermissions,
   },
   {
-    superadminPath: '/superadmin/listings',
-    employeePath: '/employee/listings',
-    permissions: ['listings.read'],
-  },
-  {
     superadminPath: '/superadmin/recurrence',
     employeePath: '/employee/recurrence',
     permissions: ['recurrence.manage'],
   },
   {
-    superadminPath: '/superadmin/settings',
-    employeePath: '/employee/settings',
-    permissions: ['settings.manage'],
+    superadminPath: '/superadmin/analytics',
+    employeePath: '/employee/analytics',
+    permissions: ['analytics.read'],
   },
   {
-    superadminPath: '/superadmin/translations',
-    employeePath: '/employee/translations',
-    permissions: ['translations.manage'],
+    superadminPath: '/superadmin/recruitment',
+    employeePath: '/employee/recruitment',
+    permissions: recruitmentAnyPermissions,
   },
   {
     superadminPath: '/superadmin/footer',
@@ -76,9 +75,24 @@ export const employeeRoutePermissions: EmployeeRoutePermission[] = [
     permissions: employeeFooterPermissions,
   },
   {
-    superadminPath: '/superadmin/dashboard',
-    employeePath: '/employee/dashboard',
-    permissions: ['dashboard.view'],
+    superadminPath: '/superadmin/translations',
+    employeePath: '/employee/translations',
+    permissions: ['translations.manage'],
+  },
+  {
+    superadminPath: '/superadmin/users/roles',
+    employeePath: '/employee/users/roles',
+    permissions: employeeRolesPermissions,
+  },
+  {
+    superadminPath: '/superadmin/users',
+    employeePath: '/employee/users',
+    permissions: employeeUsersPermissions,
+  },
+  {
+    superadminPath: '/superadmin/settings',
+    employeePath: '/employee/settings',
+    permissions: ['settings.manage'],
   },
 ];
 

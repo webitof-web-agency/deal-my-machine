@@ -8,12 +8,13 @@ import SellVehicleModal from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
-import { 
-  ChevronRight, 
+import {
+  ChevronRight,
   Globe,
-  Phone, 
-  Mail, 
-  MapPin 
+  Heart,
+  Phone,
+  Mail,
+  MapPin
 } from 'lucide-react';
 
 type FooterSocialLink = {
@@ -238,6 +239,12 @@ export default function Footer() {
                     {t('navbar.soldVehicles')}
                   </Link>
                 </li>
+                <li>
+                  <Link href="/jobs" className="group flex items-center text-[13px] text-[#B3B3B3] hover:text-white transition-colors whitespace-nowrap">
+                    <ChevronRight size={14} className="text-[#F0C85C] mr-3 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                    Careers &amp; Jobs
+                  </Link>
+                </li>
               </ul>
             </div>
 
@@ -340,12 +347,17 @@ export default function Footer() {
           <div className="pt-6 border-t border-[#333333] flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 text-[12px] text-[#8C8C8C]">
             
             <div className="flex items-center text-center sm:text-left">
-              <span>{t('footer.copyright', '? 2025-2026 JCB Exchange. All rights reserved.')}</span>
+              <span>{t('footer.copyright', '© 2026-2027 JCB Exchange. All rights reserved.')}</span>
             </div>
 
             <div className="flex items-center">
               <span className="flex items-center justify-center">
-                {t('footer.craftedWith', 'Crafted with')} <span className="mx-1 text-[16px] leading-none text-red-500">?</span> {t('footer.by', 'by')} <a href="https://webitof.com/" target="_blank" rel="noopener noreferrer" className="ml-1 underline transition-colors hover:text-white">Webitof</a>
+                {t('footer.craftedWith', 'Crafted with')}{' '}
+                <Heart size={16} className="mx-1 inline-block fill-red-500 text-red-500" aria-hidden="true" />{' '}
+                {t('footer.by', 'by')}{' '}
+                <a href="https://webitof.com/" target="_blank" rel="noopener noreferrer" className="ml-1 underline transition-colors hover:text-white">
+                  Webitof
+                </a>
               </span>
             </div>
 

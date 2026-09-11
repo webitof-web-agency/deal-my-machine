@@ -30,6 +30,7 @@ import {
 import {
   createCustomerPrimeSubscriptionRequest,
   getCustomerPrimeAccessPayload,
+  listCustomerPrimeSubscriptionsForUser,
 } from '../utils/customerPrimeSubscriptions';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jcbexchange_super_secret_key_123';
@@ -1341,6 +1342,49 @@ export const getCustomerPrimeAccess = async (req: Request, res: Response, next: 
     return res.json({
       access: accessPayload,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCustomerPrimeHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    const subscriptions = await listCustomerPrimeSubscriptionsForUser({
+      userId: req.user.id,
+      take: 25,
+    });
+
+    const history = subscriptions.map((subscription: any) => {
+      const settingsSnapshot = subscription.settingsSnapshot || {};
+      const validityValue = Number(settingsSnapshot.validityValue || 0);
+      const validityUnit = String(settingsSnapshot.validityUnit || 'DAYS').toUpperCase() === 'MONTHS' ? 'MONTHS' : 'DAYS';
+      const planDurationLabel =
+        validityValue > 0
+          ? `${validityValue} ${validityUnit === 'MONTHS' ? (validityValue === 1 ? 'month' : 'months') : validityValue === 1 ? 'day' : 'days'}`
+          : 'Prime Membership';
+      const displayName =
+        subscription.user?.name?.trim() ||
+        subscription.user?.mobile?.trim() ||
+        'Prime Customer';
+
+      return {
+        id: subscription.id,
+        memberName: displayName,
+        planName: `JCB Exchange Prime - ${planDurationLabel}`,
+        amount: Number(subscription.paidAmount || 0),
+        status: subscription.status,
+        submittedAt: subscription.submittedAt,
+        startedAt: subscription.startedAt,
+        expiresAt: subscription.expiresAt,
+        receiptUrl: subscription.receiptUrl || null,
+      };
+    });
+
+    return res.json({ history });
   } catch (error) {
     next(error);
   }

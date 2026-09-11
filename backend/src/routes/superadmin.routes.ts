@@ -20,6 +20,8 @@ import {
   getPendingVerifications,
   getVerificationDetail,
   getCustomerPrimePayments,
+  getListingPaymentSubmissionById,
+  getListingPaymentSubmissions,
   updatePlatformSettings,
   saveAdminPartnerOnboarding,
   submitAdminPartnerOnboarding,
@@ -34,6 +36,7 @@ import {
   updateInspectionSectionContent,
   updateSiteLogoContent,
   updateCustomerPrimePaymentStatus,
+  updateListingPaymentSubmissionStatus,
   updateVerificationStatus,
 } from '../controllers/admin.controller';
 import {
@@ -90,6 +93,11 @@ router.get('/translations/catalog', canManageTranslations, getTranslationCatalog
 router.put('/translations/catalog', canManageTranslations, saveTranslationCatalog);
 router.get('/customer-prime-payments', canManageRecurrence, getCustomerPrimePayments);
 router.patch('/customer-prime-payments/:id/status', canManageRecurrence, updateCustomerPrimePaymentStatus);
+const canVerifyListingPayment = requireSuperAdminOrEmployeePermissions(['listings.verify_payment', 'listings.approve', 'settings.manage']);
+
+router.get('/listing-payments', canVerifyListingPayment, getListingPaymentSubmissions);
+router.get('/listing-payments/:id', canVerifyListingPayment, getListingPaymentSubmissionById);
+router.patch('/listing-payments/:id/status', canVerifyListingPayment, updateListingPaymentSubmissionStatus);
 router.get('/users', canViewUsers, getAdminUsers);
 router.get('/partners', canViewPartners, getAdminPartners);
 router.get('/visitors', canViewVisitors, getCustomerVisitors);

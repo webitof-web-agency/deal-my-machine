@@ -29,6 +29,16 @@ const leadRelatedUserSelect = {
       partnerType: true,
     },
   },
+  customerPrimeSubscriptions: {
+    where: {
+      status: 'ACTIVE',
+    },
+    select: {
+      id: true,
+      status: true,
+      expiresAt: true,
+    },
+  },
 } as const;
 
 const leadRelatedListingSelect = {
@@ -42,6 +52,48 @@ const leadRelatedListingSelect = {
     select: leadRelatedUserSelect,
   },
 } as const;
+
+const leadListingPaymentSelect = {
+  id: true,
+  listingId: true,
+  buyerId: true,
+  partnerId: true,
+  method: true,
+  status: true,
+  amount: true,
+  transactionRef: true,
+  paymentNote: true,
+  receiptUrl: true,
+  submittedAt: true,
+  reviewedAt: true,
+  rejectionReason: true,
+  listing: { select: { id: true, title: true, price: true, status: true } },
+} as const;
+
+const mapLeadListingPayment = (payment: any) => ({
+  id: payment.id,
+  listingId: payment.listingId,
+  buyerId: payment.buyerId,
+  partnerId: payment.partnerId,
+  method: payment.method,
+  status: payment.status,
+  amount: Number(payment.amount || 0),
+  transactionRef: payment.transactionRef || '',
+  paymentNote: payment.paymentNote || '',
+  receiptUrl: payment.receiptUrl || '',
+  submittedAt: payment.submittedAt,
+  reviewedAt: payment.reviewedAt,
+  rejectionReason: payment.rejectionReason || '',
+  isForCurrentListing: payment.isForCurrentListing === true,
+  listing: payment.listing
+    ? {
+        id: payment.listing.id,
+        title: payment.listing.title,
+        price: Number(payment.listing.price || 0),
+        status: payment.listing.status || '',
+      }
+    : null,
+});
 
 const canEmployeeManageEnquiries = async (userId: string) => {
   const employee = await prismaAny.user.findUnique({
@@ -67,66 +119,97 @@ const canEmployeeManageEnquiries = async (userId: string) => {
   return permissions.includes('ALL_ACCESS') || permissions.includes('enquiries.manage');
 };
 
-const formatLead = (lead: any) => ({
-  id: lead.id,
-  enquiryType: lead.enquiryType,
-  message: lead.message || '',
-  status: lead.status,
-  createdAt: lead.createdAt,
-  updatedAt: lead.updatedAt,
-  customer: {
-    id: lead.customer?.id || '',
-    name: lead.customer?.name || lead.customer?.mobile || lead.customer?.email || 'Customer',
-    mobile: lead.customer?.mobile || '',
-    email: lead.customer?.email || '',
-    city: lead.customer?.city || '',
-    state: lead.customer?.state || '',
-  },
-  listing: {
-    id: lead.listing?.id || '',
-    title: lead.listing?.title || lead.listingTitleSnapshot || 'Listing removed',
-    status: lead.listing?.status || lead.listingStatusSnapshot || '',
-    price: Number(lead.listing?.price ?? lead.listingPriceSnapshot ?? 0),
-    locationCity: lead.listing?.locationCity || lead.listingLocationCitySnapshot || '',
-    locationState: lead.listing?.locationState || lead.listingLocationStateSnapshot || '',
-  },
-  routing: {
-    mode: lead.dealer?.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'SELLER',
-  },
-  recipient: {
-    id: lead.dealer?.id || '',
-    name:
-      lead.dealer?.partnerProfile?.businessName ||
-      lead.dealer?.name ||
-      lead.dealer?.mobile ||
-      lead.dealer?.email ||
-      'Recipient',
-    mobile: lead.dealer?.mobile || '',
-    email: lead.dealer?.email || '',
-    whatsappNumber: lead.dealer?.whatsappNumber || '',
-    role: lead.dealer?.role || '',
-    partnerType: lead.dealer?.partnerProfile?.partnerType || null,
-  },
-  listingOwner:
-    lead.dealer?.role === 'SUPER_ADMIN'
-      ? null
-      : {
-          id: lead.listing?.partner?.id || lead.dealer?.id || '',
-          name:
-            lead.listing?.partner?.partnerProfile?.businessName ||
-            lead.listing?.partner?.name ||
-            lead.dealer?.partnerProfile?.businessName ||
-            lead.dealer?.name ||
-            'Listing Seller',
-          mobile: lead.listing?.partner?.mobile || lead.dealer?.mobile || '',
-          whatsappNumber:
-            lead.listing?.partner?.whatsappNumber || lead.dealer?.whatsappNumber || '',
-          partnerType:
-            lead.listing?.partner?.partnerProfile?.partnerType ||
-            lead.dealer?.partnerProfile?.partnerType ||
-            null,
-        },
-});
+const formatLead = (lead: any) => {
+  const isSuperAdminRecipient = lead.dealer?.role === 'SUPER_ADMIN';
+
+  let dynamicEnquiryType = lead.enquiryType;
+  if (isSuperAdminRecipient) {
+    if (lead.enquiryType === 'DEALER_WHATSAPP' || lead.enquiryType === 'SELLER_WHATSAPP' || lead.enquiryType === 'WHATSAPP') {
+      dynamicEnquiryType = 'SUPER_ADMIN_WHATSAPP';
+    } else if (lead.enquiryType === 'DEALER_CALL' || lead.enquiryType === 'SELLER_CALL' || lead.enquiryType === 'CALL') {
+      dynamicEnquiryType = 'SUPER_ADMIN_CALL';
+    } else if (lead.enquiryType === 'DEALER_CALLBACK' || lead.enquiryType === 'SELLER_CALLBACK' || lead.enquiryType === 'CALLBACK') {
+      dynamicEnquiryType = 'SUPER_ADMIN_CALLBACK';
+    }
+  } else {
+    if (lead.enquiryType === 'DEALER_WHATSAPP' || lead.enquiryType === 'WHATSAPP') {
+      dynamicEnquiryType = 'SELLER_WHATSAPP';
+    } else if (lead.enquiryType === 'DEALER_CALL' || lead.enquiryType === 'CALL') {
+      dynamicEnquiryType = 'SELLER_CALL';
+    } else if (lead.enquiryType === 'DEALER_CALLBACK' || lead.enquiryType === 'CALLBACK') {
+      dynamicEnquiryType = 'SELLER_CALLBACK';
+    }
+  }
+
+  const isPrime =
+    lead.customer?.role === 'CUSTOMER' &&
+    Array.isArray(lead.customer?.customerPrimeSubscriptions) &&
+    lead.customer.customerPrimeSubscriptions.some(
+      (sub: any) => sub.status === 'ACTIVE' && (!sub.expiresAt || new Date(sub.expiresAt) >= new Date())
+    );
+
+  return {
+    id: lead.id,
+    enquiryType: dynamicEnquiryType,
+    message: lead.message || '',
+    status: lead.status,
+    createdAt: lead.createdAt,
+    updatedAt: lead.updatedAt,
+    customer: {
+      id: lead.customer?.id || '',
+      name: lead.customer?.name || lead.customer?.mobile || lead.customer?.email || 'Customer',
+      mobile: lead.customer?.mobile || '',
+      email: lead.customer?.email || '',
+      city: lead.customer?.city || '',
+      state: lead.customer?.state || '',
+      isPrime: Boolean(isPrime),
+    },
+    listing: {
+      id: lead.listing?.id || '',
+      title: lead.listing?.title || lead.listingTitleSnapshot || 'Listing removed',
+      status: lead.listing?.status || lead.listingStatusSnapshot || '',
+      price: Number(lead.listing?.price ?? lead.listingPriceSnapshot ?? 0),
+      locationCity: lead.listing?.locationCity || lead.listingLocationCitySnapshot || '',
+      locationState: lead.listing?.locationState || lead.listingLocationStateSnapshot || '',
+    },
+    routing: {
+      mode: lead.dealer?.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'SELLER',
+    },
+    recipient: {
+      id: lead.dealer?.id || '',
+      name:
+        lead.dealer?.partnerProfile?.businessName ||
+        lead.dealer?.name ||
+        lead.dealer?.mobile ||
+        lead.dealer?.email ||
+        'Recipient',
+      mobile: lead.dealer?.mobile || '',
+      email: lead.dealer?.email || '',
+      whatsappNumber: lead.dealer?.whatsappNumber || '',
+      role: lead.dealer?.role || '',
+      partnerType: lead.dealer?.partnerProfile?.partnerType || null,
+    },
+    listingOwner:
+      lead.dealer?.role === 'SUPER_ADMIN'
+        ? null
+        : {
+            id: lead.listing?.partner?.id || lead.dealer?.id || '',
+            name:
+              lead.listing?.partner?.partnerProfile?.businessName ||
+              lead.listing?.partner?.name ||
+              lead.dealer?.partnerProfile?.businessName ||
+              lead.dealer?.name ||
+              'Listing Seller',
+            mobile: lead.listing?.partner?.mobile || lead.dealer?.mobile || '',
+            whatsappNumber:
+              lead.listing?.partner?.whatsappNumber || lead.dealer?.whatsappNumber || '',
+            partnerType:
+              lead.listing?.partner?.partnerProfile?.partnerType ||
+              lead.dealer?.partnerProfile?.partnerType ||
+              null,
+          },
+  };
+};
 
 const formatDetailedLead = (lead: any) => {
   const base = formatLead(lead);
@@ -215,6 +298,9 @@ const formatDetailedLead = (lead: any) => {
       createdAt: lead.customer?.createdAt || null,
     },
     listing: listingDetails,
+    listingPayments: Array.isArray(lead.listingPayments)
+      ? lead.listingPayments.map(mapLeadListingPayment)
+      : [],
     activities: synthesizedTimeline,
   };
 };
@@ -520,6 +606,9 @@ export const createLead = async (req: Request, res: Response, next: NextFunction
 
     let lead;
 
+    const calculatedEnquiryType =
+      leadRecipient.routingMode === 'SUPER_ADMIN' ? 'SUPER_ADMIN_CALLBACK' : 'SELLER_CALLBACK';
+
     if (existingLead) {
       await prismaAny.leadActivity.create({
         data: {
@@ -535,7 +624,7 @@ export const createLead = async (req: Request, res: Response, next: NextFunction
         data: {
           status: 'NEW',
           updatedAt: new Date(),
-          enquiryType: 'DEALER_CALLBACK',
+          enquiryType: calculatedEnquiryType,
           message: leadMessage,
         },
         include: {
@@ -556,7 +645,7 @@ export const createLead = async (req: Request, res: Response, next: NextFunction
           listingId: listing.id,
           customerId: customer.id,
           dealerId: leadRecipient.recipientUserId,
-          enquiryType: 'DEALER_CALLBACK',
+          enquiryType: calculatedEnquiryType,
           listingTitleSnapshot: listing.title,
           listingStatusSnapshot: listing.status,
           listingPriceSnapshot: listing.price,
@@ -772,6 +861,15 @@ export const createPublicContactLead = async (req: Request, res: Response, next:
 
     let lead;
 
+    const calculatedPublicEnquiryType =
+      leadRecipient.routingMode === 'SUPER_ADMIN'
+        ? enquiryType === 'WHATSAPP'
+          ? 'SUPER_ADMIN_WHATSAPP'
+          : 'SUPER_ADMIN_CALL'
+        : enquiryType === 'WHATSAPP'
+        ? 'SELLER_WHATSAPP'
+        : 'SELLER_CALL';
+
     if (existingLead) {
       await prismaAny.leadActivity.create({
         data: {
@@ -787,7 +885,7 @@ export const createPublicContactLead = async (req: Request, res: Response, next:
         data: {
           status: 'NEW',
           updatedAt: new Date(),
-          enquiryType: enquiryType === 'WHATSAPP' ? 'DEALER_WHATSAPP' : 'DEALER_CALL',
+          enquiryType: calculatedPublicEnquiryType,
           message: leadMessage,
         },
         include: {
@@ -808,7 +906,7 @@ export const createPublicContactLead = async (req: Request, res: Response, next:
           listingId: listing.id,
           customerId: customer.id,
           dealerId: leadRecipient.recipientUserId,
-          enquiryType: enquiryType === 'WHATSAPP' ? 'DEALER_WHATSAPP' : 'DEALER_CALL',
+          enquiryType: calculatedPublicEnquiryType,
           listingTitleSnapshot: listing.title,
           listingStatusSnapshot: listing.status,
           listingPriceSnapshot: listing.price,
@@ -972,6 +1070,7 @@ export const updateLeadStatus = async (req: Request, res: Response, next: NextFu
 
     const leadId = String(req.params.id || '').trim();
     const status = String(req.body?.status || '').trim().toUpperCase();
+    const note = String(req.body?.note || '').trim();
 
     if (!leadId) {
       return res.status(400).json({ error: 'Lead id is required.' });
@@ -979,6 +1078,10 @@ export const updateLeadStatus = async (req: Request, res: Response, next: NextFu
 
     if (!LEAD_STATUSES.includes(status as (typeof LEAD_STATUSES)[number])) {
       return res.status(400).json({ error: 'Invalid lead status.' });
+    }
+
+    if (status === 'LOST' && !note) {
+      return res.status(400).json({ error: 'Loss note is required when closing a deal as lost.' });
     }
 
     const existingLead = await prismaAny.lead.findUnique({
@@ -1030,22 +1133,77 @@ export const updateLeadStatus = async (req: Request, res: Response, next: NextFu
       },
     });
 
+    let activityPayload: {
+      id: string;
+      type: string;
+      title: string;
+      content: string;
+      metadata: unknown;
+      createdAt: Date;
+      actor: {
+        id: string;
+        name: string;
+        role: string;
+      } | null;
+    } | null = null;
+
     if (existingLead.status !== status) {
-      const note = String(req.body?.note || '').trim();
-      await prismaAny.leadActivity.create({
+      const isLostDeal = status === 'LOST';
+      const activity = await prismaAny.leadActivity.create({
         data: {
           leadId,
           actorId: req.user.id,
           type: 'STATUS_CHANGE',
-          title: `Status changed to ${status.replace(/_/g, ' ')}`,
-          content: note || `Lead status was updated from ${existingLead.status} to ${status}.`,
+          title: isLostDeal
+            ? 'Deal Closed - Lost'
+            : `Status changed to ${status.replace(/_/g, ' ')}`,
+          content:
+            isLostDeal
+              ? note || 'Deal was closed as lost.'
+              : `Lead status was updated from ${existingLead.status} to ${status}.`,
           metadata: {
             fromStatus: existingLead.status,
             toStatus: status,
-            note: note || undefined,
+            note: isLostDeal ? note || undefined : undefined,
+            isLostDeal,
           },
         },
-      }).catch((err: any) => console.error('Failed to record status change activity:', err));
+        include: {
+          actor: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              partnerProfile: {
+                select: {
+                  businessName: true,
+                },
+              },
+            },
+          },
+        },
+      }).catch((err: any) => {
+        console.error('Failed to record status change activity:', err);
+        return null;
+      });
+
+      if (activity) {
+        activityPayload = {
+          id: activity.id,
+          type: activity.type,
+          title: activity.title,
+          content: activity.content,
+          metadata: activity.metadata,
+          createdAt: activity.createdAt,
+          actor: activity.actor
+            ? {
+                id: activity.actor.id,
+                name: activity.actor.partnerProfile?.businessName || activity.actor.name || 'Staff',
+                role: activity.actor.role,
+              }
+            : null,
+        };
+      }
 
       if (existingLead.customerId) {
         PushNotificationService.sendToUser(existingLead.customerId, {
@@ -1061,6 +1219,7 @@ export const updateLeadStatus = async (req: Request, res: Response, next: NextFu
     return res.json({
       message: 'Lead status updated successfully.',
       lead: formatLead(updatedLead),
+      activity: activityPayload,
     });
   } catch (error) {
     next(error);
@@ -1152,8 +1311,33 @@ export const getLeadById = async (req: Request, res: Response, next: NextFunctio
       return res.status(403).json({ error: 'Access denied to this lead.' });
     }
 
+    const listingPayments = await prismaAny.listingPaymentSubmission.findMany({
+      where: {
+        buyerId: lead.customerId,
+      },
+      orderBy: { submittedAt: 'desc' },
+      take: 25,
+      select: leadListingPaymentSelect,
+    });
+
+    const sortedListingPayments = listingPayments
+      .map((payment: any) => ({
+        ...payment,
+        isForCurrentListing: Boolean(lead.listingId && payment.listingId === lead.listingId),
+      }))
+      .sort((first: any, second: any) => {
+        if (first.isForCurrentListing !== second.isForCurrentListing) {
+          return first.isForCurrentListing ? -1 : 1;
+        }
+
+        return new Date(second.submittedAt).getTime() - new Date(first.submittedAt).getTime();
+      });
+
     return res.json({
-      lead: formatDetailedLead(lead),
+      lead: formatDetailedLead({
+        ...lead,
+        listingPayments: sortedListingPayments,
+      }),
     });
   } catch (error) {
     next(error);

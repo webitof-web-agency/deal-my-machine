@@ -48,6 +48,7 @@ export type InspectionSectionSettings = {
 
 export type SiteLogoSettings = {
   imageUrl: string | null;
+  darkLogoUrl: string | null;
   faviconUrl: string | null;
   manifestIconUrl: string | null;
   updatedAt: string | null;
@@ -83,11 +84,126 @@ export type FooterSettings = {
   };
 };
 
+export type ListingPaymentSettings = {
+  rtgs: {
+    enabled: boolean;
+    beneficiaryName: string | null;
+    bankName: string | null;
+    accountNumber: string | null;
+    ifscCode: string | null;
+    branchName: string | null;
+    instructions: string | null;
+  };
+  razorpay: {
+    enabled: boolean;
+    keyId: string | null;
+    keySecret: string | null;
+    webhookSecret: string | null;
+    mode: 'TEST' | 'LIVE';
+  };
+  phonepe: {
+    enabled: boolean;
+    clientId: string | null;
+    clientSecret: string | null;
+    clientVersion: string | null;
+    mode: 'TEST' | 'LIVE';
+  };
+  updatedAt: string | null;
+  updatedByUserId: string | null;
+};
+
+export const detectRazorpayModeFromKeyId = (keyId?: string | null): 'TEST' | 'LIVE' | null => {
+  const normalizedKeyId = keyId?.trim();
+  if (!normalizedKeyId) {
+    return null;
+  }
+
+  if (normalizedKeyId.startsWith('rzp_test_')) {
+    return 'TEST';
+  }
+
+  if (normalizedKeyId.startsWith('rzp_live_')) {
+    return 'LIVE';
+  }
+
+  return null;
+};
+
+export const isValidRazorpayKeyId = (keyId?: string | null) =>
+  detectRazorpayModeFromKeyId(keyId) !== null;
+
+export const detectPhonePeModeFromClientId = (clientId?: string | null): 'TEST' | 'LIVE' => {
+  const normalizedClientId = clientId?.trim().toUpperCase();
+  if (!normalizedClientId) {
+    return 'TEST';
+  }
+
+  return /(TEST|UAT|SANDBOX|PREPROD)/.test(normalizedClientId) ? 'TEST' : 'LIVE';
+};
+
+export const normalizeListingPaymentSettings = (
+  settings?: Partial<ListingPaymentSettings> | null,
+): ListingPaymentSettings => ({
+  rtgs: {
+    enabled: settings?.rtgs?.enabled === true,
+    beneficiaryName: settings?.rtgs?.beneficiaryName?.trim() || null,
+    bankName: settings?.rtgs?.bankName?.trim() || null,
+    accountNumber: settings?.rtgs?.accountNumber?.trim() || null,
+    ifscCode: settings?.rtgs?.ifscCode?.trim()?.toUpperCase() || null,
+    branchName: settings?.rtgs?.branchName?.trim() || null,
+    instructions: settings?.rtgs?.instructions?.trim() || null,
+  },
+  razorpay: {
+    enabled: settings?.razorpay?.enabled === true,
+    keyId: settings?.razorpay?.keyId?.trim() || null,
+    keySecret: settings?.razorpay?.keySecret?.trim() || null,
+    webhookSecret: settings?.razorpay?.webhookSecret?.trim() || null,
+    mode: detectRazorpayModeFromKeyId(settings?.razorpay?.keyId) || 'TEST',
+  },
+  phonepe: {
+    enabled: settings?.phonepe?.enabled === true,
+    clientId: settings?.phonepe?.clientId?.trim() || null,
+    clientSecret: settings?.phonepe?.clientSecret?.trim() || null,
+    clientVersion: settings?.phonepe?.clientVersion?.trim() || '1',
+    mode: detectPhonePeModeFromClientId(settings?.phonepe?.clientId),
+  },
+  updatedAt: settings?.updatedAt || null,
+  updatedByUserId: settings?.updatedByUserId || null,
+});
+
+export type CompanyInvoiceSettings = {
+  companyName: string | null;
+  gstin: string | null;
+  address: string | null;
+  state: string | null;
+  city: string | null;
+  defaultGstRate: number;
+  termsAndConditions: string | null;
+  updatedAt: string | null;
+  updatedByUserId: string | null;
+};
+
+export const normalizeCompanyInvoiceSettings = (
+  settings?: Partial<CompanyInvoiceSettings> | null,
+): CompanyInvoiceSettings => ({
+  companyName: settings?.companyName?.trim() || 'JCB Exchange',
+  gstin: settings?.gstin?.trim().toUpperCase() || null,
+  address: settings?.address?.trim() || null,
+  state: settings?.state?.trim() || 'Maharashtra',
+  city: settings?.city?.trim() || 'Mumbai',
+  defaultGstRate: typeof settings?.defaultGstRate === 'number' && !Number.isNaN(settings.defaultGstRate) ? settings.defaultGstRate : 18,
+  termsAndConditions: settings?.termsAndConditions?.trim() || 'This is a computer-generated tax invoice and does not require a physical signature.',
+  updatedAt: settings?.updatedAt || null,
+  updatedByUserId: settings?.updatedByUserId || null,
+});
+
 type AppSettings = {
   googleAuth: GoogleAuthSettings;
   mobileOtp: MobileOtpSettings;
   publicLeadRouting: PublicLeadRoutingSettings;
   customerPrime: CustomerPrimeSettings;
+  listingPayment: ListingPaymentSettings;
+  companyInvoice: CompanyInvoiceSettings;
   financeSupport: {
     items: FinanceSupportItem[];
   };
@@ -130,6 +246,7 @@ const settingsFileCandidates = Array.from(
   new Set([settingsFilePath, legacySettingsFilePath, repoRootLegacySettingsFilePath]),
 );
 const siteLogoPublicUrlPrefix = '/uploads/public/site-logo/';
+const siteDarkLogoPublicUrlPrefix = '/uploads/public/site-dark-logo/';
 const siteFaviconPublicUrlPrefix = '/uploads/public/site-favicon/';
 const siteManifestIconPublicUrlPrefix = '/uploads/public/site-manifest-icon/';
 const supportedFooterSocialPlatforms = new Set(['FACEBOOK', 'INSTAGRAM', 'TWITTER']);
@@ -162,6 +279,33 @@ const defaultSettings: AppSettings = {
     updatedAt: null,
     updatedByUserId: null,
   },
+  listingPayment: {
+    rtgs: {
+      enabled: false,
+      beneficiaryName: null,
+      bankName: null,
+      accountNumber: null,
+      ifscCode: null,
+      branchName: null,
+      instructions: null,
+    },
+    razorpay: {
+      enabled: false,
+      keyId: null,
+      keySecret: null,
+      webhookSecret: null,
+      mode: 'TEST',
+    },
+    phonepe: {
+      enabled: false,
+      clientId: null,
+      clientSecret: null,
+      clientVersion: '1',
+      mode: 'TEST',
+    },
+    updatedAt: null,
+    updatedByUserId: null,
+  },
   financeSupport: {
     items: [],
   },
@@ -180,6 +324,7 @@ const defaultSettings: AppSettings = {
   },
   siteLogo: {
     imageUrl: null,
+    darkLogoUrl: null,
     faviconUrl: null,
     manifestIconUrl: null,
     updatedAt: null,
@@ -204,6 +349,17 @@ const defaultSettings: AppSettings = {
       updatedByUserId: null,
     },
   },
+  companyInvoice: {
+    companyName: 'JCB Exchange',
+    gstin: null,
+    address: null,
+    state: 'Maharashtra',
+    city: 'Mumbai',
+    defaultGstRate: 18,
+    termsAndConditions: 'This is a computer-generated tax invoice and does not require a physical signature.',
+    updatedAt: null,
+    updatedByUserId: null,
+  },
 };
 
 const parseTimestamp = (value?: string | null) => {
@@ -225,9 +381,11 @@ const getSettingsFreshnessScore = (settings?: AppSettings | null) => {
     parseTimestamp(settings.mobileOtp.updatedAt),
     parseTimestamp(settings.publicLeadRouting.updatedAt),
     parseTimestamp(settings.customerPrime.updatedAt),
+    parseTimestamp(settings.listingPayment?.updatedAt),
     parseTimestamp(settings.heroImage.updatedAt),
     parseTimestamp(settings.inspectionSection.updatedAt),
     parseTimestamp(settings.siteLogo.updatedAt),
+    parseTimestamp(settings.companyInvoice.updatedAt),
     parseTimestamp(settings.footer.contact.updatedAt),
     parseTimestamp(settings.footer.legalPages.updatedAt),
     ...settings.financeSupport.items.map((item) => parseTimestamp(item.updatedAt)),
@@ -251,6 +409,8 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
     updatedByUserId: parsed?.publicLeadRouting?.updatedByUserId || null,
   },
   customerPrime: normalizeCustomerPrimeSettings(parsed?.customerPrime),
+  listingPayment: normalizeListingPaymentSettings(parsed?.listingPayment),
+  companyInvoice: normalizeCompanyInvoiceSettings(parsed?.companyInvoice),
   financeSupport: {
     items: normalizeFinanceSupportItems(parsed?.financeSupport?.items),
   },
@@ -269,6 +429,7 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
   },
   siteLogo: {
     imageUrl: parsed?.siteLogo?.imageUrl?.trim() || null,
+    darkLogoUrl: parsed?.siteLogo?.darkLogoUrl?.trim() || null,
     faviconUrl: parsed?.siteLogo?.faviconUrl?.trim() || null,
     manifestIconUrl: parsed?.siteLogo?.manifestIconUrl?.trim() || null,
     updatedAt: parsed?.siteLogo?.updatedAt || null,
@@ -472,6 +633,10 @@ const resolveManagedBrandingFilePath = (fileUrl?: string | null) => {
     return path.join(uploadRootDir, normalizedUrl.replace(siteLogoPublicUrlPrefix, `public${path.sep}site-logo${path.sep}`));
   }
 
+  if (normalizedUrl.startsWith(siteDarkLogoPublicUrlPrefix)) {
+    return path.join(uploadRootDir, normalizedUrl.replace(siteDarkLogoPublicUrlPrefix, `public${path.sep}site-dark-logo${path.sep}`));
+  }
+
   if (normalizedUrl.startsWith(siteFaviconPublicUrlPrefix)) {
     return path.join(uploadRootDir, normalizedUrl.replace(siteFaviconPublicUrlPrefix, `public${path.sep}site-favicon${path.sep}`));
   }
@@ -672,6 +837,8 @@ export const updatePlatformRuntimeSettings = async ({
   mobileOtp,
   publicLeadRouting,
   customerPrime,
+  listingPayment,
+  companyInvoice,
   updatedByUserId,
 }: {
   googleClientId?: string | null;
@@ -697,6 +864,8 @@ export const updatePlatformRuntimeSettings = async ({
       | 'requireForSellListing'
     >
   > | null;
+  listingPayment?: Partial<ListingPaymentSettings> | null;
+  companyInvoice?: Partial<CompanyInvoiceSettings> | null;
   updatedByUserId?: string | null;
 }) => {
   const currentSettings = await getAppSettings();
@@ -705,6 +874,8 @@ export const updatePlatformRuntimeSettings = async ({
   const hasMobileOtpUpdate = mobileOtp !== undefined;
   const hasPublicLeadRoutingUpdate = publicLeadRouting !== undefined;
   const hasCustomerPrimeUpdate = customerPrime !== undefined;
+  const hasListingPaymentUpdate = listingPayment !== undefined;
+  const hasCompanyInvoiceUpdate = companyInvoice !== undefined;
 
   const nextSettings: AppSettings = {
     ...currentSettings,
@@ -751,6 +922,38 @@ export const updatePlatformRuntimeSettings = async ({
         updatedByUserId: updatedByUserId || null,
       }
       : currentSettings.customerPrime,
+    listingPayment: hasListingPaymentUpdate
+      ? {
+        ...normalizeListingPaymentSettings({
+          ...currentSettings.listingPayment,
+          ...listingPayment,
+          rtgs: {
+            ...currentSettings.listingPayment.rtgs,
+            ...listingPayment?.rtgs,
+          },
+          razorpay: {
+            ...currentSettings.listingPayment.razorpay,
+            ...listingPayment?.razorpay,
+          },
+          phonepe: {
+            ...currentSettings.listingPayment.phonepe,
+            ...listingPayment?.phonepe,
+          },
+        }),
+        updatedAt: nextTimestamp,
+        updatedByUserId: updatedByUserId || null,
+      }
+      : currentSettings.listingPayment,
+    companyInvoice: hasCompanyInvoiceUpdate
+      ? {
+        ...normalizeCompanyInvoiceSettings({
+          ...currentSettings.companyInvoice,
+          ...companyInvoice,
+        }),
+        updatedAt: nextTimestamp,
+        updatedByUserId: updatedByUserId || null,
+      }
+      : currentSettings.companyInvoice,
   };
 
   await persistSettings(nextSettings);
@@ -841,21 +1044,25 @@ export const updateInspectionSectionSettings = async ({
 
 export const updateSiteLogoSettings = async ({
   imageUrl,
+  darkLogoUrl,
   faviconUrl,
   manifestIconUrl,
   updatedByUserId,
 }: {
   imageUrl?: string | null;
+  darkLogoUrl?: string | null;
   faviconUrl?: string | null;
   manifestIconUrl?: string | null;
   updatedByUserId?: string | null;
 }) => {
   const currentSettings = await getAppSettings();
   const normalizedImageUrl = imageUrl?.trim() || null;
+  const normalizedDarkLogoUrl = darkLogoUrl === undefined ? currentSettings.siteLogo.darkLogoUrl : darkLogoUrl?.trim() || null;
   const normalizedFaviconUrl = faviconUrl?.trim() || null;
   const normalizedManifestIconUrl = manifestIconUrl?.trim() || null;
 
   const previousImageUrl = currentSettings.siteLogo.imageUrl;
+  const previousDarkLogoUrl = currentSettings.siteLogo.darkLogoUrl;
   const previousFaviconUrl = currentSettings.siteLogo.faviconUrl;
   const previousManifestIconUrl = currentSettings.siteLogo.manifestIconUrl;
 
@@ -863,6 +1070,7 @@ export const updateSiteLogoSettings = async ({
     ...currentSettings,
     siteLogo: {
       imageUrl: normalizedImageUrl,
+      darkLogoUrl: normalizedDarkLogoUrl,
       faviconUrl: normalizedFaviconUrl,
       manifestIconUrl: normalizedManifestIconUrl,
       updatedAt: new Date().toISOString(),
@@ -875,6 +1083,9 @@ export const updateSiteLogoSettings = async ({
   const cleanupTargets: Array<string | null | undefined> = [];
   if (previousImageUrl && previousImageUrl !== normalizedImageUrl) {
     cleanupTargets.push(previousImageUrl);
+  }
+  if (previousDarkLogoUrl && previousDarkLogoUrl !== normalizedDarkLogoUrl) {
+    cleanupTargets.push(previousDarkLogoUrl);
   }
   if (previousFaviconUrl && previousFaviconUrl !== normalizedFaviconUrl) {
     cleanupTargets.push(previousFaviconUrl);
