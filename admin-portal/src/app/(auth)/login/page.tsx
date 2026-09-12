@@ -36,6 +36,8 @@ function LoginPageInner() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isFirstSetup, setIsFirstSetup] = useState(false);
+  const [partnerRegistrationEnabled, setPartnerRegistrationEnabled] = useState(true);
+  const [partnerRegistrationSettingsLoaded, setPartnerRegistrationSettingsLoaded] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const showLoginSuccessToast = useCallback((user?: AuthenticatedPortalUser) => {
@@ -145,6 +147,31 @@ function LoginPageInner() {
     };
 
     checkSetupStatus();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPublicAccessSettings = async () => {
+      try {
+        const response = await api.get<{ data?: { partnerRegistrationEnabled?: boolean } }>('/master/public-access');
+        if (!cancelled) {
+          setPartnerRegistrationEnabled(response.data.data?.partnerRegistrationEnabled !== false);
+          setPartnerRegistrationSettingsLoaded(true);
+        }
+      } catch {
+        // Keep the backward-compatible default so a settings endpoint outage never blocks portal login.
+        if (!cancelled) {
+          setPartnerRegistrationSettingsLoaded(true);
+        }
+      }
+    };
+
+    void loadPublicAccessSettings();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -286,11 +313,13 @@ function LoginPageInner() {
                 {t('authPortal.loginFooterHelp')}
               </p>
 
-              <div className="mt-4 text-center">
-                <Link href="/signup" className="text-sm font-semibold text-[#C28D00] hover:underline">
-                  {t('authPortal.registerHere')}
-                </Link>
-              </div>
+              {partnerRegistrationSettingsLoaded && partnerRegistrationEnabled ? (
+                <div className="mt-4 text-center">
+                  <Link href="/signup" className="text-sm font-semibold text-[#C28D00] hover:underline">
+                    {t('authPortal.registerHere')}
+                  </Link>
+                </div>
+              ) : null}
             </>
           )}
         </div>

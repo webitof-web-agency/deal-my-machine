@@ -12,6 +12,7 @@ import {
   defaultMobileOtpSettings,
   normalizeMobileOtpSettings,
 } from './mobileOtp';
+import { normalizePartnerRegistrationEnabled } from './publicAccessSettings';
 
 type GoogleAuthSettings = {
   enabled: boolean;
@@ -199,6 +200,7 @@ export const normalizeCompanyInvoiceSettings = (
 
 type AppSettings = {
   googleAuth: GoogleAuthSettings;
+  partnerRegistrationEnabled: boolean;
   mobileOtp: MobileOtpSettings;
   publicLeadRouting: PublicLeadRoutingSettings;
   customerPrime: CustomerPrimeSettings;
@@ -258,6 +260,7 @@ const defaultSettings: AppSettings = {
     updatedAt: null,
     updatedByUserId: null,
   },
+  partnerRegistrationEnabled: true,
   mobileOtp: defaultMobileOtpSettings,
   publicLeadRouting: {
     useSellerContact: false,
@@ -400,6 +403,7 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
     updatedAt: parsed?.googleAuth?.updatedAt || null,
     updatedByUserId: parsed?.googleAuth?.updatedByUserId || null,
   },
+  partnerRegistrationEnabled: normalizePartnerRegistrationEnabled(parsed?.partnerRegistrationEnabled),
   mobileOtp: normalizeMobileOtpSettings(parsed?.mobileOtp),
   publicLeadRouting: {
     useSellerContact: parsed?.publicLeadRouting?.useSellerContact === true,
@@ -458,6 +462,7 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
 
 const isMeaningfulSettings = (settings: AppSettings) =>
   Boolean(
+    settings.partnerRegistrationEnabled === false ||
     settings.googleAuth.enabled ||
     settings.googleAuth.clientId ||
     settings.mobileOtp.enabled ||
@@ -834,6 +839,7 @@ export const updateGoogleAuthSettings = async ({
 export const updatePlatformRuntimeSettings = async ({
   googleClientId,
   googleAuthEnabled,
+  partnerRegistrationEnabled,
   mobileOtp,
   publicLeadRouting,
   customerPrime,
@@ -843,6 +849,7 @@ export const updatePlatformRuntimeSettings = async ({
 }: {
   googleClientId?: string | null;
   googleAuthEnabled?: boolean;
+  partnerRegistrationEnabled?: boolean;
   mobileOtp?: Partial<
     Pick<
       MobileOtpSettings,
@@ -871,6 +878,7 @@ export const updatePlatformRuntimeSettings = async ({
   const currentSettings = await getAppSettings();
   const nextTimestamp = new Date().toISOString();
   const hasGoogleAuthUpdate = googleClientId !== undefined || googleAuthEnabled !== undefined;
+  const hasPartnerRegistrationUpdate = partnerRegistrationEnabled !== undefined;
   const hasMobileOtpUpdate = mobileOtp !== undefined;
   const hasPublicLeadRoutingUpdate = publicLeadRouting !== undefined;
   const hasCustomerPrimeUpdate = customerPrime !== undefined;
@@ -879,6 +887,9 @@ export const updatePlatformRuntimeSettings = async ({
 
   const nextSettings: AppSettings = {
     ...currentSettings,
+    partnerRegistrationEnabled: hasPartnerRegistrationUpdate
+      ? partnerRegistrationEnabled === true
+      : currentSettings.partnerRegistrationEnabled,
     googleAuth: hasGoogleAuthUpdate
       ? {
         enabled:

@@ -2,8 +2,9 @@
 
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Truck, X, Upload, ImagePlus, PlayCircle, Pencil, Trash2, MoreVertical, UserCheck, ChevronDown, ChevronLeft, ChevronRight, ReceiptText, Phone, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Truck, X, Upload, ImagePlus, PlayCircle, Pencil, Trash2, MoreVertical, UserCheck, ChevronDown, ChevronLeft, ChevronRight, ReceiptText, Phone, Check, ArrowUpDown, ArrowUp, ArrowDown, Plus } from 'lucide-react';
 import axios from 'axios';
 import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
@@ -25,6 +26,7 @@ import { useAuthStore } from '@/store/authStore';
 import { hasPermission } from '@/lib/permissionUtils';
 import { generateAdminListingDetailPath } from '@/lib/routePaths';
 import { YEAR_SELECT_OPTIONS } from '@/lib/listingDateOptions';
+import { canDeleteListing, normalizePortalRole } from '@/lib/listingActionVisibility';
 import {
   isValidDigitsOnlyValue,
   isValidPinCodeValue,
@@ -103,6 +105,7 @@ type ListingFormDependencies = {
 
 type ListingRecord = {
   id: string;
+  partnerId?: string | null;
   title: string;
   price: string;
   manufacturingYear: number;
@@ -124,6 +127,9 @@ type ListingRecord = {
   dealer?: string;
   dealerCategory?: string;
   partner?: {
+    id?: string | null;
+    name?: string | null;
+    email?: string | null;
     role?: string | null;
     mobile?: string | null;
     phone?: string | null;
@@ -152,8 +158,6 @@ type ListingRecord = {
     isFeatured: boolean;
   }>;
 };
-
-const isProtectedListing = (listing: ListingRecord) => listing.partner?.role === 'SUPER_ADMIN';
 
 type MediaSlotKey =
   | 'front-view'
@@ -701,9 +705,8 @@ function CustomSelectPill({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-9 items-center justify-between gap-2 rounded-full border border-gray-300 bg-white px-3.5 text-xs font-semibold text-gray-700 shadow-2xs outline-none transition hover:border-gray-400 hover:bg-gray-50 focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${
-          isOpen ? 'border-[#FFC107] ring-1 ring-[#FFC107]' : ''
-        }`}
+        className={`flex h-9 items-center justify-between gap-2 rounded-full border border-gray-300 bg-white px-3.5 text-xs font-semibold text-gray-700 shadow-2xs outline-none transition hover:border-gray-400 hover:bg-gray-50 focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${isOpen ? 'border-[#FFC107] ring-1 ring-[#FFC107]' : ''
+          }`}
       >
         <span className="truncate max-w-[140px]">{displayLabel}</span>
         <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
@@ -721,11 +724,10 @@ function CustomSelectPill({
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left rounded-xl px-3.5 py-2 text-xs font-medium transition cursor-pointer flex items-center justify-between gap-2 ${
-                  isSelected
+                className={`w-full text-left rounded-xl px-3.5 py-2 text-xs font-medium transition cursor-pointer flex items-center justify-between gap-2 ${isSelected
                     ? 'bg-gray-100 text-gray-950 font-bold'
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-950'
-                }`}
+                  }`}
               >
                 <span className="truncate">{opt.label}</span>
                 {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-[#FFC107] shrink-0" />}
@@ -767,9 +769,8 @@ function AvailabilityFilterDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-9 items-center justify-between gap-2 rounded-full border border-gray-300 bg-white px-3.5 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-400 hover:bg-gray-50 shadow-2xs cursor-pointer ${
-          isOpen ? 'border-[#FFC107] ring-1 ring-[#FFC107]' : ''
-        }`}
+        className={`flex h-9 items-center justify-between gap-2 rounded-full border border-gray-300 bg-white px-3.5 text-xs font-semibold text-gray-700 outline-none transition hover:border-gray-400 hover:bg-gray-50 shadow-2xs cursor-pointer ${isOpen ? 'border-[#FFC107] ring-1 ring-[#FFC107]' : ''
+          }`}
       >
         <span className="truncate max-w-[140px]">{selectedOption?.label || 'All Availability'}</span>
         <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
@@ -787,11 +788,10 @@ function AvailabilityFilterDropdown({
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left rounded-xl px-3.5 py-2 text-xs font-medium transition cursor-pointer flex items-center justify-between gap-2 ${
-                  isSelected
+                className={`w-full text-left rounded-xl px-3.5 py-2 text-xs font-medium transition cursor-pointer flex items-center justify-between gap-2 ${isSelected
                     ? 'bg-gray-100 text-gray-950 font-bold'
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-950'
-                }`}
+                  }`}
               >
                 <span className="truncate">{opt.label}</span>
                 {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-[#FFC107] shrink-0" />}
@@ -818,63 +818,287 @@ function TableAvailabilityDropdown({
   openUpwards?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuHeight = Math.min(options.length * 30 + 8, 192);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+    if (!isOpen) return;
+
+    const updateMenuPosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+
+      const rect = button.getBoundingClientRect();
+      const viewportPadding = 8;
+      const gap = 4;
+      const menuWidth = Math.max(120, rect.width + 20);
+      const shouldOpenUpwards =
+        Boolean(openUpwards) || window.innerHeight - rect.bottom < menuHeight + gap + viewportPadding;
+      const top = shouldOpenUpwards
+        ? Math.max(viewportPadding, rect.top - menuHeight - gap)
+        : Math.min(window.innerHeight - menuHeight - viewportPadding, rect.bottom + gap);
+      const left = Math.min(
+        Math.max(viewportPadding, rect.left),
+        Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding),
+      );
+
+      setMenuPosition({ top, left });
+    };
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [isOpen, menuHeight, openUpwards]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!buttonRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false);
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isOpen]);
+
+  const menu = isOpen && menuPosition && typeof document !== 'undefined'
+    ? createPortal(
+      <div
+        ref={menuRef}
+        role="listbox"
+        aria-label="Availability"
+        style={{
+          position: 'fixed',
+          top: menuPosition.top,
+          left: menuPosition.left,
+          zIndex: 1000,
+        }}
+        className="min-w-[120px] max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {options.map((opt) => {
+          const isSelected = opt === value;
+          return (
+            <button
+              key={opt}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition cursor-pointer ${isSelected
+                  ? 'bg-gray-100 text-gray-950 font-extrabold'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>,
+      document.body,
+    )
+    : null;
 
   const badgeClass = availabilityBadgeClassName[value] || 'border-gray-200 bg-white text-gray-700';
 
   return (
-    <div ref={containerRef} className="relative inline-block text-left">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className={`flex items-center justify-between gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold shadow-xs outline-none transition disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${badgeClass}`}
-      >
-        <span>{value}</span>
-        <ChevronDown size={11} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+    <>
+      <div className="relative inline-block text-left">
+        <button
+          ref={buttonRef}
+          type="button"
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen((previous) => !previous);
+          }}
+          className={`flex items-center justify-between gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold shadow-xs outline-none transition disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${badgeClass}`}
+        >
+          <span>{value}</span>
+          <ChevronDown size={11} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+      {menu}
+    </>
+  );
+}
 
-      {isOpen && (
-        <div className={`absolute left-0 z-50 min-w-[120px] max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
-          openUpwards ? 'bottom-full mb-1 origin-bottom-left' : 'top-full mt-1 origin-top-left'
-        }`}>
-          {options.map((opt) => {
-            const isSelected = opt === value;
-            return (
+function ListingActionsDropdown({
+  isOpen,
+  isNearBottom,
+  canApprove,
+  isPending,
+  isModerating,
+  canEdit,
+  canDelete,
+  onToggle,
+  onApprove,
+  onReject,
+  onEdit,
+  onDelete,
+}: {
+  isOpen: boolean;
+  isNearBottom: boolean;
+  canApprove: boolean;
+  isPending: boolean;
+  isModerating: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  onToggle: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const visibleActionCount = (canApprove && isPending ? 2 : 0) + (canEdit ? 1 : 0) + (canDelete ? 1 : 0);
+  const menuWidth = 224;
+  const menuHeight = Math.min(visibleActionCount * 42 + 16, 280);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const updateMenuPosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+
+      const rect = button.getBoundingClientRect();
+      const viewportPadding = 8;
+      const gap = 6;
+      const shouldOpenUpwards =
+        isNearBottom || window.innerHeight - rect.bottom < menuHeight + gap + viewportPadding;
+      const top = shouldOpenUpwards
+        ? Math.max(viewportPadding, rect.top - menuHeight - gap)
+        : Math.min(window.innerHeight - menuHeight - viewportPadding, rect.bottom + gap);
+      const left = Math.min(
+        Math.max(viewportPadding, rect.right - menuWidth),
+        Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding),
+      );
+
+      setMenuPosition({ top, left });
+    };
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [isOpen, isNearBottom, menuHeight]);
+
+  const menu = isOpen && menuPosition && visibleActionCount > 0 && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label="Listing actions"
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          className="listing-action-dropdown-menu fixed z-[1000] w-56 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
+        >
+          {canApprove && isPending ? (
+            <>
               <button
-                key={opt}
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange(opt);
-                  setIsOpen(false);
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onApprove();
                 }}
-                className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition cursor-pointer ${
-                  isSelected
-                    ? 'bg-gray-100 text-gray-950 font-extrabold'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
+                disabled={isModerating}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {opt}
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                Approve
               </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReject();
+                }}
+                disabled={isModerating}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <X className="h-3.5 w-3.5 text-amber-600" />
+                Reject
+              </button>
+            </>
+          ) : null}
+          {canEdit ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-gray-950"
+            >
+              <Pencil size={14} className="text-gray-500" />
+              Edit Listing
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash2 size={14} className="text-red-500" />
+              Delete Listing
+            </button>
+          ) : null}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggle();
+        }}
+        className="action-dropdown-container inline-flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+      >
+        <MoreVertical size={18} />
+      </button>
+      {menu}
+    </>
   );
 }
 
@@ -883,17 +1107,24 @@ export default function PartnerListingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
+  const normalizedUserRole = normalizePortalRole(user?.role);
 
   const canEdit =
-    user?.role === 'SUPER_ADMIN' ||
-    user?.role === 'ADMIN' ||
+    normalizedUserRole === 'SUPER_ADMIN' ||
+    normalizedUserRole === 'ADMIN' ||
     hasPermission(user?.permissions, 'listings.update') ||
     hasPermission(user?.permissions, 'listings.approve');
-  const canDelete = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || hasPermission(user?.permissions, 'listings.delete');
-  const canApprove = user?.role === 'SUPER_ADMIN' || hasPermission(user?.permissions, 'listings.approve');
+  const canDelete = normalizedUserRole === 'SUPER_ADMIN' || normalizedUserRole === 'ADMIN' || hasPermission(user?.permissions, 'listings.delete');
+  const canDeleteThisListing = (listing: ListingRecord) =>
+    canDeleteListing({
+      viewerRole: normalizedUserRole,
+      ownerRole: listing.partner?.role,
+      hasDeletePermission: canDelete,
+    });
+  const canApprove = normalizedUserRole === 'SUPER_ADMIN' || hasPermission(user?.permissions, 'listings.approve');
   const canVerifyPayment =
-    user?.role === 'SUPER_ADMIN' ||
-    user?.role === 'ADMIN' ||
+    normalizedUserRole === 'SUPER_ADMIN' ||
+    normalizedUserRole === 'ADMIN' ||
     hasPermission(user?.permissions, 'listings.verify_payment') ||
     hasPermission(user?.permissions, 'listings.approve');
 
@@ -938,9 +1169,9 @@ export default function PartnerListingsPage() {
   const [pendingBrandFilter, setPendingBrandFilter] = useState('ALL');
   const [pendingDealerFilter, setPendingDealerFilter] = useState('ALL');
   const [pendingSearch, setPendingSearch] = useState('');
-  const [listingView, setListingView] = useState<'all' | 'pending' | 'payments'>(() => {
+  const [listingView, setListingView] = useState<'all' | 'mine' | 'pending' | 'payments'>(() => {
     const requestedView = searchParams.get('view');
-    if (requestedView === 'payments' || requestedView === 'pending' || requestedView === 'all') {
+    if (requestedView === 'payments' || requestedView === 'pending' || requestedView === 'mine' || requestedView === 'all') {
       return requestedView;
     }
     return 'all';
@@ -1001,7 +1232,11 @@ export default function PartnerListingsPage() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
-      if (target?.closest?.('.action-dropdown-container') || target?.closest?.('.rows-per-page-dropdown-container')) {
+      if (
+        target?.closest?.('.action-dropdown-container') ||
+        target?.closest?.('.listing-action-dropdown-menu') ||
+        target?.closest?.('.rows-per-page-dropdown-container')
+      ) {
         return;
       }
       setOpenActionDropdownId(null);
@@ -1306,8 +1541,11 @@ export default function PartnerListingsPage() {
       return pendingList;
     }
 
-    // Default: 'all' Listings View
-    let scopedListings = listings.filter((listing) => !isPendingApprovalListing(listing.status));
+    // Default: 'all' or 'mine' Listings View
+    let scopedListings =
+      listingView === 'mine'
+        ? listings.filter((listing) => listing.partnerId === user?.id || listing.partner?.id === user?.id)
+        : listings.filter((listing) => !isPendingApprovalListing(listing.status));
 
     if (availabilityFilter !== 'ALL') {
       scopedListings = scopedListings.filter(
@@ -1509,6 +1747,19 @@ export default function PartnerListingsPage() {
     setMediaState(nextMediaState);
     setPreviewState(nextPreviewState);
     setIsModalOpen(true);
+  };
+
+  const openCreateModal = async () => {
+    setEditingListingId(null);
+    setForm(initialForm);
+    setMediaState(createEmptyMediaState());
+    setPreviewState(createEmptyPreviewState());
+    setIsModalOpen(true);
+    try {
+      await ensureFormDependencies();
+    } catch {
+      // ignore fallback
+    }
   };
 
   const openEditModal = async (listing: ListingRecord) => {
@@ -1827,13 +2078,26 @@ export default function PartnerListingsPage() {
                 setListingView('all');
                 setCurrentPage(1);
               }}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                listingView === 'all'
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${listingView === 'all'
                   ? 'bg-[#FFC107] text-black shadow-2xs font-extrabold'
                   : 'border border-gray-200 bg-white text-gray-600 hover:border-[#FFC107] hover:text-gray-900'
-              }`}
+                }`}
             >
               All Listings ({listings.filter((l) => !isPendingApprovalListing(l.status)).length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setListingView('mine');
+                setCurrentPage(1);
+              }}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${listingView === 'mine'
+                  ? 'bg-[#FFC107] text-black shadow-2xs font-extrabold'
+                  : 'border border-gray-200 bg-white text-gray-600 hover:border-[#FFC107] hover:text-gray-900'
+                }`}
+            >
+              My Listings ({listings.filter((l) => l.partnerId === user?.id || l.partner?.id === user?.id).length})
             </button>
 
             {canApprove ? (
@@ -1847,11 +2111,10 @@ export default function PartnerListingsPage() {
                     window.dispatchEvent(new CustomEvent('badge_refresh'));
                   }
                 }}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                  listingView === 'pending'
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${listingView === 'pending'
                     ? 'bg-[#FFC107] text-black shadow-2xs font-extrabold'
                     : 'border border-gray-200 bg-white text-gray-600 hover:border-[#FFC107] hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <span className="inline-flex items-center gap-2">
                   <span>Pending Approval ({pendingApprovalCount})</span>
@@ -1876,11 +2139,10 @@ export default function PartnerListingsPage() {
                     window.dispatchEvent(new CustomEvent('badge_refresh'));
                   }
                 }}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${
-                  listingView === 'payments'
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition cursor-pointer ${listingView === 'payments'
                     ? 'bg-[#FFC107] text-black shadow-2xs font-extrabold'
                     : 'border border-gray-200 bg-white text-gray-600 hover:border-[#FFC107] hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <span className="inline-flex items-center gap-2">
                   <ReceiptText className="h-4 w-4" />
@@ -1895,10 +2157,21 @@ export default function PartnerListingsPage() {
               </button>
             ) : null}
           </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 rounded-full bg-[#FFC107] px-4 py-2 text-xs sm:text-sm font-extrabold text-black shadow-xs transition hover:bg-[#e5ad06] cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Listing</span>
+            </button>
+          </div>
         </div>
 
-        {/* Dedicated Filter Sub-Bar for "All Listings" */}
-        {listingView === 'all' && (
+        {/* Dedicated Filter Sub-Bar for "All Listings" and "My Listings" */}
+        {(listingView === 'all' || listingView === 'mine') && (
           <div className="flex w-full flex-col gap-3 bg-gray-50/60 p-3 sm:p-4 border-b border-gray-100 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
               <CustomSelectPill
@@ -1970,39 +2243,39 @@ export default function PartnerListingsPage() {
             </div>
 
             {false && (
-            <div className="flex flex-wrap items-center gap-1.5 w-full lg:w-auto">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 shrink-0">Quick:</span>
-              {(['ALL', 'AVAILABLE', 'PENDING', 'RESERVED', 'SOLD'] as const).map((status) => {
-                const isActive = availabilityFilter === status;
-                const chipColors: Record<string, string> = {
-                  ALL: isActive ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-300 text-gray-600 hover:border-gray-400',
-                  AVAILABLE: isActive ? 'bg-emerald-600 text-white border-emerald-600' : 'border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50',
-                  PENDING: isActive ? 'bg-amber-500 text-white border-amber-500' : 'border-amber-200 text-amber-700 hover:border-amber-400 hover:bg-amber-50',
-                  RESERVED: isActive ? 'bg-blue-600 text-white border-blue-600' : 'border-blue-200 text-blue-700 hover:border-blue-400 hover:bg-blue-50',
-                  SOLD: isActive ? 'bg-rose-600 text-white border-rose-600' : 'border-rose-200 text-rose-700 hover:border-rose-400 hover:bg-rose-50',
-                };
-                const label = status === 'ALL' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase();
-                return (
+              <div className="flex flex-wrap items-center gap-1.5 w-full lg:w-auto">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 shrink-0">Quick:</span>
+                {(['ALL', 'AVAILABLE', 'PENDING', 'RESERVED', 'SOLD'] as const).map((status) => {
+                  const isActive = availabilityFilter === status;
+                  const chipColors: Record<string, string> = {
+                    ALL: isActive ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-300 text-gray-600 hover:border-gray-400',
+                    AVAILABLE: isActive ? 'bg-emerald-600 text-white border-emerald-600' : 'border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50',
+                    PENDING: isActive ? 'bg-amber-500 text-white border-amber-500' : 'border-amber-200 text-amber-700 hover:border-amber-400 hover:bg-amber-50',
+                    RESERVED: isActive ? 'bg-blue-600 text-white border-blue-600' : 'border-blue-200 text-blue-700 hover:border-blue-400 hover:bg-blue-50',
+                    SOLD: isActive ? 'bg-rose-600 text-white border-rose-600' : 'border-rose-200 text-rose-700 hover:border-rose-400 hover:bg-rose-50',
+                  };
+                  const label = status === 'ALL' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase();
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => { setAvailabilityFilter(status); setCurrentPage(1); }}
+                      className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition cursor-pointer ${chipColors[status]}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                {sortKey && (
                   <button
-                    key={status}
                     type="button"
-                    onClick={() => { setAvailabilityFilter(status); setCurrentPage(1); }}
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition cursor-pointer ${chipColors[status]}`}
+                    onClick={() => { setSortKey(null); setSortDir('asc'); }}
+                    className="ml-2 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 cursor-pointer"
                   >
-                    {label}
+                    ✕ Sort
                   </button>
-                );
-              })}
-              {sortKey && (
-                <button
-                  type="button"
-                  onClick={() => { setSortKey(null); setSortDir('asc'); }}
-                  className="ml-2 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 cursor-pointer"
-                >
-                  ✕ Sort
-                </button>
-              )}
-            </div>
+                )}
+              </div>
 
             )}
 
@@ -2119,12 +2392,18 @@ export default function PartnerListingsPage() {
               <Truck size={32} className="text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">
-              {listingView === 'pending' ? 'No pending approvals' : 'No listings found'}
+              {listingView === 'pending'
+                ? 'No pending approvals'
+                : listingView === 'mine'
+                  ? 'No listings created by you'
+                  : 'No listings found'}
             </h3>
             <p className="mt-1 max-w-sm text-sm text-gray-500">
               {listingView === 'pending'
                 ? 'All submitted listings have already been reviewed.'
-                : 'There are no vehicles or machinery listed yet.'}
+                : listingView === 'mine'
+                  ? 'You have not posted any listings yet. Click "Create Listing" above to post your first listing.'
+                  : 'There are no vehicles or machinery listed yet.'}
             </p>
           </div>
         ) : (
@@ -2208,7 +2487,12 @@ export default function PartnerListingsPage() {
                         </td>
                         <td className="px-4 py-3 text-xs font-semibold text-gray-900">
                           <div className="flex flex-col">
-                            <span>{listing.dealer || 'Unknown'}</span>
+                            <span>
+                              {listing.dealer?.trim() ||
+                                listing.partner?.name?.trim() ||
+                                listing.partner?.email?.split('@')[0]?.trim() ||
+                                resolveDealerTypeLabel(listing)}
+                            </span>
                             {listing.partner?.mobile || listing.partner?.phone || listing.partner?.partnerProfile?.phone ? (
                               <a
                                 href={`tel:${listing.partner?.mobile || listing.partner?.phone || listing.partner?.partnerProfile?.phone}`}
@@ -2256,87 +2540,34 @@ export default function PartnerListingsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right sm:px-6 sm:py-4">
-                          <div className="relative inline-block text-left action-dropdown-container">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                setOpenActionDropdownId((prev) => prev === listing.id ? null : listing.id);
-                              }}
-                              className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-                            >
-                              <MoreVertical size={18} />
-                            </button>
-
-                            {openActionDropdownId === listing.id ? (
-                              <div className={`absolute right-0 z-[100] w-44 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
-                                isNearBottom ? 'bottom-full mb-1.5 origin-bottom-right' : 'top-full mt-1.5 origin-top-right'
-                              }`}>
-                                {canApprove && isPendingListing ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.preventDefault();
-                                        void handleListingModeration(listing.id, 'PUBLISHED');
-                                        setOpenActionDropdownId(null);
-                                      }}
-                                      disabled={isModeratingListing}
-                                      className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition cursor-pointer disabled:opacity-60"
-                                    >
-                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                      Approve
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        void handleListingModeration(listing.id, 'CHANGES_REQUESTED');
-                                        setOpenActionDropdownId(null);
-                                      }}
-                                      disabled={isModeratingListing}
-                                      className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition cursor-pointer disabled:opacity-60"
-                                    >
-                                      <X className="h-3.5 w-3.5 text-amber-600" />
-                                      Reject
-                                    </button>
-                                  </>
-                                ) : null}
-                                {canEdit ? (
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      openEditModal(listing);
-                                      setOpenActionDropdownId(null);
-                                    }}
-                                    className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-950 transition cursor-pointer"
-                                  >
-                                    <Pencil size={14} className="text-gray-500" />
-                                    Edit Listing
-                                  </button>
-                                ) : null}
-                                {canDelete && !isProtectedListing(listing) ? (
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      setDeleteListingRecord(listing);
-                                      setOpenActionDropdownId(null);
-                                    }}
-                                    className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 transition cursor-pointer"
-                                  >
-                                    <Trash2 size={14} className="text-red-500" />
-                                    Delete Listing
-                                  </button>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
+                          <ListingActionsDropdown
+                            isOpen={openActionDropdownId === listing.id}
+                            isNearBottom={isNearBottom}
+                            canApprove={canApprove}
+                            isPending={isPendingListing}
+                            isModerating={isModeratingListing}
+                            canEdit={canEdit}
+                            canDelete={canDeleteThisListing(listing)}
+                            onToggle={() => {
+                              setOpenActionDropdownId((prev) => (prev === listing.id ? null : listing.id));
+                            }}
+                            onApprove={() => {
+                              void handleListingModeration(listing.id, 'PUBLISHED');
+                              setOpenActionDropdownId(null);
+                            }}
+                            onReject={() => {
+                              void handleListingModeration(listing.id, 'CHANGES_REQUESTED');
+                              setOpenActionDropdownId(null);
+                            }}
+                            onEdit={() => {
+                              void openEditModal(listing);
+                              setOpenActionDropdownId(null);
+                            }}
+                            onDelete={() => {
+                              setDeleteListingRecord(listing);
+                              setOpenActionDropdownId(null);
+                            }}
+                          />
                         </td>
                       </tr>
                     );
@@ -2382,9 +2613,8 @@ export default function PartnerListingsPage() {
                               setCurrentPage(1);
                               setOpenPageSizeDropdown(false);
                             }}
-                            className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-gray-100 ${
-                              pageSize === size ? 'bg-[#FFC107]/20 font-extrabold text-gray-900' : 'font-medium text-gray-700'
-                            }`}
+                            className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-gray-100 ${pageSize === size ? 'bg-[#FFC107]/20 font-extrabold text-gray-900' : 'font-medium text-gray-700'
+                              }`}
                           >
                             {size}
                           </button>
@@ -2413,9 +2643,8 @@ export default function PartnerListingsPage() {
                         key={item}
                         type="button"
                         onClick={() => setCurrentPage(item)}
-                        className={`h-8 w-8 rounded-lg text-xs font-bold transition ${
-                          currentPageForView === item ? 'bg-[#FFC107] text-black shadow-2xs' : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        className={`h-8 w-8 rounded-lg text-xs font-bold transition ${currentPageForView === item ? 'bg-[#FFC107] text-black shadow-2xs' : 'text-gray-600 hover:bg-gray-100'
+                          }`}
                       >
                         {item}
                       </button>
@@ -2845,7 +3074,7 @@ export default function PartnerListingsPage() {
 
 
 
-      {deleteListingRecord && !isProtectedListing(deleteListingRecord) && (
+      {deleteListingRecord && canDeleteThisListing(deleteListingRecord) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">

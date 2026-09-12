@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { detachLeadsFromListing, getSoldAtValueForStatus, getSoldListingCutoff, setListingSoldAt } from '../utils/soldListingRetention';
 import { assertCustomerPrimeEligibility } from '../utils/customerPrimeSubscriptions';
-import { isPublicMarketplaceListingVisible } from '../utils/publicListingVisibility';
+import { getSellerDisplayName, isPublicMarketplaceListingVisible } from '../utils/publicListingVisibility';
 import { PushNotificationService } from '../services/pushNotification.service';
 import { detectRazorpayModeFromKeyId, getAppSettings } from '../utils/appSettings';
 import { finalizeListingPaymentSale } from '../utils/listingPaymentFinalization';
@@ -615,8 +615,20 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
     }
 
     const isCustomer = req.user.role === 'CUSTOMER';
-    if (!isCustomer && req.user.role !== 'PARTNER') {
-      return res.status(403).json({ error: 'Customer or approved partner access required.' });
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'].includes(req.user.role);
+    if (!isCustomer && req.user.role !== 'PARTNER' && !isAdmin) {
+      return res.status(403).json({ error: 'Customer, partner, or admin access required.' });
+    }
+
+    if (req.user.role === 'EMPLOYEE') {
+      const permissions = await getEmployeePermissions(req.user.id);
+      if (
+        !permissions.includes('ALL_ACCESS') &&
+        !permissions.includes('listings.create') &&
+        !permissions.includes('listings.update')
+      ) {
+        return res.status(403).json({ error: 'You do not have permission to create listings.' });
+      }
     }
 
     if (isCustomer) {
@@ -638,7 +650,7 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
     }
 
     let partnerProfileId = null;
-    if (!isCustomer) {
+    if (!isCustomer && !isAdmin) {
       const partnerProfile = await getApprovedPartnerProfile(req.user.id);
       if (!partnerProfile) {
         return res.status(403).json({
@@ -672,8 +684,8 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
     const normalizedBrandName = normalizeText(brandName) || 'Not specified';
     const normalizedModelName = normalizeText(modelName) || 'Not specified';
     const normalizedTitle = normalizeText(title);
-    const normalizedStatus = normalizeListingStatus(status, 'PENDING_APPROVAL');
-    const initialListingStatus = isCustomer || req.user.role === 'PARTNER' ? 'PENDING_APPROVAL' : normalizedStatus;
+    const normalizedStatus = normalizeListingStatus(status, isAdmin ? 'PUBLISHED' : 'PENDING_APPROVAL');
+    const initialListingStatus = isAdmin ? (status ? normalizedStatus : 'PUBLISHED') : (isCustomer || req.user.role === 'PARTNER' ? 'PENDING_APPROVAL' : normalizedStatus);
     const normalizedState = normalizeText(locationState) || 'Not specified';
     const normalizedCity = normalizeText(locationCity) || 'Not specified';
     const normalizedAddress = normalizeText(address);
@@ -879,11 +891,7 @@ export const getListings = async (req: Request, res: Response, next: NextFunctio
       listings: listings.map((listing: any) => ({
         ...listing,
         isPubliclyVisible: isOwnedListingPubliclyVisible(listing),
-        dealer:
-          listing.partner?.partnerProfile?.businessName ||
-          listing.partner?.name ||
-          listing.partner?.email ||
-          'Unknown partner',
+        dealer: getSellerDisplayName(listing.partner),
         dealerCategory: getDealerCategoryLabel(listing.partner),
       })),
     });
@@ -950,11 +958,7 @@ export const getListingById = async (req: Request, res: Response, next: NextFunc
     return res.json({
       listing: {
         ...listing,
-        dealer:
-          listing.partner?.partnerProfile?.businessName ||
-          listing.partner?.name ||
-          listing.partner?.email ||
-          'Unknown partner',
+        dealer: getSellerDisplayName(listing.partner),
         dealerCategory: getDealerCategoryLabel(listing.partner),
       },
     });
@@ -1244,8 +1248,8 @@ export const deleteListing = async (req: Request, res: Response, next: NextFunct
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
-    if (existingListing.partner?.role === 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Super admin listings cannot be deleted.' });
+    if (existingListing.partner?.role === 'SUPER_ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Super admin listings cannot be deleted by non-superadmins.' });
     }
 
     if (req.user.role === 'CUSTOMER' && String(existingListing.status || '').toUpperCase() === 'SOLD') {
@@ -1367,11 +1371,7 @@ export const updateListingStatus = async (req: Request, res: Response, next: Nex
           : 'Listing marked as changes requested.',
       listing: {
         ...updatedListing,
-        dealer:
-          updatedListing.partner?.partnerProfile?.businessName ||
-          updatedListing.partner?.name ||
-          updatedListing.partner?.email ||
-          'Unknown partner',
+        dealer: getSellerDisplayName(updatedListing.partner),
         dealerCategory: getDealerCategoryLabel(updatedListing.partner),
       },
     });

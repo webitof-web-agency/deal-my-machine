@@ -627,6 +627,7 @@ export const getPlatformSettings = async (req: Request, res: Response, next: Nex
         updatedAt: settings.googleAuth.updatedAt,
         updatedByUserId: settings.googleAuth.updatedByUserId,
       },
+      partnerRegistrationEnabled: settings.partnerRegistrationEnabled,
       mobileOtp: {
         enabled: settings.mobileOtp.enabled,
         apiKey: settings.mobileOtp.apiKey || '',
@@ -660,9 +661,10 @@ export const getPlatformSettings = async (req: Request, res: Response, next: Nex
 
 export const updatePlatformSettings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { googleClientId, googleAuthEnabled, mobileOtp, publicLeadRouting, customerPrime, listingPayment, companyInvoice } = req.body as {
+    const { googleClientId, googleAuthEnabled, partnerRegistrationEnabled, mobileOtp, publicLeadRouting, customerPrime, listingPayment, companyInvoice } = req.body as {
       googleClientId?: string;
       googleAuthEnabled?: boolean;
+      partnerRegistrationEnabled?: boolean;
       mobileOtp?: {
         enabled?: boolean;
         apiKey?: string;
@@ -695,6 +697,7 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
     if (
       googleClientId === undefined &&
       googleAuthEnabled === undefined &&
+      partnerRegistrationEnabled === undefined &&
       !mobileOtp &&
       !publicLeadRouting &&
       !customerPrime &&
@@ -709,6 +712,10 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
     const settingsPayload: Parameters<typeof updatePlatformRuntimeSettings>[0] = {
       updatedByUserId: req.user?.id || null,
     };
+
+    if (partnerRegistrationEnabled !== undefined) {
+      settingsPayload.partnerRegistrationEnabled = partnerRegistrationEnabled === true;
+    }
 
     if (googleClientId !== undefined || googleAuthEnabled !== undefined) {
       settingsPayload.googleAuthEnabled = googleAuthEnabled === true;
@@ -803,6 +810,7 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
         updatedAt: settings.googleAuth.updatedAt,
         updatedByUserId: settings.googleAuth.updatedByUserId,
       },
+      partnerRegistrationEnabled: settings.partnerRegistrationEnabled,
       mobileOtp: {
         enabled: settings.mobileOtp.enabled,
         apiKey: settings.mobileOtp.apiKey || '',

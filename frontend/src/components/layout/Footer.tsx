@@ -14,7 +14,8 @@ import {
   Heart,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Building2
 } from 'lucide-react';
 
 type FooterSocialLink = {
@@ -45,6 +46,12 @@ type FooterSettingsResponse = {
   data?: {
     socialLinks?: FooterSocialLink[];
     contact?: FooterContact;
+  };
+};
+
+type PublicAccessSettingsResponse = {
+  data?: {
+    partnerRegistrationEnabled?: boolean;
   };
 };
 
@@ -105,12 +112,51 @@ const SocialIcon = ({ platform }: { platform: string }) => {
   }
 };
 
+// Roles that are allowed direct SSO handoff to the partner/admin portal
+const PORTAL_ALLOWED_ROLES = ['PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'];
+
 export default function Footer() {
   const { t } = useTranslation();
-  const { setAuthModalOpen, isAuthenticated, user } = useAuthStore();
+  const { setAuthModalOpen, isAuthenticated, user, token } = useAuthStore();
   
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isPrimePaymentOpen, setIsPrimePaymentOpen] = useState(false);
+  const [partnerRegistrationEnabled, setPartnerRegistrationEnabled] = useState(true);
+  const [partnerRegistrationSettingsLoaded, setPartnerRegistrationSettingsLoaded] = useState(false);
+
+  // Partner Portal link with SSO token handoff
+  // Industry Standard: if the user is already logged in with a portal-eligible role,
+  // we forward their JWT via ?token= query param. The admin-portal /login page
+  // validates it against /api/auth/profile, saves the session, and redirects
+  // the user directly to their role-specific dashboard — no double login needed.
+  // Regular customers or unauthenticated users land on the plain login page.
+  const handlePartnerPortalClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const partnerPortalUrl =
+      process.env.NEXT_PUBLIC_PARTNER_PORTAL_URL || 'http://localhost:3001';
+
+    const hasPortalAccess =
+      isAuthenticated &&
+      token &&
+      user?.role &&
+      PORTAL_ALLOWED_ROLES.includes(user.role);
+
+    if (hasPortalAccess) {
+      // SSO Handoff: pass token so admin-portal can auto-login
+      window.open(
+        `${partnerPortalUrl}/login?token=${encodeURIComponent(token)}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+    } else {
+      // Not eligible for SSO: send to plain login page
+      window.open(
+        `${partnerPortalUrl}/login`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+    }
+  };
   const [socialLinks, setSocialLinks] = useState<FooterSocialLink[]>([]);
   const [contact, setContact] = useState<ResolvedFooterContact>(emptyContact);
   const visibleSocialLinks = [...socialLinks]
@@ -152,6 +198,31 @@ export default function Footer() {
     };
 
     void fetchFooterSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPublicAccessSettings = async () => {
+      try {
+        const response = await api.get<PublicAccessSettingsResponse>('/master/public-access');
+        if (!cancelled) {
+          setPartnerRegistrationEnabled(response.data.data?.partnerRegistrationEnabled !== false);
+          setPartnerRegistrationSettingsLoaded(true);
+        }
+      } catch {
+        // Keep the backward-compatible default when the public settings request is unavailable.
+        if (!cancelled) {
+          setPartnerRegistrationSettingsLoaded(true);
+        }
+      }
+    };
+
+    void fetchPublicAccessSettings();
 
     return () => {
       cancelled = true;
@@ -273,6 +344,30 @@ export default function Footer() {
                     {t('legalPages.disclaimer', 'Disclaimer')}
                   </Link>
                 </li>
+                {partnerRegistrationSettingsLoaded && partnerRegistrationEnabled ? (
+                  <li>
+                    {/* Partner Portal SSO Link */}
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_PARTNER_PORTAL_URL || 'http://localhost:3001'}/login`}
+                      onClick={handlePartnerPortalClick}
+                      rel="noopener noreferrer"
+                      className="group flex items-center text-[13px] text-[#B3B3B3] hover:text-white transition-colors whitespace-nowrap"
+                    >
+                      <Building2
+                        size={14}
+                        className="text-[#F0C85C] mr-3 flex-shrink-0 group-hover:scale-110 transition-transform"
+                      />
+                      <span>
+                        {t('footer.partnerPortal', 'Partner Portal')}
+                      </span>
+                      {isAuthenticated && user?.role && PORTAL_ALLOWED_ROLES.includes(user.role) && (
+                        <span className="ml-2 inline-flex items-center rounded-sm bg-[#F0C85C]/20 border border-[#F0C85C]/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F0C85C] leading-none">
+                          SSO
+                        </span>
+                      )}
+                    </a>
+                  </li>
+                ) : null}
               </ul>
             </div>
 

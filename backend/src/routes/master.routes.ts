@@ -14,6 +14,7 @@ import {
   getApprovedDealers,
   getFinanceSupportItems,
   getFooterSettings,
+  getPublicAccessSettings,
   getHeroImage,
   getInspectionSection,
   getSiteLogo,
@@ -85,6 +86,7 @@ router.get('/dealers/:id', getDealerById);
 router.get('/dealers/:id/listings', getDealerListings);
 router.get('/finance-support', getFinanceSupportItems);
 router.get('/footer', getFooterSettings);
+router.get('/public-access', getPublicAccessSettings);
 router.get('/hero-image', getHeroImage);
 router.get('/inspection-section', getInspectionSection);
 router.get('/site-logo', getSiteLogo);

@@ -6,6 +6,7 @@ import {
   getMarketplaceSellerPresentation,
   getPublicListingStatuses,
   getPublicMarketplaceListingWhere,
+  getSellerDisplayName,
   isPublicMarketplaceListingVisible,
 } from '../utils/publicListingVisibility';
 import { hashDedupeKey, recordAnalyticsEvent } from '../services/analytics.service';
@@ -768,6 +769,8 @@ export const getDealerListings = async (req: Request, res: Response, next: NextF
           select: {
             id: true,
             name: true,
+            email: true,
+            role: true,
             customerPrimeSubscriptions: {
               where: {
                 status: 'ACTIVE',
@@ -904,6 +907,21 @@ export const getFooterSettings = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const getPublicAccessSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAppSettings();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        partnerRegistrationEnabled: settings.partnerRegistrationEnabled,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPublicListings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status } = req.query;
@@ -981,11 +999,15 @@ export const getPublicListings = async (req: Request, res: Response, next: NextF
         model: listing.model,
         partner: {
           id: listing.partner?.partnerProfile?.id || listing.partner?.id,
-          name:
-            listing.partner?.partnerProfile?.businessName ||
-            listing.partner?.name ||
-            'Verified Partner',
-          type: listing.partner?.partnerProfile?.partnerType || 'Partner',
+          name: getSellerDisplayName(listing.partner),
+          type:
+            getMarketplaceSellerPresentation({
+              role: listing.partner?.role,
+              name: listing.partner?.name,
+              email: listing.partner?.email,
+              partnerProfile: listing.partner?.partnerProfile,
+              customerPrimeSubscriptions: listing.partner?.customerPrimeSubscriptions,
+            }).partnerType || 'Partner',
         },
         featuredImage:
           listing.media.find((media: any) => media.type === 'IMAGE' && media.isFeatured)?.url ||
@@ -1028,6 +1050,8 @@ export const getRecentListings = async (req: Request, res: Response, next: NextF
         partner: {
           select: {
             name: true,
+            email: true,
+            role: true,
             customerPrimeSubscriptions: {
               where: {
                 status: 'ACTIVE',
@@ -1066,9 +1090,7 @@ export const getRecentListings = async (req: Request, res: Response, next: NextF
         categoryName: listing.category?.name,
         brandName: listing.brand?.name,
         partnerName:
-          listing.partner?.partnerProfile?.businessName ||
-          listing.partner?.name ||
-          'Verified Partner',
+          getSellerDisplayName(listing.partner),
         featuredImage:
           listing.media.find((media: any) => media.type === 'IMAGE' && media.isFeatured)?.url ||
           listing.media.find((media: any) => media.type === 'IMAGE')?.url ||
@@ -1374,6 +1396,7 @@ export const getPublicListingById = async (req: Request, res: Response, next: Ne
     const sellerPresentation = getMarketplaceSellerPresentation({
       role: listing.partner?.role,
       name: listing.partner?.name,
+      email: listing.partner?.email,
       partnerProfile: listing.partner?.partnerProfile,
       customerPrimeSubscriptions: listing.partner?.customerPrimeSubscriptions,
     });

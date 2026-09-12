@@ -86,6 +86,7 @@ type SettingsResponse = {
     updatedAt?: string | null;
     updatedByUserId?: string | null;
   };
+  partnerRegistrationEnabled?: boolean;
   mobileOtp: {
     enabled: boolean;
     apiKey: string;
@@ -219,6 +220,7 @@ export default function SuperAdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<'security' | 'leadRouting' | 'homepage' | 'payments' | 'invoice'>('security');
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
+  const [partnerRegistrationEnabled, setPartnerRegistrationEnabled] = useState(true);
   const [leadRoutingForm, setLeadRoutingForm] = useState<LeadRoutingFormState>({
     useSellerContact: false,
     adminCallNumber: '',
@@ -227,6 +229,7 @@ export default function SuperAdminSettingsPage() {
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [googleSaving, setGoogleSaving] = useState(false);
   const [googleToggleSaving, setGoogleToggleSaving] = useState(false);
+  const [partnerRegistrationToggleSaving, setPartnerRegistrationToggleSaving] = useState(false);
   const [leadRoutingSaving, setLeadRoutingSaving] = useState(false);
   const [paymentsSaving, setPaymentsSaving] = useState(false);
   const [listingPaymentSaving, setListingPaymentSaving] = useState(false);
@@ -327,6 +330,7 @@ export default function SuperAdminSettingsPage() {
 
       setGoogleClientId(response.data.googleAuth.clientId || '');
       setGoogleAuthEnabled(response.data.googleAuth.enabled === true);
+      setPartnerRegistrationEnabled(response.data.partnerRegistrationEnabled !== false);
       setLeadRoutingForm({
         useSellerContact: response.data.publicLeadRouting.useSellerContact,
         adminCallNumber: response.data.publicLeadRouting.adminCallNumber || '',
@@ -448,6 +452,33 @@ export default function SuperAdminSettingsPage() {
       toast.error(getApiErrorMessage(error, 'Unable to update Google login status.'));
     } finally {
       setGoogleToggleSaving(false);
+    }
+  };
+
+  const handlePartnerRegistrationToggle = async () => {
+    const nextEnabledState = !partnerRegistrationEnabled;
+    setPartnerRegistrationEnabled(nextEnabledState);
+    setPartnerRegistrationToggleSaving(true);
+
+    try {
+      const response = await api.patch<{
+        message: string;
+        partnerRegistrationEnabled?: boolean;
+      }>('/superadmin/settings', {
+        partnerRegistrationEnabled: nextEnabledState,
+      });
+
+      setPartnerRegistrationEnabled(response.data.partnerRegistrationEnabled !== false);
+      toast.success(
+        response.data.partnerRegistrationEnabled === false
+          ? 'Partner registration disabled successfully.'
+          : 'Partner registration enabled successfully.',
+      );
+    } catch (error: unknown) {
+      setPartnerRegistrationEnabled(!nextEnabledState);
+      toast.error(getApiErrorMessage(error, 'Unable to update partner registration status.'));
+    } finally {
+      setPartnerRegistrationToggleSaving(false);
     }
   };
 
@@ -822,6 +853,50 @@ export default function SuperAdminSettingsPage() {
                     </span>
                   </div>
                 </div>
+              </section>
+
+              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Partner Access</p>
+                    <h3 className="mt-1 text-xl font-bold text-gray-900">Allow Partner Registration</h3>
+                    <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                      When disabled, the partner registration link on the portal login page and public footer is hidden.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={partnerRegistrationEnabled}
+                    aria-label="Toggle partner registration"
+                    onClick={() => void handlePartnerRegistrationToggle()}
+                    disabled={partnerRegistrationToggleSaving}
+                    className={`flex min-w-[168px] items-center justify-between rounded-full border px-2 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                      partnerRegistrationEnabled
+                        ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                        : 'border-gray-300 bg-white text-gray-600'
+                    } ${partnerRegistrationToggleSaving ? 'cursor-not-allowed opacity-60' : ''}`}
+                  >
+                    <span
+                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                        partnerRegistrationEnabled ? 'bg-emerald-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform ${
+                          partnerRegistrationEnabled ? 'translate-x-7' : 'translate-x-1'
+                        }`}
+                      />
+                    </span>
+                    <span className="sr-only">
+                      {partnerRegistrationToggleSaving ? 'Updating partner registration setting' : 'Toggle partner registration'}
+                    </span>
+                  </button>
+                </div>
+                <p className={`mt-4 text-sm font-semibold ${partnerRegistrationEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {partnerRegistrationEnabled ? 'Partner registration enabled' : 'Partner registration disabled'}
+                </p>
               </section>
 
               <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">

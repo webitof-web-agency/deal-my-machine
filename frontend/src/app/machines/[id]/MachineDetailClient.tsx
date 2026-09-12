@@ -314,6 +314,8 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
   const mainImage = images[activeImageIndex]?.url || listing.featuredImage;
   const partnerTypeLabel = !listing.partner?.partnerType
     ? t('machineDetails.marketplaceSeller')
+    : ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'].includes(listing.partner.partnerType)
+      ? formatPartnerTypeLabel(listing.partner.partnerType)
     : listing.partner?.partnerType === 'PRIME_CUSTOMER'
       ? t('machineDetails.primeCustomer')
       : listing.partner?.partnerType === 'SHOWROOM' || listing.partner?.partnerType === 'DEALER'

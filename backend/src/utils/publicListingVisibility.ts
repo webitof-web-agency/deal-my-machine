@@ -1,4 +1,17 @@
 const publicListingStatuses = ['PUBLISHED', 'RESERVED', 'PAUSED', 'SOLD'] as const;
+const publicInternalSellerRoles = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'] as const;
+
+const formatRoleLabel = (role?: string | null) => {
+  const normalizedRole = String(role || '').trim().toUpperCase();
+  if (!normalizedRole) {
+    return 'Marketplace Seller';
+  }
+
+  return normalizedRole
+    .split('_')
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 const approvedPartnerProfileWhere = {
   onboardingStatus: 'APPROVED',
@@ -17,10 +30,52 @@ export const getPublicSellerWhere = () => ({
       status: 'ACTIVE',
     },
     {
+      role: { in: [...publicInternalSellerRoles] },
+      status: 'ACTIVE',
+    },
+    {
       partnerProfile: getApprovedPartnerProfileWhere(),
     },
   ],
 });
+
+export const getSellerDisplayName = (seller?: {
+  role?: string | null;
+  name?: string | null;
+  email?: string | null;
+  partnerProfile?: {
+    businessName?: string | null;
+  } | null;
+}) => {
+  const businessName = seller?.partnerProfile?.businessName?.trim();
+  if (businessName) {
+    return businessName;
+  }
+
+  const name = seller?.name?.trim();
+  if (name) {
+    return name;
+  }
+
+  const emailLocalPart = seller?.email?.split('@')[0]?.trim();
+  if (emailLocalPart) {
+    return emailLocalPart;
+  }
+
+  if (seller?.role === 'SUPER_ADMIN') {
+    return 'Super Admin';
+  }
+
+  if (seller?.role === 'ADMIN') {
+    return 'Admin';
+  }
+
+  if (seller?.role === 'EMPLOYEE') {
+    return 'Employee';
+  }
+
+  return 'Marketplace Seller';
+};
 
 export const getPublicMarketplaceListingWhere = () => ({
   status: {
@@ -50,6 +105,13 @@ export const isPublicMarketplaceListingVisible = (listing: {
     return true;
   }
 
+  if (
+    publicInternalSellerRoles.includes(listing.partner?.role as (typeof publicInternalSellerRoles)[number]) &&
+    listing.partner?.status === 'ACTIVE'
+  ) {
+    return true;
+  }
+
   return (
     listing.partner?.partnerProfile?.onboardingStatus === approvedPartnerProfileWhere.onboardingStatus &&
     listing.partner?.partnerProfile?.accountStatus === approvedPartnerProfileWhere.accountStatus &&
@@ -60,6 +122,7 @@ export const isPublicMarketplaceListingVisible = (listing: {
 export const getMarketplaceSellerPresentation = (seller?: {
   role?: string | null;
   name?: string | null;
+  email?: string | null;
   customerPrimeSubscriptions?: Array<{
     expiresAt?: Date | null;
   }> | null;
@@ -77,13 +140,13 @@ export const getMarketplaceSellerPresentation = (seller?: {
 
   return {
     displayName:
-      seller?.partnerProfile?.businessName ||
-      seller?.name ||
-      (isPartnerSeller ? 'Verified Partner' : 'Marketplace Seller'),
+      getSellerDisplayName(seller) || (isPartnerSeller ? 'Verified Partner' : 'Marketplace Seller'),
     partnerType: isPartnerSeller
       ? seller?.partnerProfile?.partnerType || null
       : hasActivePrimeSubscription
         ? 'PRIME_CUSTOMER'
-        : null,
+        : publicInternalSellerRoles.includes(seller?.role as (typeof publicInternalSellerRoles)[number])
+          ? formatRoleLabel(seller?.role)
+          : null,
   };
 };
