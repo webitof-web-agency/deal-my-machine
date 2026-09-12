@@ -9,11 +9,7 @@ const withPWA = withPWAInit({
   register: true,
 });
 
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-if (!configuredApiUrl) {
-  throw new Error('NEXT_PUBLIC_API_URL is not set');
-}
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
 
 const getRemotePattern = (value: string, pathname: string) => {
   try {
