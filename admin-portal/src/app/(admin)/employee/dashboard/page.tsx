@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
 import api from '@/lib/api';
+import { APP_NAME } from '@/lib/appConfig';
 import { getDashboardCards } from '@/lib/dashboardCardLinks';
 import { useAuthStore } from '@/store/authStore';
 import { Users, ClipboardList, Package, CheckCircle2, MessageSquare, Heart } from 'lucide-react';
@@ -320,7 +321,7 @@ export default function EmployeeDashboardPage() {
 
       <div className="border-t border-gray-100 pt-8 pb-4">
         <div className="flex flex-col items-center gap-2 text-center text-xs font-medium text-gray-400">
-          <span>© 2026-2027 JCB Exchange. All rights reserved.</span>
+          <span>© 2026-2027 {APP_NAME}. All rights reserved.</span>
           <span className="inline-flex items-center justify-center">
             Crafted with <Heart className="mx-1 h-3.5 w-3.5 inline-block shrink-0 fill-red-500 text-red-500" /> by{' '}
             <a href="https://webitof.com/" target="_blank" rel="noopener noreferrer" className="ml-1 font-semibold text-gray-600 underline transition-colors hover:text-gray-900">

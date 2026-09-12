@@ -3,15 +3,16 @@ import { Metadata } from 'next';
 import { Mail, MapPin } from 'lucide-react';
 import LegalDocumentShell from '@/components/legal/LegalDocumentShell';
 import LegalPageContent from '@/components/legal/LegalPageContent';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: "Disclaimer | JCB Exchange - Heavy Machinery Notice",
-  description: "Read the official legal disclaimer for JCB Exchange. Notices regarding equipment specifications, dealer listings, machine verification, and financial liability.",
+  title: `Disclaimer | ${SITE_NAME} - Heavy Machinery Notice`,
+  description: `Read the official legal disclaimer for ${SITE_NAME}. Notices regarding equipment specifications, dealer listings, machine verification, and financial liability.`,
   openGraph: {
-    title: "Disclaimer | JCB Exchange",
-    description: "Important legal notices and disclaimers for buyers and sellers on JCB Exchange.",
+    title: `Disclaimer | ${SITE_NAME}`,
+    description: `Important legal notices and disclaimers for buyers and sellers on ${SITE_NAME}.`,
     url: "https://jcbexchange.com/disclaimer",
-    siteName: "JCB Exchange",
+    siteName: SITE_NAME,
     type: "website",
   },
   alternates: {
@@ -31,7 +32,7 @@ export default function DisclaimerPage() {
                     1. Marketplace Facilitation Notice
                   </h2>
                   <p>
-                    JCB Exchange operates strictly as a digital marketplace connecting independent buyers, sellers, and dealers of heavy equipment. JCB Exchange does not own listed vehicles (unless explicitly specified) and is not a direct contract party to individual sale transactions.
+                    {SITE_NAME} operates strictly as a digital marketplace connecting independent buyers, sellers, and dealers of heavy equipment. {SITE_NAME} does not own listed vehicles (unless explicitly specified) and is not a direct contract party to individual sale transactions.
                   </p>
                 </section>
 
@@ -56,7 +57,7 @@ export default function DisclaimerPage() {
                     If you have questions regarding this Disclaimer notice, please reach out to us:
                   </p>
                   <div className="mt-4 p-5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2 text-xs sm:text-sm text-gray-700">
-                    <p className="font-semibold text-gray-900">JCB Exchange Legal Support</p>
+                    <p className="font-semibold text-gray-900">{SITE_NAME} Legal Support</p>
                     <p className="flex items-center gap-2">
                       <MapPin size={14} className="text-amber-600" />
                       Plot No. 23, Sector 18, Gurugram, Haryana 122015, India

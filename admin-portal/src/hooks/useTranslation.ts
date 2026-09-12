@@ -3,6 +3,7 @@ import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 import { dictionaries } from '@/lib/i18n/dictionaries';
 import { queueMissingTranslationRegistration } from '@/lib/i18n/missingTranslationRegistry';
 import { useLanguageStore } from '@/store/languageStore';
+import { APP_NAME } from '@/lib/appConfig';
 
 type TranslationValue = string | number | boolean | null | undefined;
 export type TranslationParams = Record<string, TranslationValue>;
@@ -24,14 +25,17 @@ const getNestedValue = (dictionary: unknown, key: string): string | null => {
 };
 
 const interpolate = (template: string, params?: TranslationParams, defaultText?: string) => {
+  const replaceBrandName = (value: string) =>
+    value.replace(/JCB\s*Exchange/gi, () => APP_NAME);
+
   if (!params) {
     if (defaultText?.trim() && template.includes('{')) {
-      return defaultText;
+      return replaceBrandName(defaultText);
     }
-    return template.replace(/\{(\w+)\}\s*/g, '').trim();
+    return replaceBrandName(template.replace(/\{(\w+)\}\s*/g, '').trim());
   }
 
-  return template.replace(/\{(\w+)\}/g, (_, token: string) => {
+  return replaceBrandName(template.replace(/\{(\w+)\}/g, (_, token: string) => {
     if (params[token] !== undefined && params[token] !== null) {
       return String(params[token]);
     }
@@ -39,7 +43,7 @@ const interpolate = (template: string, params?: TranslationParams, defaultText?:
       return defaultText;
     }
     return '';
-  });
+  }));
 };
 
 const buildRegistryFallbackText = (key: string, defaultText?: string) => {

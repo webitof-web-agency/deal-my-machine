@@ -31,16 +31,16 @@ export async function generateMetadata({ params }: JobDetailProps): Promise<Meta
   const data = await fetchJobData(slug);
   if (!data || !data.job) {
     return {
-      title: 'Job Not Found | JCB Exchange Careers',
+      title: `Job Not Found | ${SITE_NAME} Careers`,
     };
   }
 
   const job = data.job;
-  const title = job.seoTitle || `${job.title} Job opening in ${job.locationCity} | JCB Exchange Careers`;
+  const title = job.seoTitle || `${job.title} Job opening in ${job.locationCity} | ${SITE_NAME} Careers`;
   const description =
     job.metaDescription ||
     job.summary ||
-    `Apply for ${job.title} in ${job.locationCity}, ${job.locationState} at JCB Exchange. Join our high-growth heavy machinery marketplace team.`;
+    `Apply for ${job.title} in ${job.locationCity}, ${job.locationState} at ${SITE_NAME}. Join our high-growth heavy machinery marketplace team.`;
   const canonical = job.canonicalUrl || `${SITE_URL}/jobs/${job.slug}`;
 
   return {
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: JobDetailProps): Promise<Meta
       canonical,
     },
     openGraph: {
-      title: `${job.title} | Careers at JCB Exchange`,
+      title: `${job.title} | Careers at ${SITE_NAME}`,
       description,
       url: canonical,
       siteName: SITE_NAME,
@@ -78,7 +78,7 @@ export default async function JobDetailPage({ params }: JobDetailProps) {
     description: job.description,
     identifier: {
       '@type': 'PropertyValue',
-      name: 'JCB Exchange',
+      name: SITE_NAME,
       value: job.jobCode,
     },
     datePosted: job.postedAt || job.createdAt,
@@ -86,7 +86,7 @@ export default async function JobDetailPage({ params }: JobDetailProps) {
     employmentType: job.employmentType,
     hiringOrganization: {
       '@type': 'Organization',
-      name: 'JCB Exchange',
+      name: SITE_NAME,
       sameAs: SITE_URL,
       logo: `${SITE_URL}/icon.png`,
     },

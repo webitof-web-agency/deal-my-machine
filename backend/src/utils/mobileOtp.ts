@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { APP_NAME } from '../config/appConfig';
 
 export type MobileOtpSettings = {
   enabled: boolean;
@@ -34,7 +35,7 @@ const sessionDirectory = path.resolve(process.cwd(), 'runtime');
 const sessionFilePath = path.join(sessionDirectory, 'mobile-otp-sessions.json');
 
 export const defaultMobileOtpTemplateMessage =
-  'Your OTP for JCB Exchange is {#var#}. Validity 5 mins.';
+  `Your OTP for ${APP_NAME} is {#var#}. Validity 5 mins.`;
 
 export const defaultMobileOtpSettings: MobileOtpSettings = {
   enabled: false,

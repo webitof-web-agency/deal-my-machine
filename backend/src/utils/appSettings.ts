@@ -13,6 +13,7 @@ import {
   normalizeMobileOtpSettings,
 } from './mobileOtp';
 import { normalizePartnerRegistrationEnabled } from './publicAccessSettings';
+import { APP_NAME } from '../config/appConfig';
 
 type GoogleAuthSettings = {
   enabled: boolean;
@@ -187,7 +188,7 @@ export type CompanyInvoiceSettings = {
 export const normalizeCompanyInvoiceSettings = (
   settings?: Partial<CompanyInvoiceSettings> | null,
 ): CompanyInvoiceSettings => ({
-  companyName: settings?.companyName?.trim() || 'JCB Exchange',
+  companyName: settings?.companyName?.trim() || APP_NAME,
   gstin: settings?.gstin?.trim().toUpperCase() || null,
   address: settings?.address?.trim() || null,
   state: settings?.state?.trim() || 'Maharashtra',
@@ -353,7 +354,7 @@ const defaultSettings: AppSettings = {
     },
   },
   companyInvoice: {
-    companyName: 'JCB Exchange',
+    companyName: APP_NAME,
     gstin: null,
     address: null,
     state: 'Maharashtra',

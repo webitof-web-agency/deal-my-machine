@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import { useTranslation } from '@/hooks/useTranslation';
+import { APP_NAME } from '@/lib/appConfig';
 
 type FooterSocialLink = {
   id: string;
@@ -58,7 +59,7 @@ const TEXT_BLOCK_OPTIONS: Option[] = [
 ];
 
 const DEFAULT_PRIVACY_POLICY = `<h2>1. Information We Collect</h2>
-<p>At <strong>JCB Exchange</strong>, we collect personal information such as name, phone number, email address, and equipment listing details when you register as a buyer, seller, or dealer.</p>
+<p>At <strong>${APP_NAME}</strong>, we collect personal information such as name, phone number, email address, and equipment listing details when you register as a buyer, seller, or dealer.</p>
 
 <h2>2. How We Use Your Information</h2>
 <p>We utilize the collected information to:</p>
@@ -72,7 +73,7 @@ const DEFAULT_PRIVACY_POLICY = `<h2>1. Information We Collect</h2>
 <p>Your data is encrypted using industry-standard SSL protocols and protected in secure cloud infrastructure. We do not sell or rent user data to third parties.</p>`;
 
 const DEFAULT_TERMS_CONDITIONS = `<h2>1. Acceptance of Terms</h2>
-<p>By accessing <strong>JCB Exchange</strong>, you agree to comply with all marketplace rules, seller guidelines, and Indian commercial laws governing machinery trading.</p>
+<p>By accessing <strong>${APP_NAME}</strong>, you agree to comply with all marketplace rules, seller guidelines, and Indian commercial laws governing machinery trading.</p>
 
 <h2>2. Seller & Listing Responsibilities</h2>
 <p>Sellers must provide accurate machine details including:</p>
@@ -83,19 +84,19 @@ const DEFAULT_TERMS_CONDITIONS = `<h2>1. Acceptance of Terms</h2>
 </ul>
 
 <h2>3. Transaction Facilitation</h2>
-<p>JCB Exchange serves as a listing facilitator. Direct physical inspection and payment verification between buyer and seller are recommended prior to purchase.</p>`;
+<p>${APP_NAME} serves as a listing facilitator. Direct physical inspection and payment verification between buyer and seller are recommended prior to purchase.</p>`;
 
 const DEFAULT_DISCLAIMER = `<h2>1. Facilitator Notice</h2>
-<p><strong>JCB Exchange</strong> provides a digital listing platform connecting buyers and sellers of construction machinery across India.</p>
+<p><strong>${APP_NAME}</strong> provides a digital listing platform connecting buyers and sellers of construction machinery across India.</p>
 
 <h2>2. Machine Inspection Disclaimer</h2>
 <p>While we encourage dealers to verify listings, buyers are advised to conduct independent technical inspections of all heavy equipment prior to completing financial transfers.</p>
 
 <h2>3. Limitation of Liability</h2>
-<p>JCB Exchange is not liable for secondary damages, operational breakdown, or misrepresentation by independent third-party sellers on the platform.</p>`;
+<p>${APP_NAME} is not liable for secondary damages, operational breakdown, or misrepresentation by independent third-party sellers on the platform.</p>`;
 
 const DEFAULT_REFUND_RETURN_POLICY = `<h2>1. Marketplace Nature</h2>
-<p><strong>JCB Exchange</strong> primarily acts as a marketplace and lead-generation platform connecting equipment buyers and sellers. Unless expressly stated otherwise in a specific paid service or invoice, machinery transactions happen directly between buyer and seller.</p>
+<p><strong>${APP_NAME}</strong> primarily acts as a marketplace and lead-generation platform connecting equipment buyers and sellers. Unless expressly stated otherwise in a specific paid service or invoice, machinery transactions happen directly between buyer and seller.</p>
 
 <h2>2. Refund Eligibility</h2>
 <p>Fees paid for platform subscriptions, premium access, featured listings, or related digital services may be considered for refund only when:</p>
@@ -109,7 +110,7 @@ const DEFAULT_REFUND_RETURN_POLICY = `<h2>1. Marketplace Nature</h2>
 <p>Refunds are generally not available for completed lead-generation services, approved premium activations, listing boosts already delivered, or disputes arising between independent buyers and sellers after contact has been shared.</p>
 
 <h2>4. Return & Resolution Process</h2>
-<p>If you believe a refund review is required, contact the JCB Exchange support team with your payment proof, registered mobile number, and transaction details. Approved refunds, if applicable, are processed back to the original payment source within the applicable banking timeline.</p>`;
+<p>If you believe a refund review is required, contact the ${APP_NAME} support team with your payment proof, registered mobile number, and transaction details. Approved refunds, if applicable, are processed back to the original payment source within the applicable banking timeline.</p>`;
 
 const LEGAL_ALLOWED_TAGS = new Set(['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h2', 'h3', 'span', 'div']);
 const LEGAL_ALLOWED_CLASS_NAMES = new Set(['legal-callout']);
@@ -783,7 +784,7 @@ export default function FooterContentSettings() {
                 <textarea
                   value={contact.address || ''}
                   onChange={(event) => setContact((current) => ({ ...current, address: event.target.value }))}
-                  placeholder={t('footerSettings.addressPlaceholder', 'JCB Exchange, Plot No. 23\nSector 18, Gurugram\nHaryana 122015, India')}
+                  placeholder={t('footerSettings.addressPlaceholder', `${APP_NAME}, Plot No. 23\nSector 18, Gurugram\nHaryana 122015, India`)}
                   rows={4}
                   className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                 />

@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import api from '@/lib/api';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import HomepageContentSettings from '@/components/admin/HomepageContentSettings';
+import { APP_NAME } from '@/lib/appConfig';
 
 const INDIAN_STATES = [
   'Andhra Pradesh',
@@ -246,7 +247,7 @@ export default function SuperAdminSettingsPage() {
   const [dbCities, setDbCities] = useState<{ id: string | number; name: string }[]>([]);
 
   const [companyInvoiceForm, setCompanyInvoiceForm] = useState<CompanyInvoiceFormState>({
-    companyName: 'JCB Exchange',
+    companyName: APP_NAME,
     gstin: '',
     address: '',
     state: 'Maharashtra',
@@ -318,7 +319,7 @@ export default function SuperAdminSettingsPage() {
     apiKey: '',
     senderId: '',
     templateId: '',
-    templateMessage: 'Your OTP for JCB Exchange is {#var#}. Validity 5 mins.',
+    templateMessage: `Your OTP for ${APP_NAME} is {#var#}. Validity 5 mins.`,
   });
   const [otpSaving, setOtpSaving] = useState(false);
 
@@ -343,7 +344,7 @@ export default function SuperAdminSettingsPage() {
         templateId: response.data.mobileOtp.templateId || '',
         templateMessage:
           response.data.mobileOtp.templateMessage ||
-          'Your OTP for JCB Exchange is {#var#}. Validity 5 mins.',
+          `Your OTP for ${APP_NAME} is {#var#}. Validity 5 mins.`,
       });
       setCustomerPrimeForm({
         enabled: response.data.customerPrime.enabled,
@@ -379,7 +380,7 @@ export default function SuperAdminSettingsPage() {
       });
       if (response.data.companyInvoice) {
         setCompanyInvoiceForm({
-          companyName: response.data.companyInvoice.companyName || 'JCB Exchange',
+          companyName: response.data.companyInvoice.companyName || APP_NAME,
           gstin: response.data.companyInvoice.gstin || '',
           address: response.data.companyInvoice.address || '',
           state: response.data.companyInvoice.state || 'Maharashtra',
@@ -507,7 +508,7 @@ export default function SuperAdminSettingsPage() {
         templateId: response.data.mobileOtp.templateId || '',
         templateMessage:
           response.data.mobileOtp.templateMessage ||
-          'Your OTP for JCB Exchange is {#var#}. Validity 5 mins.',
+          `Your OTP for ${APP_NAME} is {#var#}. Validity 5 mins.`,
       });
       toast.success(response.data.message);
     } catch (error: unknown) {
@@ -720,7 +721,7 @@ export default function SuperAdminSettingsPage() {
 
       if (response.data.companyInvoice) {
         setCompanyInvoiceForm({
-          companyName: response.data.companyInvoice.companyName || 'JCB Exchange',
+          companyName: response.data.companyInvoice.companyName || APP_NAME,
           gstin: response.data.companyInvoice.gstin || '',
           address: response.data.companyInvoice.address || '',
           state: response.data.companyInvoice.state || 'Maharashtra',
@@ -1374,7 +1375,7 @@ export default function SuperAdminSettingsPage() {
                         type="text"
                         value={companyInvoiceForm.companyName}
                         onChange={(e) => setCompanyInvoiceForm((prev) => ({ ...prev, companyName: e.target.value }))}
-                        placeholder="e.g. JCB Exchange Pvt Ltd"
+                        placeholder={`e.g. ${APP_NAME} Pvt Ltd`}
                         className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                       />
                     </label>

@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { APP_NAME } from '@/lib/appConfig';
 import { canUseRecruitmentPermission, recruitmentPermissions } from '@/lib/recruitmentPermissions';
 import {
   Building2,
@@ -425,16 +426,16 @@ function getMockTemplates(): EmailTemplateItem[] {
       id: 'tmpl-1',
       name: 'Application Receipt Confirmation',
       type: 'APPLICATION_CONFIRMATION',
-      subject: 'Application Received: {{job_title}} at JCB Exchange',
-      body: 'Dear {{candidate_name}},\n\nThank you for applying for the position of {{job_title}} at JCB Exchange.\n\nYour application reference number is {{application_ref}}.\nOur talent acquisition team will review your profile and reach out if there is a match.\n\nBest regards,\nJCB Exchange Recruitment Team',
+      subject: `Application Received: {{job_title}} at ${APP_NAME}`,
+      body: `Dear {{candidate_name}},\n\nThank you for applying for the position of {{job_title}} at ${APP_NAME}.\n\nYour application reference number is {{application_ref}}.\nOur talent acquisition team will review your profile and reach out if there is a match.\n\nBest regards,\n${APP_NAME} Recruitment Team`,
       isDefault: true,
     },
     {
       id: 'tmpl-2',
       name: 'Interview Schedule Invitation',
       type: 'INTERVIEW_INVITE',
-      subject: 'Interview Scheduled for {{job_title}} position - JCB Exchange',
-      body: 'Hi {{candidate_name}},\n\nWe are pleased to invite you for an interview for the {{job_title}} role.\n\nDate & Time: {{interview_date}}\nMeeting Link: {{meeting_link}}\n\nPlease let us know if you need to reschedule.\n\nWarm regards,\nJCB Exchange HR',
+      subject: `Interview Scheduled for {{job_title}} position - ${APP_NAME}`,
+      body: `Hi {{candidate_name}},\n\nWe are pleased to invite you for an interview for the {{job_title}} role.\n\nDate & Time: {{interview_date}}\nMeeting Link: {{meeting_link}}\n\nPlease let us know if you need to reschedule.\n\nWarm regards,\n${APP_NAME} HR`,
       isDefault: true,
     },
     {
@@ -442,7 +443,7 @@ function getMockTemplates(): EmailTemplateItem[] {
       name: 'Application Rejection Notice',
       type: 'REJECTION_NOTICE',
       subject: 'Update regarding your application for {{job_title}}',
-      body: 'Dear {{candidate_name}},\n\nThank you for your interest in the {{job_title}} position at JCB Exchange and taking time to interview with us.\n\nAfter careful consideration, we have decided to move forward with another candidate whose qualifications more closely align with our current needs.\n\nWe wish you success in your job search.\n\nSincerely,\nJCB Exchange Talent Team',
+      body: `Dear {{candidate_name}},\n\nThank you for your interest in the {{job_title}} position at ${APP_NAME} and taking time to interview with us.\n\nAfter careful consideration, we have decided to move forward with another candidate whose qualifications more closely align with our current needs.\n\nWe wish you success in your job search.\n\nSincerely,\n${APP_NAME} Talent Team`,
       isDefault: true,
     },
   ];

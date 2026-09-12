@@ -32,6 +32,7 @@ import {
   getCustomerPrimeAccessPayload,
   listCustomerPrimeSubscriptionsForUser,
 } from '../utils/customerPrimeSubscriptions';
+import { APP_NAME } from '../config/appConfig';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jcbexchange_super_secret_key_123';
 const prismaAny = prisma as any;
@@ -1374,7 +1375,7 @@ export const getCustomerPrimeHistory = async (req: Request, res: Response, next:
       return {
         id: subscription.id,
         memberName: displayName,
-        planName: `JCB Exchange Prime - ${planDurationLabel}`,
+        planName: `${APP_NAME} Prime - ${planDurationLabel}`,
         amount: Number(subscription.paidAmount || 0),
         status: subscription.status,
         submittedAt: subscription.submittedAt,

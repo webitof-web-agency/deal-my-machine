@@ -4,6 +4,7 @@ import { extractIdFromSlug, generateDealerSlugPath } from '@/lib/seoUtils';
 import { resolvePublicDealerId } from '@/lib/publicRouteResolvers';
 import DealerDetailPageClient from './DealerDetailPageClient';
 import { getAbsoluteDealerAssetUrl, getDealerDetail, getDealerListings } from './data';
+import { SITE_NAME } from '@/lib/site';
 
 type DealerDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export async function generateMetadata({
   if (!dealer) {
     return {
       title: 'Dealer Not Found',
-      description: 'The requested dealer profile could not be found on JCB Exchange.',
+      description: `The requested dealer profile could not be found on ${SITE_NAME}.`,
     };
   }
 
@@ -29,7 +30,7 @@ export async function generateMetadata({
     ? `${dealer.businessName}${location ? ` in ${location}` : ''}`
     : 'Verified Dealer Profile';
   const description = dealer.businessDescription
-    || `Explore ${dealer.businessName || 'this dealer'} on JCB Exchange${location ? ` in ${location}` : ''}. View available machines, business details, and contact options.`;
+    || `Explore ${dealer.businessName || 'this dealer'} on ${SITE_NAME}${location ? ` in ${location}` : ''}. View available machines, business details, and contact options.`;
 
   return {
     title,
@@ -38,7 +39,7 @@ export async function generateMetadata({
       canonical: generateDealerSlugPath(dealer),
     },
     openGraph: {
-      title: `${title} | JCB Exchange`,
+      title: `${title} | ${SITE_NAME}`,
       description,
       url: `https://jcbexchange.com${generateDealerSlugPath(dealer)}`,
       type: 'website',
@@ -55,7 +56,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: dealer.businessLogoUrl ? 'summary_large_image' : 'summary',
-      title: `${title} | JCB Exchange`,
+      title: `${title} | ${SITE_NAME}`,
       description,
       ...(dealer.businessLogoUrl ? { images: [dealer.businessLogoUrl] } : {}),
     },
@@ -85,10 +86,10 @@ export default async function DealerDetailPage({ params }: DealerDetailPageProps
   const localBusinessSchema = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
-    name: dealer.businessName || 'JCB Exchange Dealer',
+    name: dealer.businessName || `${SITE_NAME} Dealer`,
     description:
       dealer.businessDescription ||
-      `Verified heavy machinery dealer profile on JCB Exchange${dealer.district ? ` in ${dealer.district}` : ''}.`,
+      `Verified heavy machinery dealer profile on ${SITE_NAME}${dealer.district ? ` in ${dealer.district}` : ''}.`,
     url: canonicalUrl,
     image: logoUrl || undefined,
     telephone: dealer.publicContact?.callNumber || undefined,

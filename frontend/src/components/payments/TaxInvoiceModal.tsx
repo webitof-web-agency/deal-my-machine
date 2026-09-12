@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Download, X, FileText } from 'lucide-react';
 import api, { getAbsoluteMediaUrl } from '@/lib/api';
+import { SITE_NAME } from '@/lib/site';
 
 type InvoiceSettings = {
   companyName: string | null;
@@ -72,7 +73,7 @@ const numberToWordsInr = (num: number): string => {
 
 export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoiceModalProps) {
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
-    companyName: 'JCB Exchange',
+    companyName: SITE_NAME,
     gstin: null,
     address: null,
     state: 'Maharashtra',
@@ -91,7 +92,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
           if (isMounted && res.data) {
             if (res.data.invoice) {
               setInvoiceSettings({
-                companyName: res.data.invoice.companyName || 'JCB Exchange',
+                companyName: res.data.invoice.companyName || SITE_NAME,
                 gstin: res.data.invoice.gstin || null,
                 address: res.data.invoice.address || null,
                 state: res.data.invoice.state || 'Maharashtra',
@@ -296,7 +297,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
                 </div>
               )}
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{invoiceSettings.companyName || 'JCB Exchange'}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">{invoiceSettings.companyName || SITE_NAME}</h1>
               </div>
             </div>
 
@@ -319,7 +320,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
               <h2 className="font-semibold text-amber-800 uppercase tracking-wider text-[10px] mb-1.5">
                 Billed From (Supplier)
               </h2>
-              <p className="font-semibold text-xs text-gray-900">{invoiceSettings.companyName || 'JCB Exchange'}</p>
+              <p className="font-semibold text-xs text-gray-900">{invoiceSettings.companyName || SITE_NAME}</p>
               {invoiceSettings.address && (
                 <p className="text-gray-600 mt-0.5 whitespace-pre-line leading-relaxed text-[11px]">{invoiceSettings.address}</p>
               )}
@@ -434,7 +435,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
                 ))}
             </div>
             <div className="flex justify-between items-center pt-2.5 text-gray-400 text-[9px]">
-              <p>© {new Date().getFullYear()} {invoiceSettings.companyName || 'JCB Exchange'}. All rights reserved.</p>
+              <p>© {new Date().getFullYear()} {invoiceSettings.companyName || SITE_NAME}. All rights reserved.</p>
               <p className="font-mono">Standard Tax Invoice (Indian GST Compliant)</p>
             </div>
           </div>

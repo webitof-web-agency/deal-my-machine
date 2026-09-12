@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { getAppSettings } from './appSettings';
+import { APP_NAME } from '../config/appConfig';
 import {
   buildPrimeSettingsSnapshot,
   buildUpiPaymentUri,
@@ -163,7 +164,7 @@ export const getCustomerPrimeAccessPayload = async ({
         ? buildUpiPaymentUri({
             upiId: settings.upiId,
             amount: settings.amount,
-            payeeName: 'JCB Exchange',
+            payeeName: APP_NAME,
             transactionNote: 'Prime customer subscription',
           })
         : null,

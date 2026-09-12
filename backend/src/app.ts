@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes';
 import { ensureUploadDirectories, publicUploadDir } from './utils/documentUpload';
+import { APP_NAME } from './config/appConfig';
 
 dotenv.config();
 
@@ -20,11 +21,11 @@ app.use('/api', apiRoutes);
 
 // Basic Root & Health Check Routes
 app.get('/', (req: Request, res: Response) => {
-  res.status(200).json({ success: true, message: 'JCB Exchange Backend API is running' });
+  res.status(200).json({ success: true, message: `${APP_NAME} Backend API is running` });
 });
 
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', message: 'JCB Exchange API is running' });
+  res.status(200).json({ status: 'ok', message: `${APP_NAME} API is running` });
 });
 
 // Default Error Handler

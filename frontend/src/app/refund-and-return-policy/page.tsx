@@ -3,15 +3,16 @@ import { Metadata } from 'next';
 import { Mail, MapPin } from 'lucide-react';
 import LegalDocumentShell from '@/components/legal/LegalDocumentShell';
 import LegalPageContent from '@/components/legal/LegalPageContent';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: 'Refund & Return Policy | JCB Exchange - Marketplace Services',
-  description: 'Read the official Refund & Return Policy of JCB Exchange for subscription charges, paid services, duplicate payments, and support-led refund handling.',
+  title: `Refund & Return Policy | ${SITE_NAME} - Marketplace Services`,
+  description: `Read the official Refund & Return Policy of ${SITE_NAME} for subscription charges, paid services, duplicate payments, and support-led refund handling.`,
   openGraph: {
-    title: 'Refund & Return Policy | JCB Exchange',
-    description: 'Official refund and return guidelines for JCB Exchange digital services and platform charges.',
+    title: `Refund & Return Policy | ${SITE_NAME}`,
+    description: `Official refund and return guidelines for ${SITE_NAME} digital services and platform charges.`,
     url: 'https://jcbexchange.com/refund-and-return-policy',
-    siteName: 'JCB Exchange',
+    siteName: SITE_NAME,
     type: 'website',
   },
   alternates: {
@@ -31,7 +32,7 @@ export default function RefundAndReturnPolicyPage() {
                 1. Marketplace Service Scope
               </h2>
               <p>
-                JCB Exchange primarily facilitates equipment discovery, listing exposure, and buyer-seller connections.
+                {SITE_NAME} primarily facilitates equipment discovery, listing exposure, and buyer-seller connections.
                 Unless specifically mentioned in a paid service commitment, machine sale transactions happen directly
                 between independent buyers and sellers.
               </p>
@@ -49,7 +50,7 @@ export default function RefundAndReturnPolicyPage() {
               <ul className="list-disc pl-5 space-y-2 text-gray-600">
                 <li>A duplicate payment is charged for the same subscription or service.</li>
                 <li>A verified technical issue prevents delivery of a paid platform feature and the issue remains unresolved.</li>
-                <li>A refund is required under applicable law or an expressly agreed written commitment from JCB Exchange.</li>
+                <li>A refund is required under applicable law or an expressly agreed written commitment from {SITE_NAME}.</li>
               </ul>
             </section>
 
@@ -88,7 +89,7 @@ export default function RefundAndReturnPolicyPage() {
                 For refund and return policy queries, please contact:
               </p>
               <div className="mt-4 space-y-2 rounded-xl border border-gray-200/80 bg-gray-50 p-5 text-xs text-gray-700 sm:text-sm">
-                <p className="font-semibold text-gray-900">JCB Exchange Support Team</p>
+                <p className="font-semibold text-gray-900">{SITE_NAME} Support Team</p>
                 <p className="flex items-center gap-2">
                   <MapPin size={14} className="text-amber-600" />
                   Plot No. 23, Sector 18, Gurugram, Haryana 122015, India

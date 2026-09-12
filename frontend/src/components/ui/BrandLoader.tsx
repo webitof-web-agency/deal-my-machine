@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useSiteLogo } from '@/hooks/useSiteLogo';
+import { SITE_NAME } from '@/lib/site';
 
 export type BrandLoaderSize    = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type BrandLoaderVariant = 'inline' | 'section' | 'overlay' | 'fullscreen';
@@ -82,7 +83,7 @@ function LoaderLogo({ ring, logo, logoUrl, darkLogoUrl, initialLogoUrl }: { ring
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={remoteLogoUrl}
-          alt="JCB Exchange"
+          alt={SITE_NAME}
           fetchPriority="high"
           decoding="async"
           onError={() => {

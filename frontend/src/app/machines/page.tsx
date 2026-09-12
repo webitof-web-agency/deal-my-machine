@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import MachinesPageClient from './MachinesPageClient';
+import { SITE_NAME } from '@/lib/site';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
 
@@ -61,8 +62,8 @@ export async function generateMetadata({
     : 'Used Machines for Sale';
 
   const description = matchedCategory && !hasSearchIntent
-    ? `Browse verified ${matchedCategory.name.toLowerCase()} listings, prices, and machine details across India on JCB Exchange.`
-    : 'Explore verified used JCBs, excavators, loaders, and heavy machinery for sale across India on JCB Exchange.';
+    ? `Browse verified ${matchedCategory.name.toLowerCase()} listings, prices, and machine details across India on ${SITE_NAME}.`
+    : `Explore verified used JCBs, excavators, loaders, and heavy machinery for sale across India on ${SITE_NAME}.`;
 
   const shouldIndex = !hasSearchIntent;
 
@@ -84,14 +85,14 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${title} | JCB Exchange`,
+      title: `${title} | ${SITE_NAME}`,
       description,
       url: `https://jcbexchange.com${canonical}`,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${title} | JCB Exchange`,
+      title: `${title} | ${SITE_NAME}`,
       description,
     },
   };
@@ -101,8 +102,8 @@ export default function MachinesPage() {
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Used Machines for Sale | JCB Exchange',
-    description: 'Explore verified used JCBs, excavators, loaders, and heavy machinery for sale across India on JCB Exchange.',
+    name: `Used Machines for Sale | ${SITE_NAME}`,
+    description: `Explore verified used JCBs, excavators, loaders, and heavy machinery for sale across India on ${SITE_NAME}.`,
     url: 'https://jcbexchange.com/machines',
     isPartOf: {
       '@id': 'https://jcbexchange.com/#website',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { SITE_NAME } from '@/lib/site';
 
 const styles = StyleSheet.create({
   page: {
@@ -333,7 +334,7 @@ export const InvoicePDFTemplate = ({
                 <Text style={styles.fallbackLogoText}>JCB</Text>
               </View>
             )}
-            <Text style={styles.companyTitle}>{invoiceSettings?.companyName || 'JCB Exchange'}</Text>
+            <Text style={styles.companyTitle}>{invoiceSettings?.companyName || SITE_NAME}</Text>
           </View>
           <View style={styles.headerRight}>
             <View style={styles.taxInvoiceBadge}>
@@ -351,7 +352,7 @@ export const InvoicePDFTemplate = ({
         <View style={styles.addressesRow}>
           <View style={styles.addressBox}>
             <Text style={styles.addressBoxTitle}>Billed From (Supplier)</Text>
-            <Text style={styles.addressBoxName}>{invoiceSettings?.companyName || 'JCB Exchange'}</Text>
+            <Text style={styles.addressBoxName}>{invoiceSettings?.companyName || SITE_NAME}</Text>
             {invoiceSettings?.address && (
               <Text style={styles.addressBoxText}>{invoiceSettings.address}</Text>
             )}
@@ -459,7 +460,7 @@ export const InvoicePDFTemplate = ({
           
           <View style={styles.copyrightRow}>
             <Text style={styles.copyrightText}>
-              © {new Date().getFullYear()} {invoiceSettings?.companyName || 'JCB Exchange'}. All rights reserved.
+              © {new Date().getFullYear()} {invoiceSettings?.companyName || SITE_NAME}. All rights reserved.
             </Text>
             <Text style={styles.copyrightText}>
               Standard Tax Invoice (Indian GST Compliant)

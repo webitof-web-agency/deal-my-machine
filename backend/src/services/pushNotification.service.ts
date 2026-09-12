@@ -7,6 +7,7 @@ import {
   normalizePushSubscription,
   PushSubscriptionPayload,
 } from '../utils/pushSubscriptions';
+import { APP_NAME } from '../config/appConfig';
 
 // Ensure you have these variables in your .env
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || '';
@@ -161,7 +162,7 @@ export class PushNotificationService {
 
       // 2. Mobile FCM Push Notification
       if (user.fcmToken) {
-        const title = payload.title || 'JCB Exchange Notification';
+        const title = payload.title || `${APP_NAME} Notification`;
         const body = payload.body || payload.message || '';
         const dataPath = payload.url || payload.path || payload.link || '/notifications';
 

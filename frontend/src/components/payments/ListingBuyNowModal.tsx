@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '@/lib/api';
+import { SITE_NAME } from '@/lib/site';
 import { getAbsoluteMediaUrl } from '@/lib/api';
 import { uploadListingPaymentReceiptToServer } from '@/lib/fileUpload';
 import { useToastStore } from '@/store/toastStore';
@@ -428,7 +429,7 @@ export default function ListingBuyNowModal({
         key: order.keyId,
         amount: order.amount,
         currency: order.currency,
-        name: 'JCB Exchange',
+        name: SITE_NAME,
         description: order.listingTitle,
         order_id: order.id,
         prefill: {

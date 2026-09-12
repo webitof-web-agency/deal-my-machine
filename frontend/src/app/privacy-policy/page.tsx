@@ -3,15 +3,16 @@ import { Metadata } from 'next';
 import { Mail, MapPin } from 'lucide-react';
 import LegalDocumentShell from '@/components/legal/LegalDocumentShell';
 import LegalPageContent from '@/components/legal/LegalPageContent';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | JCB Exchange - Heavy Equipment Marketplace",
-  description: "Read the official Privacy Policy of JCB Exchange. Learn how we collect, protect, and use your personal information, contact details, and heavy machinery listing data.",
+  title: `Privacy Policy | ${SITE_NAME} - Heavy Equipment Marketplace`,
+  description: `Read the official Privacy Policy of ${SITE_NAME}. Learn how we collect, protect, and use your personal information, contact details, and heavy machinery listing data.`,
   openGraph: {
-    title: "Privacy Policy | JCB Exchange",
-    description: "Learn how JCB Exchange protects user privacy, personal data, and equipment listing information.",
+    title: `Privacy Policy | ${SITE_NAME}`,
+    description: `Learn how ${SITE_NAME} protects user privacy, personal data, and equipment listing information.`,
     url: "https://jcbexchange.com/privacy-policy",
-    siteName: "JCB Exchange",
+    siteName: SITE_NAME,
     type: "website",
   },
   alternates: {
@@ -106,7 +107,7 @@ export default function PrivacyPolicyPage() {
                     If you have questions, wish to access your personal data, or request account deletion, please contact our support team:
                   </p>
                   <div className="mt-4 p-5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2 text-xs sm:text-sm text-gray-700">
-                    <p className="font-semibold text-gray-900">JCB Exchange Support Team</p>
+                    <p className="font-semibold text-gray-900">{SITE_NAME} Support Team</p>
                     <p className="flex items-center gap-2">
                       <MapPin size={14} className="text-amber-600" />
                       Plot No. 23, Sector 18, Gurugram, Haryana 122015, India

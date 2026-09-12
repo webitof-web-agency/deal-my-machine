@@ -3,15 +3,16 @@ import { Metadata } from 'next';
 import { Mail, MapPin } from 'lucide-react';
 import LegalDocumentShell from '@/components/legal/LegalDocumentShell';
 import LegalPageContent from '@/components/legal/LegalPageContent';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions | JCB Exchange - Heavy Machinery Marketplace",
-  description: "Review the official Terms and Conditions of JCB Exchange. Guidelines for buyers, sellers, equipment listings, dealer verification, and platform usage.",
+  title: `Terms & Conditions | ${SITE_NAME} - Heavy Machinery Marketplace`,
+  description: `Review the official Terms and Conditions of ${SITE_NAME}. Guidelines for buyers, sellers, equipment listings, dealer verification, and platform usage.`,
   openGraph: {
-    title: "Terms & Conditions | JCB Exchange",
-    description: "Official user agreement and terms of service for JCB Exchange marketplace platform.",
+    title: `Terms & Conditions | ${SITE_NAME}`,
+    description: `Official user agreement and terms of service for ${SITE_NAME} marketplace platform.`,
     url: "https://jcbexchange.com/terms-and-conditions",
-    siteName: "JCB Exchange",
+    siteName: SITE_NAME,
     type: "website",
   },
   alternates: {
@@ -31,7 +32,7 @@ export default function TermsAndConditionsPage() {
                     1. Platform Scope &amp; Eligibility
                   </h2>
                   <p>
-                    JCB Exchange is an online marketplace dedicated to facilitating equipment discovery and transaction inquiries for pre-owned and new JCB machinery, excavators, backhoe loaders, and heavy construction equipment across India.
+                    {SITE_NAME} is an online marketplace dedicated to facilitating equipment discovery and transaction inquiries for pre-owned and new JCB machinery, excavators, backhoe loaders, and heavy construction equipment across India.
                   </p>
                   <ul className="list-disc pl-5 space-y-2 text-gray-600">
                     <li>Users must be at least 18 years old or an authorized business entity.</li>
@@ -62,7 +63,7 @@ export default function TermsAndConditionsPage() {
                     3. Buyer Due Diligence &amp; Inspection
                   </h2>
                   <p>
-                    While JCB Exchange conducts dealer verification checks, prospective buyers are strongly advised to perform independent physical inspections, mechanical evaluations, and ownership document checks before making financial transfers.
+                    While {SITE_NAME} conducts dealer verification checks, prospective buyers are strongly advised to perform independent physical inspections, mechanical evaluations, and ownership document checks before making financial transfers.
                   </p>
                 </section>
 
@@ -87,7 +88,7 @@ export default function TermsAndConditionsPage() {
                     For questions regarding these Terms &amp; Conditions, please contact us:
                   </p>
                   <div className="mt-4 p-5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2 text-xs sm:text-sm text-gray-700">
-                    <p className="font-semibold text-gray-900">JCB Exchange Support Team</p>
+                    <p className="font-semibold text-gray-900">{SITE_NAME} Support Team</p>
                     <p className="flex items-center gap-2">
                       <MapPin size={14} className="text-amber-600" />
                       Plot No. 23, Sector 18, Gurugram, Haryana 122015, India

@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import AnalyticsListingDetail from '@/components/analytics/AnalyticsListingDetail';
 import BrandLoader from '@/components/ui/BrandLoader';
+import { PORTAL_NAME } from '@/lib/appConfig';
 
 const noIndexRobots: Metadata['robots'] = {
   index: false,
@@ -15,7 +16,7 @@ const noIndexRobots: Metadata['robots'] = {
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Listing Analytics Detail | JCB Exchange Portal',
+    title: `Listing Analytics Detail | ${PORTAL_NAME}`,
     description:
       'Detailed analytics for a single machine listing: views, tracked views, lead pipeline, conversion rate, lead status breakdown, sale record, and performance metrics.',
     robots: noIndexRobots,

@@ -9,6 +9,7 @@ import BrandLoader from '@/components/ui/BrandLoader';
 import { getAbsoluteFileUrl, uploadCustomerPrimeReceiptToServer } from '@/lib/fileUpload';
 import { useAuthStore, type AuthUser } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { SITE_NAME } from '@/lib/site';
 
 type CustomerPrimeFeature = 'CALL' | 'WHATSAPP' | 'SELL_LISTING' | 'BUY_NOW';
 
@@ -170,7 +171,7 @@ export default function CustomerPrimePaymentModal({
     },
     BUY_NOW: {
       title: 'Prime Membership Required to Buy Now',
-      helper: 'Upgrade to Prime Customer Membership to purchase equipment directly on JCB Exchange.',
+      helper: `Upgrade to Prime Customer Membership to purchase equipment directly on ${SITE_NAME}.`,
     },
   }[feature];
   const isRenewalMode = mode === 'renewal';

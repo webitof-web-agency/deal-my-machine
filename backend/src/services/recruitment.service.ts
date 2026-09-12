@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { Prisma } from '@prisma/client';
+import { APP_NAME } from '../config/appConfig';
 
 export const DEFAULT_HIRING_STAGES = [
   { name: 'New', code: 'NEW', order: 1, color: 'blue', isSystem: false, isTerminal: false },
@@ -36,24 +37,24 @@ export const DEFAULT_EMAIL_TEMPLATES = [
   {
     name: 'Application Received',
     code: 'APPLICATION_RECEIVED',
-    subject: 'Application Received for {{job_title}} - JCB Exchange',
-    bodyHtml: `<p>Dear {{candidate_name}},</p><p>Thank you for applying for the <strong>{{job_title}}</strong> position at JCB Exchange.</p><p>Your application reference number is <strong>{{application_id}}</strong>. Our recruitment team is reviewing your profile and will get back to you shortly if your qualifications match our requirements.</p><p>Best regards,<br/>Recruitment Team<br/>JCB Exchange</p>`,
+    subject: `Application Received for {{job_title}} - ${APP_NAME}`,
+    bodyHtml: `<p>Dear {{candidate_name}},</p><p>Thank you for applying for the <strong>{{job_title}}</strong> position at ${APP_NAME}.</p><p>Your application reference number is <strong>{{application_id}}</strong>. Our recruitment team is reviewing your profile and will get back to you shortly if your qualifications match our requirements.</p><p>Best regards,<br/>Recruitment Team<br/>${APP_NAME}</p>`,
     variables: ['candidate_name', 'job_title', 'application_id', 'company_name'],
     isSystem: true,
   },
   {
     name: 'Interview Scheduled',
     code: 'INTERVIEW_SCHEDULED',
-    subject: 'Interview Scheduled for {{job_title}} - JCB Exchange',
-    bodyHtml: `<p>Dear {{candidate_name}},</p><p>We are pleased to invite you for an interview for the <strong>{{job_title}}</strong> position.</p><p><strong>Date:</strong> {{interview_date}}<br/><strong>Time:</strong> {{interview_time}}<br/><strong>Application ID:</strong> {{application_id}}</p><p>Please let us know if you need to reschedule.</p><p>Best regards,<br/>Recruitment Team<br/>JCB Exchange</p>`,
+    subject: `Interview Scheduled for {{job_title}} - ${APP_NAME}`,
+    bodyHtml: `<p>Dear {{candidate_name}},</p><p>We are pleased to invite you for an interview for the <strong>{{job_title}}</strong> position.</p><p><strong>Date:</strong> {{interview_date}}<br/><strong>Time:</strong> {{interview_time}}<br/><strong>Application ID:</strong> {{application_id}}</p><p>Please let us know if you need to reschedule.</p><p>Best regards,<br/>Recruitment Team<br/>${APP_NAME}</p>`,
     variables: ['candidate_name', 'job_title', 'interview_date', 'interview_time', 'application_id', 'company_name'],
     isSystem: true,
   },
   {
     name: 'Offer Sent',
     code: 'OFFER_SENT',
-    subject: 'Job Offer: {{job_title}} - JCB Exchange',
-    bodyHtml: `<p>Dear {{candidate_name}},</p><p>We are delighted to extend an offer of employment for the <strong>{{job_title}}</strong> position at JCB Exchange.</p><p>Expected Joining Date: <strong>{{joining_date}}</strong></p><p>Please review the details in your recruitment portal workspace or attached offer letter.</p><p>Best regards,<br/>Human Resources<br/>JCB Exchange</p>`,
+    subject: `Job Offer: {{job_title}} - ${APP_NAME}`,
+    bodyHtml: `<p>Dear {{candidate_name}},</p><p>We are delighted to extend an offer of employment for the <strong>{{job_title}}</strong> position at ${APP_NAME}.</p><p>Expected Joining Date: <strong>{{joining_date}}</strong></p><p>Please review the details in your recruitment portal workspace or attached offer letter.</p><p>Best regards,<br/>Human Resources<br/>${APP_NAME}</p>`,
     variables: ['candidate_name', 'job_title', 'joining_date', 'company_name'],
     isSystem: true,
   },

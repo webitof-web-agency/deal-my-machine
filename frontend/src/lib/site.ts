@@ -1,4 +1,5 @@
-export const SITE_NAME = 'JCB Exchange';
+/** Public brand name, configured per deployment through NEXT_PUBLIC_APP_NAME. */
+export const SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME?.trim() || 'JCB Exchange';
 export const SITE_DESCRIPTION =
   "India's trusted marketplace for heavy machinery. Buy, sell and rent JCBs, excavators and more.";
 export const SITE_URL = 'https://jcbexchange.com';

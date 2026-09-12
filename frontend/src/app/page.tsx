@@ -10,6 +10,7 @@ import api, { API_ORIGIN } from '@/lib/api';
 import { generateMachineSlugPath } from '@/lib/seoUtils';
 import { useTranslation } from '@/hooks/useTranslation';
 import CategoryIconRenderer from '@/components/shared/CategoryIconRenderer';
+import { SITE_NAME } from '@/lib/site';
 
 type FinanceSupportItem = {
   id: string;
@@ -263,7 +264,7 @@ export default function Home() {
       {/* Full Card Image */}
       <Image
         src={getMediaUrl(item.imageUrl) || item.imageUrl}
-        alt={`${item.name} finance support partner on JCB Exchange`}
+        alt={`${item.name} finance support partner on ${SITE_NAME}`}
         fill
         sizes="(max-width: 640px) 220px, 240px"
         className="object-cover opacity-80 transition-opacity hover:opacity-100"
@@ -676,7 +677,7 @@ export default function Home() {
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
                 <Sparkles size={12} className="text-amber-600" />
-                <span>{t('careers.badge', 'Careers at JCB Exchange')}</span>
+                <span>{t('careers.badge', `Careers at ${SITE_NAME}`)}</span>
               </div>
               <h2 className="text-base sm:text-xl font-bold tracking-tight text-gray-900">
                 {t('careers.homeHeading', "Join India's Leading Heavy Equipment Network")}

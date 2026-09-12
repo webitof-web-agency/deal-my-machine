@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { getAbsoluteFileUrl } from '@/lib/fileUpload';
+import { SITE_NAME } from '@/lib/site';
 
 type SiteBrandProps = {
   href?: string;
@@ -54,7 +55,7 @@ export default function SiteBrand({
         <div className={`relative flex items-center ${widthClass}`}>
           <Image
             src={logoUrl}
-            alt="JCB Exchange"
+            alt={SITE_NAME}
             width={300}
             height={80}
             sizes={variant === 'footer' ? '(max-width: 768px) 240px, 360px' : '(max-width: 640px) 200px, (max-width: 768px) 240px, 300px'}

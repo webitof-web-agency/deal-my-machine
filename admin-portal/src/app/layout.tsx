@@ -10,6 +10,7 @@ import {
   getPortalBranding,
 } from '@/lib/siteBranding';
 import { SiteLogoProvider } from '@/hooks/useSiteLogo';
+import { APP_NAME, PORTAL_NAME } from '@/lib/appConfig';
 
 const getIconType = (url: string) => {
   const lowerUrl = url.toLowerCase();
@@ -28,8 +29,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const iconType = getIconType(faviconUrl);
 
   return {
-    title: "JCB Exchange Portal",
-    description: "Internal operations and partner management portal for JCB Exchange.",
+    title: PORTAL_NAME,
+    description: `Internal operations and partner management portal for ${APP_NAME}.`,
     robots: {
       index: false,
       follow: false,

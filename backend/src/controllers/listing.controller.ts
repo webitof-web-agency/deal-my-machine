@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import prisma from '../lib/prisma';
+import { APP_NAME } from '../config/appConfig';
 import { detachLeadsFromListing, getSoldAtValueForStatus, getSoldListingCutoff, setListingSoldAt } from '../utils/soldListingRetention';
 import { assertCustomerPrimeEligibility } from '../utils/customerPrimeSubscriptions';
 import { getSellerDisplayName, isPublicMarketplaceListingVisible } from '../utils/publicListingVisibility';
@@ -1783,7 +1784,7 @@ export const createListingPhonePeOrder = async (req: Request, res: Response, nex
         expireAfter: 1200,
         paymentFlow: {
           type: 'PG_CHECKOUT',
-          message: `JCB Exchange listing payment: ${listing!.title}`,
+          message: `${APP_NAME} listing payment: ${listing!.title}`,
           merchantUrls: {
             redirectUrl,
           },

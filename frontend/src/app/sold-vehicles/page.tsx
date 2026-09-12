@@ -2,23 +2,24 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import SoldVehiclesPageClient from './SoldVehiclesPageClient';
 import { getSiteBranding } from '@/lib/siteBranding';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Sold Vehicles & Equipment',
-  description: 'Explore verified heavy machinery and JCB equipment successfully sold through JCB Exchange across India.',
+  description: `Explore verified heavy machinery and JCB equipment successfully sold through ${SITE_NAME} across India.`,
   alternates: {
     canonical: '/sold-vehicles',
   },
   openGraph: {
-    title: 'Sold Vehicles & Equipment | JCB Exchange',
-    description: 'Explore verified heavy machinery and JCB equipment successfully sold through JCB Exchange across India.',
+    title: `Sold Vehicles & Equipment | ${SITE_NAME}`,
+    description: `Explore verified heavy machinery and JCB equipment successfully sold through ${SITE_NAME} across India.`,
     url: 'https://jcbexchange.com/sold-vehicles',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Sold Vehicles & Equipment | JCB Exchange',
-    description: 'Explore verified heavy machinery and JCB equipment successfully sold through JCB Exchange across India.',
+    title: `Sold Vehicles & Equipment | ${SITE_NAME}`,
+    description: `Explore verified heavy machinery and JCB equipment successfully sold through ${SITE_NAME} across India.`,
   },
 };
 
@@ -27,8 +28,8 @@ export default async function SoldVehiclesPage() {
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Sold Vehicles & Equipment | JCB Exchange',
-    description: 'Explore verified heavy machinery and JCB equipment successfully sold through JCB Exchange across India.',
+    name: `Sold Vehicles & Equipment | ${SITE_NAME}`,
+    description: `Explore verified heavy machinery and JCB equipment successfully sold through ${SITE_NAME} across India.`,
     url: 'https://jcbexchange.com/sold-vehicles',
     isPartOf: {
       '@id': 'https://jcbexchange.com/#website',

@@ -45,6 +45,7 @@ import { getPublicAnalyticsIdentity } from '@/lib/analytics';
 import { useToastStore } from '@/store/toastStore';
 import { API_BASE_URL } from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
+import { SITE_NAME } from '@/lib/site';
 
 type MachineDetailClientProps = {
   listing: MachineListingDetail;
@@ -366,7 +367,7 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
       try {
         await navigator.share({
           title: listing.title,
-          text: `Check out ${listing.title} on JCB Exchange`,
+          text: `Check out ${listing.title} on ${SITE_NAME}`,
           url: window.location.href,
         });
         return;

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
+import { SITE_NAME } from '@/lib/site';
 
 interface JobDepartment {
   id: string;
@@ -144,7 +145,7 @@ export default function JobsPage() {
         <div className="relative max-w-7xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-medium backdrop-blur-sm">
             <Sparkles size={14} className="animate-pulse" />
-            <span>{t('careers.badge', 'Careers at JCB Exchange')}</span>
+            <span>{t('careers.badge', `Careers at ${SITE_NAME}`)}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">

@@ -25,6 +25,7 @@ import {
 import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
 import { useTranslation } from '@/hooks/useTranslation';
+import { SITE_NAME } from '@/lib/site';
 
 interface CustomQuestion {
   id: string;
@@ -1047,7 +1048,7 @@ export default function JobApplyPage({ params }: { params: Promise<{ slug: strin
                     className="mt-0.5 rounded text-amber-500 focus:ring-amber-500 shrink-0"
                   />
                   <span>
-                    I consent to the collection and processing of my personal data for recruitment purposes at JCB Exchange as per the Privacy Policy.
+                    I consent to the collection and processing of my personal data for recruitment purposes at {SITE_NAME} as per the Privacy Policy.
                   </span>
                 </label>
 

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSiteLogo } from '@/hooks/useSiteLogo';
+import { APP_NAME } from '@/lib/appConfig';
 
 type PortalBrandProps = {
   href: string;
@@ -34,7 +35,7 @@ export default function PortalBrand({
           <div className={`relative flex items-center justify-center ${wrapperClass}`}>
             <Image
               src={activeLogoUrl}
-              alt="JCB Exchange"
+              alt={APP_NAME}
               width={300}
               height={80}
               unoptimized

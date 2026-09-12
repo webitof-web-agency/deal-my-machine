@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
+import { SITE_NAME } from '@/lib/site';
 import SiteBrand from '@/components/layout/SiteBrand';
 import SellVehicleModal from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
@@ -442,7 +443,7 @@ export default function Footer() {
           <div className="pt-6 border-t border-[#333333] flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 text-[12px] text-[#8C8C8C]">
             
             <div className="flex items-center text-center sm:text-left">
-              <span>{t('footer.copyright', '© 2026-2027 JCB Exchange. All rights reserved.')}</span>
+              <span>{t('footer.copyright', `© 2026-2027 ${SITE_NAME}. All rights reserved.`)}</span>
             </div>
 
             <div className="flex items-center">

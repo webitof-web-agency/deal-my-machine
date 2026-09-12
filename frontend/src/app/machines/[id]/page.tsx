@@ -5,6 +5,7 @@ import { resolvePublicMachineListingId } from '@/lib/publicRouteResolvers';
 import MachineDetailClient from './MachineDetailClient';
 import { getAbsoluteMediaUrl, getMachineListing } from './data';
 import { formatListingLocation } from '@/lib/listingLocation';
+import { SITE_NAME } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,8 +22,8 @@ export async function generateMetadata({
 
   if (!listing) {
     return {
-      title: 'Machine Not Found | JCB Exchange',
-      description: 'The requested machine listing could not be found on JCB Exchange.',
+      title: `Machine Not Found | ${SITE_NAME}`,
+      description: `The requested machine listing could not be found on ${SITE_NAME}.`,
     };
   }
 
@@ -34,7 +35,7 @@ export async function generateMetadata({
   ].filter(Boolean);
   const description =
     listing.description ||
-    `${listing.title} available on JCB Exchange${locationSummary ? ` in ${locationSummary}` : ''}. Explore price, seller details, machine specifications, and availability.`;
+    `${listing.title} available on ${SITE_NAME}${locationSummary ? ` in ${locationSummary}` : ''}. Explore price, seller details, machine specifications, and availability.`;
   const canonicalUrl = generateMachineSlugPath(listing);
   const primaryImage = listing.featuredImage || listing.media.find((media) => media.type === 'IMAGE')?.url || '';
   const imageUrl = primaryImage ? getAbsoluteMediaUrl(primaryImage) : undefined;
@@ -49,7 +50,7 @@ export async function generateMetadata({
       title: titleSegments.join(' | '),
       description,
       url: canonicalUrl,
-      siteName: 'JCB Exchange',
+      siteName: SITE_NAME,
       type: 'website',
       ...(imageUrl
         ? {
@@ -109,7 +110,7 @@ export default async function MachineDetailPage({
     name: listing.title,
     description:
       listing.description ||
-      `${listing.title} available on JCB Exchange${locationSummary ? ` in ${locationSummary}` : ''}.`,
+      `${listing.title} available on ${SITE_NAME}${locationSummary ? ` in ${locationSummary}` : ''}.`,
     mainEntityOfPage: `https://jcbexchange.com${generateMachineSlugPath(listing)}`,
     image: structuredImages,
     brand: listing.brand?.name

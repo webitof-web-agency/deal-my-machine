@@ -1,23 +1,24 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import CategoriesPageClient from './CategoriesPageClient';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Machine Categories',
-  description: 'Browse heavy equipment categories including JCBs, excavators, loaders, and more available across India on JCB Exchange.',
+  description: `Browse heavy equipment categories including JCBs, excavators, loaders, and more available across India on ${SITE_NAME}.`,
   alternates: {
     canonical: '/categories',
   },
   openGraph: {
-    title: 'Machine Categories | JCB Exchange',
-    description: 'Browse heavy equipment categories and discover machines listed across India on JCB Exchange.',
+    title: `Machine Categories | ${SITE_NAME}`,
+    description: `Browse heavy equipment categories and discover machines listed across India on ${SITE_NAME}.`,
     url: 'https://jcbexchange.com/categories',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Machine Categories | JCB Exchange',
-    description: 'Browse heavy equipment categories and discover machines listed across India on JCB Exchange.',
+    title: `Machine Categories | ${SITE_NAME}`,
+    description: `Browse heavy equipment categories and discover machines listed across India on ${SITE_NAME}.`,
   },
 };
 
@@ -25,8 +26,8 @@ export default function CategoriesPage() {
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Machine Categories | JCB Exchange',
-    description: 'Browse heavy equipment categories and discover machines listed across India on JCB Exchange.',
+    name: `Machine Categories | ${SITE_NAME}`,
+    description: `Browse heavy equipment categories and discover machines listed across India on ${SITE_NAME}.`,
     url: 'https://jcbexchange.com/categories',
     isPartOf: {
       '@id': 'https://jcbexchange.com/#website',
