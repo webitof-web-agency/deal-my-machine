@@ -18,7 +18,11 @@ app.use('/uploads/public', express.static(publicUploadDir));
 // API Routes
 app.use('/api', apiRoutes);
 
-// Basic Health Check Route
+// Basic Root & Health Check Routes
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({ success: true, message: 'JCB Exchange Backend API is running' });
+});
+
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'JCB Exchange API is running' });
 });
