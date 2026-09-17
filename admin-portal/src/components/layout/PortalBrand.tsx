@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { useSiteLogo } from '@/hooks/useSiteLogo';
 import { APP_NAME } from '@/lib/appConfig';
 
@@ -21,7 +22,17 @@ export default function PortalBrand({
   showSubtitle = true,
 }: PortalBrandProps) {
   const { logoUrl, darkLogoUrl } = useSiteLogo();
-  const activeLogoUrl = logoUrl || darkLogoUrl;
+  const logoCandidates = useMemo(
+    () => [logoUrl, darkLogoUrl].filter((value): value is string => Boolean(value)),
+    [logoUrl, darkLogoUrl]
+  );
+  const logoSignature = logoCandidates.join('|');
+  const [failedLogoState, setFailedLogoState] = useState<{ signature: string; urls: string[] }>({
+    signature: '',
+    urls: [],
+  });
+  const failedLogoUrls = failedLogoState.signature === logoSignature ? failedLogoState.urls : [];
+  const activeLogoUrl = logoCandidates.find((candidate) => !failedLogoUrls.includes(candidate)) || null;
 
   const wrapperClass = size === 'footer'
     ? 'max-w-[240px] sm:max-w-[360px]'
@@ -34,6 +45,7 @@ export default function PortalBrand({
         {activeLogoUrl ? (
           <div className={`relative flex items-center justify-center ${wrapperClass}`}>
             <Image
+              key={activeLogoUrl}
               src={activeLogoUrl}
               alt={APP_NAME}
               width={300}
@@ -42,9 +54,26 @@ export default function PortalBrand({
               priority={size === 'header'}
               loading={size === 'header' ? 'eager' : 'lazy'}
               className={`w-full h-auto object-contain object-center mx-auto ${maxHeightClass}`}
+              onError={() => {
+                setFailedLogoState((current) => {
+                  const urls = current.signature === logoSignature ? current.urls : [];
+                  if (urls.includes(activeLogoUrl)) {
+                    return current;
+                  }
+
+                  return {
+                    signature: logoSignature,
+                    urls: [...urls, activeLogoUrl],
+                  };
+                });
+              }}
             />
           </div>
-        ) : null}
+        ) : (
+          <span className="text-base font-extrabold leading-tight text-white sm:text-lg">
+            {APP_NAME}
+          </span>
+        )}
       </Link>
       {showSubtitle && subtitle ? (
         <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-gray-400 text-center">{subtitle}</p>

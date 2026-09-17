@@ -80,7 +80,7 @@ export function useSiteLogo() {
     // RootLayout already fetched branding on the server and passes it through
     // context. Reusing that value avoids a client-side logo request on every
     // page/layout mount.
-    if (serverLogoData) {
+    if (serverLogoData?.logoUrl || serverLogoData?.darkLogoUrl) {
       cachedData = serverLogoData;
       return;
     }
