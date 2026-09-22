@@ -22,6 +22,7 @@ import {
   getRecentListings,
   getPublicCategories,
   getPublicSearchFilters,
+  getPublicHomeStats,
   getPublicListingById,
   incrementListingView,
   getDealerById,
@@ -97,6 +98,7 @@ router.get('/public-listings/:id', getPublicListingById);
 router.post('/public-listings/:id/view', incrementListingView);
 router.get('/public-categories', getPublicCategories);
 router.get('/public-search-filters', getPublicSearchFilters);
+router.get('/public-home-stats', getPublicHomeStats);
 router.get('/recent-listings', getRecentListings);
 router.get('/invoice-settings', getPublicInvoiceSettings);
 

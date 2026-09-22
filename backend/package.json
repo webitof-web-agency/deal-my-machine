@@ -18,8 +18,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "^7.9.1",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
@@ -30,9 +30,9 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.10.0",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.2.0",
+    "multer": "^2.3.0",
     "pg": "^8.23.0",
-    "prisma": "^7.9.1",
+    "prisma": "^7.10.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
@@ -44,5 +44,10 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.23.9",
     "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "mysql2": "3.24.4",
+    "uuid": "11.1.1"
   }
 }

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, ChevronDown, LogOut, Package, User, Menu, X, Home, Truck, PlusCircle, CheckCircle2, Store, Briefcase } from 'lucide-react';
+import { Bell, ChevronDown, LogOut, Package, User, Menu, X, Home, Truck, CheckCircle2, Store, Briefcase } from 'lucide-react';
 import SellVehicleModal from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
@@ -260,69 +260,100 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`sticky top-0 z-40 w-full bg-[#1A1A1A] text-white shadow-sm ${
+        className={`sticky top-0 z-40 w-full bg-white text-gray-900 border-b border-gray-200/80 shadow-xs ${
           hasBlockingModalOpen
             ? 'translate-y-0'
             : `transition-transform duration-300 ease-out will-change-transform ${shouldShowNavbar ? 'translate-y-0' : '-translate-y-full'}`
         }`}
       >
-        <div className="flex flex-col">
-          <div className="flex w-full items-center justify-between border-b border-white/10 px-3 sm:px-4 md:px-6 py-2 md:py-2.5 relative">
-            <div className="flex items-center">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="flex h-16 sm:h-20 items-center justify-between gap-6">
+            {/* Left: Mobile Toggle & Brand Logo */}
+            <div className="flex items-center gap-3 shrink-0">
               <button
-                className="mr-2 sm:mr-3 xl:hidden text-gray-300 hover:text-white transition-colors"
+                className="xl:hidden p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label="Toggle mobile menu"
               >
-                {isMobileMenuOpen ? <X size={20} className="sm:h-6 sm:w-6" /> : <Menu size={20} className="sm:h-6 sm:w-6" />}
+                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
               <SiteBrand />
             </div>
 
-            <nav className="hidden xl:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-7 text-[13px] font-semibold text-gray-300">
-              <Link href="/" className="transition-colors hover:text-white">
+            {/* Center: Desktop Navigation Links (Single Line - whitespace-nowrap) */}
+            <nav className="hidden xl:flex items-center gap-7 lg:gap-9 text-sm font-semibold text-gray-700">
+              <Link
+                href="/"
+                className={`whitespace-nowrap transition-colors hover:text-amber-600 py-1.5 relative ${
+                  pathname === '/' ? 'text-amber-600 font-extrabold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500 after:rounded-full' : 'hover:text-gray-900'
+                }`}
+              >
                 {t('navbar.home')}
               </Link>
-              <Link href="/machines" className="transition-colors hover:text-white">
+              <Link
+                href="/machines"
+                className={`whitespace-nowrap transition-colors hover:text-amber-600 py-1.5 relative ${
+                  pathname === '/machines' ? 'text-amber-600 font-extrabold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500 after:rounded-full' : 'hover:text-gray-900'
+                }`}
+              >
                 {t('navbar.machines')}
               </Link>
               <button
                 onClick={handleOpenSellVehicle}
-                className="cursor-pointer outline-none transition-colors hover:text-white"
+                className="whitespace-nowrap cursor-pointer transition-colors hover:text-amber-600 py-1.5 font-semibold text-gray-700 outline-none hover:text-gray-900"
               >
                 {t('navbar.sellVehicle')}
               </button>
-              <Link href="/sold-vehicles" className="transition-colors hover:text-white">
+              <Link
+                href="/sold-vehicles"
+                className={`whitespace-nowrap transition-colors hover:text-amber-600 py-1.5 relative ${
+                  pathname === '/sold-vehicles' ? 'text-amber-600 font-extrabold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500 after:rounded-full' : 'hover:text-gray-900'
+                }`}
+              >
                 {t('navbar.soldVehicles')}
               </Link>
               <Link
                 href="/jobs"
-                className={`transition-colors hover:text-white ${pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'text-[#FFC107] font-bold' : ''}`}
+                className={`whitespace-nowrap transition-colors hover:text-amber-600 py-1.5 relative ${
+                  pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'text-amber-600 font-extrabold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500 after:rounded-full' : 'hover:text-gray-900'
+                }`}
               >
                 Careers
               </Link>
+              <Link
+                href="/dealers"
+                className={`whitespace-nowrap transition-colors hover:text-amber-600 py-1.5 relative ${
+                  pathname === '/dealers' ? 'text-amber-600 font-extrabold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500 after:rounded-full' : 'hover:text-gray-900'
+                }`}
+              >
+                {t('common.findDealer')}
+              </Link>
             </nav>
 
-            <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
-              <div className="hidden md:block">
-                <LanguageSwitcher />
+            {/* Right: Actions (Language Switcher, Notifications, Auth/Profile) */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Language Switcher */}
+              <div className="hidden lg:block">
+                <LanguageSwitcher tone="light" />
               </div>
+
+              {/* Notification Bell */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={handleToggleDropdown}
-                  className="relative text-gray-300 transition-colors hover:text-white"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100 transition-colors"
                   aria-label="Open notifications"
                 >
-                  <Bell className="h-5 w-5 sm:h-[20px] sm:w-[20px]" strokeWidth={2.5} />
+                  <Bell className="h-5 w-5 text-gray-700" strokeWidth={2.2} />
                   {isAuthenticated && user?.role === 'CUSTOMER' && unreadCount > 0 ? (
-                    <span className="absolute -right-2 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-jcb-yellow text-[10px] font-bold text-black">
+                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-extrabold text-black ring-2 ring-white">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   ) : null}
                 </button>
 
                 {isDropdownOpen ? (
-                  <div className="fixed top-[52px] right-2 left-2 sm:absolute sm:top-auto sm:right-0 sm:left-auto z-50 mt-0 sm:mt-3 sm:w-88 overflow-hidden rounded-2xl border border-gray-100/90 bg-white text-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-200 ease-out">
+                  <div className="fixed top-[64px] right-2 left-2 sm:absolute sm:top-auto sm:right-0 sm:left-auto z-50 mt-2 sm:w-88 overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-200 ease-out">
                     <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/80 px-4 py-3.5 backdrop-blur-sm">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-extrabold text-gray-900">{t('common.notifications')}</h3>
@@ -429,31 +460,28 @@ export default function Navbar() {
                 ) : null}
               </div>
 
-              <Link href="/dealers" className="hidden md:flex rounded-[4px] bg-jcb-yellow px-6 py-2 text-sm font-bold text-black transition-colors hover:bg-yellow-400">
-                {t('common.findDealer')}
-              </Link>
-
+              {/* Profile / Auth Pill Button */}
               {isAuthenticated ? (
-                <div className="relative ml-2" ref={profileDropdownRef}>
+                <div className="relative" ref={profileDropdownRef}>
                   <button
                     onClick={() => setIsProfileDropdownOpen((current) => !current)}
-                    className="flex items-center gap-2 rounded-full py-1.5 pl-2 pr-3 transition-colors hover:bg-white/5"
+                    className="flex items-center gap-2.5 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 py-1.5 pl-1.5 pr-3.5 transition-colors shadow-2xs"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFC107] text-sm font-black text-black">
                       {displayName.charAt(0).toUpperCase()}
                     </div>
-                    <div className="hidden flex-col items-start sm:flex">
-                      <span className="text-sm font-bold text-white">{displayName}</span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    <div className="hidden flex-col items-start sm:flex text-left">
+                      <span className="text-xs font-bold text-gray-900 max-w-[120px] truncate leading-tight">{displayName}</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-amber-600 leading-tight">
                         {roleLabel}
                       </span>
                     </div>
-                    <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-500 ml-0.5" />
                   </button>
 
                   {isProfileDropdownOpen ? (
-                    <div className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] transition-all duration-200 ease-out">
-                      <div className="border-b border-gray-100 bg-white px-5 py-4">
+                    <div className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] transition-all duration-200 ease-out">
+                      <div className="border-b border-gray-100 bg-gray-50/80 px-5 py-4">
                         <p className="truncate text-sm font-bold text-gray-900">{displayName}</p>
                         <p className="mt-0.5 truncate text-xs text-gray-500">{user?.email || 'customer@jcbexchange.com'}</p>
                       </div>
@@ -462,7 +490,7 @@ export default function Navbar() {
                           <button
                             type="button"
                             onClick={handlePortalNavigation}
-                            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                           >
                             <User className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
                             <span>{portalMenuLabel}</span>
@@ -471,7 +499,7 @@ export default function Navbar() {
                           <Link
                             href={portalTarget}
                             onClick={() => setIsProfileDropdownOpen(false)}
-                            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                           >
                             <User className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
                             <span>{portalMenuLabel}</span>
@@ -480,7 +508,7 @@ export default function Navbar() {
                         <div className="mx-2 my-1.5 h-px bg-gray-100"></div>
                         <button
                           onClick={logout}
-                          className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
                         >
                           <LogOut className="h-4 w-4 text-red-500 group-hover:text-red-600" />
                           <span>{t('common.logoutSecurely')}</span>
@@ -492,41 +520,38 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => setAuthModalOpen(true)}
-                  className="ml-0 sm:ml-2 flex items-center gap-1.5 sm:gap-2 rounded-[4px] border border-gray-600 px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 text-[10px] sm:text-xs md:text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 text-xs md:text-sm font-semibold text-gray-800 shadow-2xs transition-all hover:border-gray-300"
                 >
-                  <User className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
+                  <User className="h-4 w-4 text-gray-700" strokeWidth={2.2} />
                   <span className="hidden sm:inline">{t('common.loginSignup')}</span>
                   <span className="sm:hidden">{t('common.login')}</span>
                 </button>
               )}
             </div>
           </div>
-
         </div>
       </header>
 
       {/* Mobile Menu Backdrop Overlay */}
       {isMobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[55] bg-black/70 backdrop-blur-xs transition-opacity duration-300 xl:hidden"
+          className="fixed inset-0 z-[55] bg-black/50 backdrop-blur-xs transition-opacity duration-300 xl:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       ) : null}
 
       {/* Mobile Slide-Over Navigation Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[60] flex w-[290px] max-w-[85vw] flex-col bg-[#161616] text-white shadow-2xl transition-transform duration-300 ease-out xl:hidden ${
+        className={`fixed inset-y-0 left-0 z-[60] flex w-[300px] max-w-[85vw] flex-col bg-white text-gray-900 shadow-2xl transition-transform duration-300 ease-out xl:hidden ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Drawer Header */}
-        <div className="relative flex items-center justify-center border-b border-white/10 px-4 py-4 min-h-[60px]">
-          <div className="flex items-center justify-center">
-            <SiteBrand />
-          </div>
+        <div className="relative flex items-center justify-between border-b border-gray-100 px-5 py-4 min-h-[64px]">
+          <SiteBrand />
           <button
             onClick={() => setIsMobileMenuOpen(false)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
             aria-label="Close menu"
           >
             <X size={20} />
@@ -535,14 +560,14 @@ export default function Navbar() {
 
         {/* User Profile / Auth Card */}
         {isAuthenticated ? (
-          <div className="mx-4 mt-4 flex items-center justify-between rounded-2xl bg-white/5 p-3.5 border border-white/10">
+          <div className="mx-4 mt-4 flex items-center justify-between rounded-2xl bg-gray-50 p-3.5 border border-gray-100">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFC107] font-bold text-black text-sm shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFC107] font-extrabold text-black text-sm shadow-xs">
                 {displayName.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-white">{displayName}</p>
-                <p className="truncate text-[10px] font-bold text-[#FFC107] uppercase tracking-wider">{roleLabel}</p>
+                <p className="truncate text-sm font-bold text-gray-900">{displayName}</p>
+                <p className="truncate text-[10px] font-bold text-amber-600 uppercase tracking-wider">{roleLabel}</p>
               </div>
             </div>
             {user?.role && PORTAL_ROLES.includes(user.role) ? (
@@ -552,7 +577,7 @@ export default function Navbar() {
                   setIsMobileMenuOpen(false);
                   handlePortalNavigation();
                 }}
-                className="rounded-lg bg-white/10 p-2 text-gray-300 hover:bg-white/20 hover:text-white transition-colors"
+                className="rounded-xl bg-gray-200/80 p-2 text-gray-700 hover:bg-gray-300 transition-colors"
                 title={portalMenuLabel}
               >
                 <User size={16} />
@@ -561,7 +586,7 @@ export default function Navbar() {
               <Link
                 href={portalTarget}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg bg-white/10 p-2 text-gray-300 hover:bg-white/20 hover:text-white transition-colors"
+                className="rounded-xl bg-gray-200/80 p-2 text-gray-700 hover:bg-gray-300 transition-colors"
                 title={portalMenuLabel}
               >
                 <User size={16} />
@@ -569,13 +594,13 @@ export default function Navbar() {
             )}
           </div>
         ) : (
-          <div className="mx-4 mt-4 p-3 rounded-2xl bg-white/5 border border-white/10">
+          <div className="mx-4 mt-4 p-3 rounded-2xl bg-gray-50 border border-gray-100">
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
                 setAuthModalOpen(true);
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFC107] px-4 py-2.5 text-xs font-bold text-black shadow-xs transition hover:bg-[#FFB300]"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#FFC107] px-4 py-2.5 text-xs font-extrabold text-black shadow-xs transition hover:bg-[#FFB300]"
             >
               <User size={16} />
               {t('common.loginSignup')}
@@ -583,16 +608,16 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Navigation Links with Icons */}
+        {/* Navigation Links */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           <Link
             href="/"
             onClick={() => setIsMobileMenuOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-              pathname === '/' ? 'bg-[#FFC107]/15 text-[#FFC107]' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              pathname === '/' ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <Home size={18} className={pathname === '/' ? 'text-[#FFC107]' : 'text-gray-400'} />
+            <Home size={18} className={pathname === '/' ? 'text-amber-600' : 'text-gray-400'} />
             <span>{t('navbar.home')}</span>
           </Link>
 
@@ -600,21 +625,32 @@ export default function Navbar() {
             href="/machines"
             onClick={() => setIsMobileMenuOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-              pathname === '/machines' ? 'bg-[#FFC107]/15 text-[#FFC107]' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              pathname === '/machines' ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <Truck size={18} className={pathname === '/machines' ? 'text-[#FFC107]' : 'text-gray-400'} />
+            <Truck size={18} className={pathname === '/machines' ? 'text-amber-600' : 'text-gray-400'} />
             <span>{t('navbar.machines')}</span>
           </Link>
+
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleOpenSellVehicle();
+            }}
+            className="w-full flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors text-left"
+          >
+            <Truck size={18} className="text-gray-400" />
+            <span>{t('navbar.sellVehicle')}</span>
+          </button>
 
           <Link
             href="/sold-vehicles"
             onClick={() => setIsMobileMenuOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-              pathname === '/sold-vehicles' ? 'bg-[#FFC107]/15 text-[#FFC107]' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              pathname === '/sold-vehicles' ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <CheckCircle2 size={18} className={pathname === '/sold-vehicles' ? 'text-[#FFC107]' : 'text-gray-400'} />
+            <CheckCircle2 size={18} className={pathname === '/sold-vehicles' ? 'text-amber-600' : 'text-gray-400'} />
             <span>{t('navbar.soldVehicles')}</span>
           </Link>
 
@@ -622,10 +658,10 @@ export default function Navbar() {
             href="/jobs"
             onClick={() => setIsMobileMenuOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-              pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'bg-[#FFC107]/15 text-[#FFC107]' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <Briefcase size={18} className={pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'text-[#FFC107]' : 'text-gray-400'} />
+            <Briefcase size={18} className={pathname === '/jobs' || pathname.startsWith('/jobs/') ? 'text-amber-600' : 'text-gray-400'} />
             <span>Careers</span>
           </Link>
 
@@ -633,19 +669,19 @@ export default function Navbar() {
             href="/dealers"
             onClick={() => setIsMobileMenuOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-              pathname === '/dealers' ? 'bg-[#FFC107]/15 text-[#FFC107]' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              pathname === '/dealers' ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <Store size={18} className={pathname === '/dealers' ? 'text-[#FFC107]' : 'text-gray-400'} />
+            <Store size={18} className={pathname === '/dealers' ? 'text-amber-600' : 'text-gray-400'} />
             <span>{t('common.findDealer')}</span>
           </Link>
         </nav>
 
         {/* Drawer Footer */}
-        <div className="border-t border-white/10 p-4 space-y-3 bg-[#111]">
+        <div className="border-t border-gray-100 p-4 space-y-3 bg-gray-50">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-400">{t('common.language')}</span>
-            <LanguageSwitcher direction="up" />
+            <span className="text-xs font-semibold text-gray-500">{t('common.language')}</span>
+            <LanguageSwitcher tone="light" direction="up" />
           </div>
           {isAuthenticated && (
             <button
@@ -653,7 +689,7 @@ export default function Navbar() {
                 setIsMobileMenuOpen(false);
                 logout();
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 border border-red-100 px-3 py-2.5 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
             >
               <LogOut size={15} />
               {t('common.logoutSecurely')}
@@ -661,6 +697,7 @@ export default function Navbar() {
           )}
         </div>
       </aside>
+
       {isSellModalOpen ? <SellVehicleModal isOpen={isSellModalOpen} onClose={() => setIsSellModalOpen(false)} /> : null}
       {isPrimePaymentOpen ? (
         <CustomerPrimePaymentModal

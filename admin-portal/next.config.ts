@@ -9,7 +9,11 @@ const withPWA = withPWAInit({
   register: true,
 });
 
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+if (!configuredApiUrl) {
+  throw new Error('NEXT_PUBLIC_API_URL is not set');
+}
 
 const getRemotePattern = (value: string, pathname: string) => {
   try {
@@ -100,6 +104,16 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'prezentokracja.pl',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
         pathname: '/**',
       },
       ...(uploadsPattern ? [uploadsPattern] : []),

@@ -1297,6 +1297,47 @@ export const getPublicSearchFilters = async (req: Request, res: Response, next: 
   }
 };
 
+export const getPublicHomeStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const publicListingWhere = buildPublicMarketplaceFeedWhere({});
+
+    const [machineCount, customerCount, dealerCount, brands] = await Promise.all([
+      prismaAny.listing.count({ where: publicListingWhere }),
+      prismaAny.user.count({ where: { role: 'CUSTOMER' } }),
+      prismaAny.partnerProfile.count({
+        where: {
+          accountStatus: 'ACTIVE',
+          onboardingStatus: 'APPROVED',
+          kycStatus: 'APPROVED',
+        },
+      }),
+      prismaAny.brand.findMany({
+        where: {
+          listings: {
+            some: publicListingWhere,
+          },
+        },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        counts: {
+          machines: machineCount,
+          customers: customerCount,
+          dealers: dealerCount,
+        },
+        brands,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPublicListingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;

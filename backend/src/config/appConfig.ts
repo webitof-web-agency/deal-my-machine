@@ -4,4 +4,4 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /** Runtime application configuration shared by backend services. */
-export const APP_NAME = process.env.APP_NAME?.trim() || 'JCB Exchange';
+export const APP_NAME = process.env.APP_NAME?.trim() || 'DealMyMachine';

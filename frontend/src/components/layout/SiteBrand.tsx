@@ -50,7 +50,7 @@ export default function SiteBrand({
     : 'w-full max-w-[200px] sm:max-w-[240px] md:max-w-[300px]';
 
   return (
-    <Link href={href} className={`inline-flex items-center ${widthClass}`}>
+    <Link href={href} className={`inline-flex items-center gap-2.5 ${widthClass}`}>
       {logoUrl ? (
         <div className={`relative flex items-center ${widthClass}`}>
           <Image
@@ -63,10 +63,25 @@ export default function SiteBrand({
             priority={variant === 'navbar'}
             loading={variant === 'navbar' ? 'eager' : 'lazy'}
             style={{ width: '100%', height: 'auto' }}
-            className={`object-contain ${align === 'center' ? 'object-center mx-auto' : 'object-left'} ${variant === 'footer' ? 'max-h-[80px]' : 'max-h-[64px]'}`}
+            className={`object-contain ${align === 'center' ? 'object-center mx-auto' : 'object-left'} ${variant === 'footer' ? 'max-h-[80px]' : 'max-h-[54px]'}`}
           />
         </div>
-      ) : null}
+      ) : (
+        <div className="flex items-center gap-2.5 select-none">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFC107] text-black shadow-xs font-black border border-amber-300">
+            <svg className="w-6 h-6 fill-black" viewBox="0 0 24 24">
+              <path d="M19.5 14c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM4.5 14c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM22 15.5c0-1.38-1.12-2.5-2.5-2.5h-1.07c-.43-1.46-1.78-2.5-3.43-2.5h-2v-2.5c0-.83-.67-1.5-1.5-1.5H8.5c-.83 0-1.5.67-1.5 1.5V9H5c-1.65 0-3 1.35-3 3v3.5C2 16.88 3.12 18 4.5 18h15c1.38 0 2.5-1.12 2.5-2.5zM12 9v1.5H8.5V9H12zm-3.5 4h8c.83 0 1.5.67 1.5 1.5H6c0-.83.67-1.5 1.5-1.5z"/>
+            </svg>
+          </div>
+          <div className="flex flex-col leading-none">
+            <div className="flex items-center gap-1 font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 uppercase">
+              <span>JCB</span>
+              <span className="text-amber-500">EXCHANGE</span>
+            </div>
+            <span className="text-[9px] font-bold text-gray-400 tracking-wider uppercase mt-0.5">Heavy Machinery</span>
+          </div>
+        </div>
+      )}
     </Link>
   );
 }

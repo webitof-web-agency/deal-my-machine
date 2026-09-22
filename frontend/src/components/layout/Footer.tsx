@@ -246,7 +246,7 @@ export default function Footer() {
 
   return (
     <>
-      <footer className="bg-[#1A1A1A] text-gray-300 pt-16 pb-6 px-6 md:px-12 w-full mt-auto border-t-[10px] border-[#E6E6E6]">
+      <footer className="bg-[#1A1A1A] text-gray-300 pt-16 pb-6 px-6 md:px-12 w-full mt-auto border-t border-[#262626]">
         <div className="max-w-[1200px] mx-auto">
           {/* Top Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-10 sm:gap-x-6 lg:gap-x-0 mb-12 md:mb-16">
@@ -343,6 +343,12 @@ export default function Footer() {
                   <Link href="/disclaimer" className="group flex items-center text-[13px] text-[#B3B3B3] hover:text-white transition-colors whitespace-nowrap">
                     <ChevronRight size={14} className="text-[#F0C85C] mr-3 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                     {t('legalPages.disclaimer', 'Disclaimer')}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact-us" className="group flex items-center text-[13px] text-[#B3B3B3] hover:text-white transition-colors whitespace-nowrap">
+                    <ChevronRight size={14} className="text-[#F0C85C] mr-3 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                    {t('footer.contactUs', 'Contact Us')}
                   </Link>
                 </li>
                 {partnerRegistrationSettingsLoaded && partnerRegistrationEnabled ? (

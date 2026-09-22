@@ -1,238 +1,177 @@
 "use client";
 
 import Image from 'next/image';
-import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Search, Shapes } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  ChevronDown,
+  Filter,
+  RotateCcw,
+  Search,
+  Shapes,
+} from 'lucide-react';
 import api, { API_ORIGIN } from '@/lib/api';
-import { useTranslation } from '@/hooks/useTranslation';
+import CategoryIconRenderer from '@/components/shared/CategoryIconRenderer';
 
 type PublicCategory = {
   id: string;
   name: string;
   count: number;
   featuredImage: string | null;
-  icon?: {
-    id: string;
-    name: string;
-    svgData: string;
-  } | null;
+  icon?: { id: string; name: string; svgData: string } | null;
 };
 
-import CategoryIconRenderer from '@/components/shared/CategoryIconRenderer';
+type PublicListing = {
+  id: string;
+  title: string;
+  brand?: { id: string; name: string } | null;
+  category?: { id: string; name: string } | null;
+  condition?: string | null;
+  locationCity?: string | null;
+  locationState?: string | null;
+};
 
-function CategoryIconBadge({ icon, name }: { icon?: PublicCategory['icon']; name: string }) {
+type HeroSettings = { imageUrl: string | null; headline?: string | null };
+
+const mediaUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  return /^https?:\/\//i.test(url) ? url : `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
+};
+
+const number = (value: number) => new Intl.NumberFormat('en-IN').format(value);
+
+function CategoryIcon({ category, large = false }: { category: PublicCategory; large?: boolean }) {
   return (
-    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-yellow-100 bg-[#fff8db] text-gray-700 shadow-sm">
+    <div className={`flex shrink-0 items-center justify-center ${large ? 'h-12 w-14' : 'h-10 w-10'} rounded-xl bg-amber-50`}>
       <CategoryIconRenderer
-        svgData={icon?.svgData}
-        name={name}
-        className="flex h-6 w-6 items-center justify-center text-gray-700"
+        svgData={category.icon?.svgData}
+        name={category.name}
+        className={`flex items-center justify-center text-gray-800 ${large ? 'h-8 w-8' : 'h-6 w-6'}`}
       />
-      <span className="sr-only">{name}</span>
+      <span className="sr-only">{category.name}</span>
     </div>
   );
 }
 
-const getMediaUrl = (url: string | null) => {
-  if (!url) {
-    return null;
-  }
-
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-
-  return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
-};
-
-const formatMachineCount = (count: number) =>
-  new Intl.NumberFormat('en-IN', {
-    maximumFractionDigits: 0,
-  }).format(count);
-
 export default function CategoriesPageClient() {
-  const { t } = useTranslation();
   const [categories, setCategories] = useState<PublicCategory[]>([]);
+  const [listings, setListings] = useState<PublicListing[]>([]);
+  const [hero, setHero] = useState<HeroSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('popular');
 
   useEffect(() => {
     let cancelled = false;
-
-    const loadCategories = async () => {
+    const loadPageData = async () => {
       try {
-        const response = await api.get<{ success: boolean; data: PublicCategory[] }>('/master/public-categories');
-        if (!cancelled && response.data?.success) {
-          setCategories(response.data.data || []);
-        }
+        const [categoriesRes, listingsRes, heroRes] = await Promise.all([
+          api.get<{ success: boolean; data: PublicCategory[] }>('/master/public-categories'),
+          api.get<{ success: boolean; data: PublicListing[] }>('/master/public-listings'),
+          api.get<{ success: boolean; data: HeroSettings }>('/master/hero-image').catch(() => null),
+        ]);
+
+        if (cancelled) return;
+        if (categoriesRes.data?.success) setCategories(categoriesRes.data.data || []);
+        if (listingsRes.data?.success) setListings(listingsRes.data.data || []);
+        if (heroRes?.data?.success) setHero(heroRes.data.data || null);
       } catch {
         if (!cancelled) {
           setCategories([]);
+          setListings([]);
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
-    void loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
+    void loadPageData();
+    return () => { cancelled = true; };
   }, []);
 
-  const filteredCategories = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    if (!normalizedSearch) {
-      return categories;
-    }
+  const brands = useMemo(() => {
+    const counts = new Map<string, number>();
+    listings.forEach((listing) => {
+      if (listing.brand?.name) counts.set(listing.brand.name, (counts.get(listing.brand.name) || 0) + 1);
+    });
+    return Array.from(counts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }, [listings]);
 
-    return categories.filter((category) => category.name.toLowerCase().includes(normalizedSearch));
-  }, [categories, search]);
+  const conditions = useMemo(() => {
+    const counts = new Map<string, number>();
+    listings.forEach((listing) => {
+      const condition = listing.condition || 'Unspecified';
+      counts.set(condition, (counts.get(condition) || 0) + 1);
+    });
+    return Array.from(counts, ([name, count]) => ({ name, count }));
+  }, [listings]);
 
-  const totalMachines = useMemo(
-    () => categories.reduce((sum, category) => sum + category.count, 0),
-    [categories]
-  );
+  const visibleCategories = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const result = categories.filter((category) => {
+      const matchesSearch = !query || category.name.toLowerCase().includes(query);
+      const matchesCategory = selectedCategory === 'ALL' || category.id === selectedCategory;
+      const matchesBrand = selectedBrands.length === 0 || listings.some((listing) => listing.category?.id === category.id && selectedBrands.includes(listing.brand?.name || ''));
+      const matchesCondition = selectedConditions.length === 0 || listings.some((listing) => listing.category?.id === category.id && selectedConditions.includes(listing.condition || 'Unspecified'));
+      return matchesSearch && matchesCategory && matchesBrand && matchesCondition;
+    });
+    return [...result].sort((a, b) => sortBy === 'name' ? a.name.localeCompare(b.name) : b.count - a.count);
+  }, [categories, listings, search, selectedCategory, selectedBrands, selectedConditions, sortBy]);
+
+  const activeFilterCount = selectedBrands.length + selectedConditions.length + (selectedCategory === 'ALL' ? 0 : 1);
+  const toggle = (value: string, values: string[], setValues: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setValues((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  };
+  const resetFilters = () => {
+    setSearch('');
+    setSelectedCategory('ALL');
+    setSelectedBrands([]);
+    setSelectedConditions([]);
+    setSortBy('popular');
+  };
+  const heroImage = mediaUrl(hero?.imageUrl);
+  const heroHeadlineLines = (hero?.headline || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const heroAccentLineIndex = Math.max(heroHeadlineLines.length - 1, 0);
 
   return (
-    <div className="min-h-screen bg-[#f6f4ef] pb-16 pt-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#111827_0%,#1f2937_55%,#3a321d_100%)] px-6 py-10 text-white shadow-xl sm:px-10">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="mb-3 text-xs font-bold uppercase tracking-[0.35em] text-jcb-yellow">{t('categories.browseCategories')}</p>
-              <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">
-                {t('categories.heroTitle')}
-              </h1>
-              <p className="mt-4 max-w-xl text-sm text-white/75 sm:text-base">
-                {t('categories.heroDescription')}
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/55">{t('categories.liveCategories')}</p>
-                <p className="mt-2 text-3xl font-black text-white">{formatMachineCount(categories.length)}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/55">{t('categories.publishedMachines')}</p>
-                <p className="mt-2 text-3xl font-black text-jcb-yellow">{formatMachineCount(totalMachines)}</p>
-              </div>
+    <main className="bg-[#FAFAF9] text-[#071B3A]">
+      {false ? (<section className="relative min-h-[560px] overflow-hidden bg-[#1C1C1C] md:h-[600px]">
+        {heroImage ? <Image src={heroImage || ''} alt="Heavy machinery marketplace" fill priority sizes="100vw" className="object-cover" /> : null}
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1200px] flex-col justify-center px-4 pb-8 pt-24 sm:px-6 md:pb-10 md:pt-20">
+          <div className="mb-4 flex items-center gap-2 text-xs text-white/75"><Link href="/">Home</Link><span>›</span><span>Categories</span></div>
+          {heroHeadlineLines.length > 0 ? <h1 className="max-w-[700px] text-[30px] font-extrabold leading-[1.08] tracking-normal text-white drop-shadow-lg sm:text-5xl md:text-6xl">{heroHeadlineLines.map((line, index) => { const words = line.split(/\s+/).filter(Boolean); const accentLastWord = index === heroAccentLineIndex && words.length > 1; const baseLine = accentLastWord ? words.slice(0, -1).join(' ') : line; const accentWord = accentLastWord ? words[words.length - 1] : ''; return <React.Fragment key={`${line}-${index}`}>{index > 0 ? <br /> : null}{baseLine}{accentWord ? <> <span className="text-[#FFC107]">{accentWord}</span></> : null}</React.Fragment>; })}</h1> : null}
+          <div className="relative z-30 mt-7 w-full max-w-[640px]">
+            <div className="flex w-full rounded-md border border-white/30 bg-white/95 p-2 shadow-2xl backdrop-blur-sm">
+              <div className="flex min-h-[48px] flex-1 items-center rounded-[4px] border border-gray-200 bg-white px-3 focus-within:border-[#FFC107]"><Search className="mr-2.5 h-4 w-4 shrink-0 text-gray-500 sm:h-5 sm:w-5" /><input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search categories, brands, or machine types..." className="w-full bg-transparent text-xs font-semibold text-gray-900 outline-none placeholder:text-gray-500 sm:text-sm" /></div>
+              <button type="button" className="ml-2 flex min-h-[48px] items-center justify-center gap-2 whitespace-nowrap rounded-[4px] bg-[#FFC107] px-6 text-sm font-extrabold text-black"><Search className="h-4 w-4" strokeWidth={2.8} />Search</button>
             </div>
           </div>
-        </section>
+        </div>
+      </section>) : null}
 
-        <section className="mt-8 rounded-[28px] border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="flex flex-col gap-4 border-b border-gray-100 pb-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-2xl font-extrabold text-gray-900">{t('categories.allCategories')}</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {t('categories.allCategoriesDescription')}
-              </p>
-              <div className="mt-3">
-                <Link href="/machines" className="text-sm font-bold text-jcb-yellow hover:text-yellow-600">
-                  View all machines
-                </Link>
-              </div>
-            </div>
-
-            <div className="relative w-full md:w-80">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('categories.searchPlaceholder')}
-                className="w-full rounded-xl border border-gray-200 bg-[#faf8f3] py-3 pl-11 pr-4 text-sm font-medium text-gray-800 outline-none transition focus:border-jcb-yellow"
-              />
-            </div>
+      <section className="mx-auto grid max-w-[1400px] gap-5 px-5 py-5 sm:px-8 lg:grid-cols-[178px_1fr] lg:px-10">
+        <aside className="h-fit rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3"><h2 className="text-sm font-extrabold">Filter Categories</h2><Filter className="h-4 w-4 text-slate-500" /></div>
+          <button type="button" onClick={() => setSelectedCategory('ALL')} className={`mt-3 flex w-full items-center justify-between rounded-md px-2 py-2 text-xs font-bold ${selectedCategory === 'ALL' ? 'bg-[#FFF3C4] text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}><span className="flex items-center gap-2"><Shapes className="h-4 w-4" />All Categories</span><span>{number(categories.reduce((sum, item) => sum + item.count, 0))}</span></button>
+          <div className="mt-2 space-y-1">
+            {categories.slice(0, 10).map((category) => <button type="button" key={category.id} onClick={() => setSelectedCategory(category.id)} className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[11px] ${selectedCategory === category.id ? 'bg-amber-50 font-bold text-amber-700' : 'text-slate-600 hover:bg-slate-50'}`}><span className="truncate">{category.name}</span><span className="ml-2 text-slate-400">{category.count}</span></button>)}
           </div>
+          <div className="mt-4 border-t border-slate-100 pt-3"><h3 className="mb-2 text-xs font-extrabold">Condition</h3>{conditions.map((condition) => <label key={condition.name} className="flex cursor-pointer items-center gap-2 py-1 text-[11px] text-slate-600"><input type="checkbox" checked={selectedConditions.includes(condition.name)} onChange={() => toggle(condition.name, selectedConditions, setSelectedConditions)} className="h-3.5 w-3.5 accent-[#FFC107]" /><span className="flex-1">{condition.name}</span><span className="text-slate-400">{condition.count}</span></label>)}</div>
+          <div className="mt-4 border-t border-slate-100 pt-3"><h3 className="mb-2 text-xs font-extrabold">Popular Brands</h3>{brands.slice(0, 8).map((brand) => <label key={brand.name} className="flex cursor-pointer items-center gap-2 py-1 text-[11px] text-slate-600"><input type="checkbox" checked={selectedBrands.includes(brand.name)} onChange={() => toggle(brand.name, selectedBrands, setSelectedBrands)} className="h-3.5 w-3.5 accent-[#FFC107]" /><span className="flex-1 truncate">{brand.name}</span><span className="text-slate-400">{brand.count}</span></label>)}</div>
+          <button type="button" onClick={resetFilters} className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-slate-100 py-2 text-[11px] font-bold text-slate-700 hover:bg-amber-100"><RotateCcw className="h-3.5 w-3.5" />Reset Filters</button>
+        </aside>
 
-          <div className="mt-6">
-            {loading ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={`category-loading-${index}`} className="h-[310px] animate-pulse rounded-2xl border border-gray-100 bg-[#fcfbf8] p-5" />
-                ))}
-              </div>
-            ) : filteredCategories.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-[#fcfbf8] px-6 py-16 text-center">
-                <Shapes className="h-12 w-12 text-gray-300" />
-                <h3 className="mt-4 text-xl font-bold text-gray-900">{t('categories.noCategoriesFound')}</h3>
-                <p className="mt-2 max-w-md text-sm text-gray-500">
-                  {t('categories.noCategoriesDescription')}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {filteredCategories.map((category) => (
-                    <Link
-                      href={`/machines?category=${category.id}`}
-                      key={category.id}
-                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-[#fcfbf8] p-5 transition-all hover:-translate-y-1 hover:border-jcb-yellow/40 hover:shadow-lg"
-                    >
-                    <div className="mb-4 flex items-start justify-between">
-                      <CategoryIconBadge icon={category.icon} name={category.name} />
-                      <ArrowRight className="h-4 w-4 text-gray-300 transition-colors group-hover:text-jcb-yellow" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-extrabold text-gray-900">{category.name}</h3>
-                      <p className="mt-2 text-sm font-semibold text-gray-500">
-                        {t('categories.liveMachinesCount', { count: formatMachineCount(category.count) })}
-                      </p>
-                    </div>
-
-                    <div className="relative mt-5 h-48 overflow-hidden rounded-xl bg-white">
-                      {category.featuredImage ? (
-                        <Image
-                          src={getMediaUrl(category.featuredImage) || category.featuredImage}
-                          alt={`${category.name} heavy equipment category`}
-                          fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#fff7db] to-[#efe9de]">
-                          <span className="px-4 text-center text-sm font-bold uppercase tracking-[0.26em] text-gray-500">
-                            {category.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-4">
-                      <span className="text-xs font-bold uppercase tracking-[0.24em] text-gray-400">{t('categories.categoryView')}</span>
-                      <span className="text-sm font-bold text-gray-900 group-hover:text-jcb-yellow">
-                        {t('categories.browseMachines')}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-8 rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="max-w-4xl space-y-4 text-sm leading-7 text-gray-600">
-            <h2 className="text-2xl font-extrabold text-gray-900">Explore equipment categories with real market demand</h2>
-            <p>
-              Browse machine categories to quickly narrow down verified listings for backhoe loaders, excavators, telehandlers,
-              compact equipment, and other heavy machinery commonly searched across India. Each category page helps buyers move
-              faster from discovery to comparison without losing track of active listings.
-            </p>
-            <p>
-              If you already know the type of machine you need, continue to the <Link href="/machines" className="font-bold text-jcb-yellow hover:text-yellow-600">full machines marketplace</Link>.
-              If you want help from businesses operating in your region, explore <Link href="/dealers" className="font-bold text-jcb-yellow hover:text-yellow-600">verified dealers</Link> before making contact.
-            </p>
-          </div>
-        </section>
-      </div>
-    </div>
+        <div className="min-w-0">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">All Categories</h2><p className="text-xs text-slate-500">Explore our complete range of heavy machinery categories</p></div><label className="flex items-center gap-2 text-xs font-semibold text-slate-600">Sort by:<span className="relative"><select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="appearance-none rounded-md border border-slate-200 bg-white py-2 pl-3 pr-8 text-[11px] font-bold outline-none"><option value="popular">Most Popular</option><option value="name">Name</option></select><ChevronDown className="pointer-events-none absolute right-2 top-2.5 h-3.5 w-3.5" /></span></label></div>
+          {activeFilterCount > 0 || search ? <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500"><span>{visibleCategories.length} categories found</span><button type="button" onClick={resetFilters} className="font-bold text-amber-700">Clear filters</button></div> : null}
+          {loading ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="h-[274px] animate-pulse rounded-lg bg-white" />)}</div> : visibleCategories.length === 0 ? <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><Shapes className="mx-auto h-10 w-10 text-slate-300" /><p className="mt-3 text-sm font-bold">No categories found</p><button type="button" onClick={resetFilters} className="mt-3 text-xs font-bold text-amber-700">Clear filters</button></div> : <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{visibleCategories.map((category) => { const image = mediaUrl(category.featuredImage); return <Link href={`/machines?category=${category.id}`} key={category.id} className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md"><div className="relative h-28 bg-slate-100">{image ? <Image src={image} alt={`${category.name} heavy equipment`} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw" className="object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center"><CategoryIcon category={category} large /></div>}</div><div className="p-2.5"><h3 className="truncate text-xs font-black text-slate-900">{category.name}</h3><p className="mt-1 text-[10px] text-slate-500">{number(category.count)} listings</p><p className="mt-1 line-clamp-2 min-h-[28px] text-[10px] leading-4 text-slate-500">Verified machines for construction, material handling and more.</p><span className="mt-2 inline-flex items-center gap-1 text-[10px] font-extrabold text-slate-900"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#FFC107]"><ArrowRight className="h-3.5 w-3.5" /></span>Explore</span></div></Link>; })}</div>}
+        </div>
+      </section>
+    </main>
   );
 }

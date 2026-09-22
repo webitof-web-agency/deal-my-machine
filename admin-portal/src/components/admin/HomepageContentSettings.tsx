@@ -693,6 +693,9 @@ export default function HomepageContentSettings() {
                       rows={4}
                       className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                     />
+                    <span className="mt-1.5 block text-xs font-medium text-gray-500">
+                      Press Enter to show heading on the next line. The last word on the last line is highlighted in yellow.
+                    </span>
                   </label>
                 </div>
 
@@ -755,13 +758,16 @@ export default function HomepageContentSettings() {
                 <div className="mb-5">
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-semibold text-gray-700">{t('homepageSettings.sectionTitle')}</span>
-                    <input
-                      type="text"
+                    <textarea
                       value={inspectionTitle}
                       onChange={(event) => setInspectionTitle(event.target.value)}
                       placeholder={t('homepageSettings.sectionTitlePlaceholder')}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
+                      rows={2}
+                      className="w-full resize-y rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                     />
+                    <span className="mt-1.5 block text-xs font-medium text-gray-500">
+                      Press Enter to show title on the next line. Example: Let&apos;s Get to ↵ Work
+                    </span>
                   </label>
                 </div>
 
@@ -775,6 +781,9 @@ export default function HomepageContentSettings() {
                       rows={4}
                       className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                     />
+                    <span className="mt-1.5 block text-xs font-medium text-gray-500">
+                      Press Enter to add a new line in the banner description.
+                    </span>
                   </label>
                 </div>
 
