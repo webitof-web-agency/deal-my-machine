@@ -1,7 +1,8 @@
 import { type AppLocale } from '@/lib/i18n/config';
+import { normalizeApiBaseUrl } from '@/lib/apiBaseUrl';
 
 const resolveApiBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api').replace(/\/$/, '');
+  normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api');
 
 export const fetchTranslationOverrides = async (
   app: 'frontend' | 'admin-portal',

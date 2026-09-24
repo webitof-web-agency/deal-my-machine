@@ -1,3 +1,5 @@
+import { normalizeApiBaseUrl } from '@/lib/apiBaseUrl.mjs';
+
 const REGISTRATION_BATCH_WINDOW_MS = 600;
 const REGISTRATION_BATCH_LIMIT = 25;
 const REGISTER_ENDPOINT = '/master/translations/register-missing';
@@ -12,7 +14,7 @@ const sentEntries = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 const resolveApiBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api').replace(/\/$/, '');
+  normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api');
 
 const flushMissingTranslations = async (app: 'admin-portal' | 'frontend') => {
   flushTimer = null;

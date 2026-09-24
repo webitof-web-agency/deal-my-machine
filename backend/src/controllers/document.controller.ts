@@ -59,6 +59,17 @@ const cleanupFile = async (filePath?: string) => {
   }
 };
 
+const saveSecureFile = async (file: Express.Multer.File) => {
+  const extension = path.extname(file.originalname).toLowerCase() || '.bin';
+  const fileName = `${Date.now()}-${randomUUID()}${extension}`;
+  const targetPath = path.join(secureUploadDir, fileName);
+
+  await fs.mkdir(secureUploadDir, { recursive: true });
+  await fs.writeFile(targetPath, file.buffer);
+
+  return { fileId: fileName, viewLink: getSecureDocumentUrl(fileName) };
+};
+
 const enforceStoredFileSizePolicy = async (
   file: Express.Multer.File,
   purpose: 'document' | 'listing-media' | 'finance-support' | 'hero-image' | 'inspection-section' | 'site-logo' | 'site-dark-logo' | 'site-favicon' | 'site-manifest-icon' = 'document'
@@ -187,8 +198,7 @@ export const uploadSecureDocument = async (req: Request, res: Response, next: Ne
 
     await enforceStoredFileSizePolicy(file, 'document');
     
-    // Upload to Google Drive (Resumes/Secure)
-    const { fileId, viewLink } = await uploadFileToDrive(file.buffer, file.mimetype, file.originalname);
+    const { fileId, viewLink } = await saveSecureFile(file);
     
     res.status(201).json(buildUploadResponse(req, file, 'secure', viewLink, fileId));
   } catch (error) {

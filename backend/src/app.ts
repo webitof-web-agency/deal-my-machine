@@ -1,18 +1,40 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes';
-import whatsappWebhookRoutes from './routes/whatsappWebhook.routes';
 import { publicUploadDir } from './utils/documentUpload';
 
 dotenv.config();
 
 const app: Application = express();
 
+const allowedCorsOrigins = new Set(
+  (
+    process.env.CORS_ORIGINS ||
+    'http://localhost:3000,http://localhost:3001,https://dealmymachine.com,https://www.dealmymachine.com,https://admin.dealmymachine.com'
+  )
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean),
+);
+
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedCorsOrigins.has(origin.replace(/\/+$/, ''))) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Origin is not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+  optionsSuccessStatus: 204,
+};
+
 // Middleware
-app.use(cors());
-// Meta signs the unparsed webhook payload. This route must remain before express.json().
-app.use('/api/whatsapp/webhook', whatsappWebhookRoutes);
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 // Serve branding images (hero, logo, certification) stored on the server's

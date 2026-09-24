@@ -1,4 +1,5 @@
 import { type AppLocale } from '@/lib/i18n/config';
+import { normalizeApiBaseUrl } from '@/lib/apiBaseUrl.mjs';
 
 const resolveApiBaseUrl = () => {
   const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -7,7 +8,7 @@ const resolveApiBaseUrl = () => {
     throw new Error('NEXT_PUBLIC_API_URL is not set');
   }
 
-  return configuredApiUrl.replace(/\/$/, '');
+  return normalizeApiBaseUrl(configuredApiUrl);
 };
 
 export const fetchTranslationOverrides = async (

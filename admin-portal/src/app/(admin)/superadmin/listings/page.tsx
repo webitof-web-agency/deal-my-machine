@@ -1621,6 +1621,7 @@ export default function PartnerListingsPage() {
     pendingBrandFilter,
     pendingDealerFilter,
     pendingSearch,
+    user?.id,
   ]);
 
   // Sorting logic applied on top of filtered results
