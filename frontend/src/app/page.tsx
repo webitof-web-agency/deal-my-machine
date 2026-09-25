@@ -311,6 +311,7 @@ export default function Home() {
         src={getMediaUrl(item.imageUrl) || item.imageUrl}
         alt={`${item.name} finance support partner on ${SITE_NAME}`}
         fill
+        unoptimized
         sizes="(max-width: 640px) 130px, 150px"
         className="object-contain p-3"
         onError={() => {
@@ -343,6 +344,7 @@ export default function Home() {
               alt="Heavy machinery marketplace hero banner"
               fill
               priority
+              unoptimized
               sizes="100vw"
               className="object-cover"
             />
@@ -540,6 +542,7 @@ export default function Home() {
                           src={getMediaUrl(category.featuredImage) || category.featuredImage}
                           alt={category.name}
                           fill
+                          unoptimized
                           sizes="(max-width: 640px) 160px, (max-width: 1024px) 200px, 220px"
                           className="object-contain p-1 group-hover:scale-108 transition-transform duration-300"
                         />
@@ -618,6 +621,7 @@ export default function Home() {
                           src={img}
                           alt={`${listing.title} available in ${listing.locationCity || 'India'}`}
                           fill
+                          unoptimized
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -829,7 +833,7 @@ export default function Home() {
                   <Link key={listing.id} href={generateMachineSlugPath(listing)} className="group flex min-h-[112px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xs transition-all hover:border-amber-300 hover:shadow-md">
                     <div className="relative h-auto min-h-[112px] w-[38%] shrink-0 overflow-hidden bg-gray-100">
                       {imageUrl ? (
-                        <Image src={imageUrl} alt={listing.title} fill sizes="(max-width: 768px) 38vw, 180px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <Image src={imageUrl} alt={listing.title} fill unoptimized sizes="(max-width: 768px) 38vw, 180px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-gray-400"><Package className="h-8 w-8" /></div>
                       )}
@@ -860,6 +864,7 @@ export default function Home() {
               src={getMediaUrl(inspectionContent.imageUrl) || inspectionContent.imageUrl}
               alt={inspectionContent?.title || 'Bottom CTA banner background'}
               fill
+              unoptimized
               sizes="100vw"
               className="object-cover"
               onError={() => setInspectionImageFailed(true)}

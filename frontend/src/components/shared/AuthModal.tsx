@@ -142,8 +142,12 @@ export default function AuthModal() {
   }, []);
 
   useEffect(() => {
+    if (!isAuthModalOpen) {
+      googleInitializedRef.current = false;
+      return;
+    }
+
     if (
-      !isAuthModalOpen ||
       !canRenderGoogleLogin ||
       !isGoogleScriptReady ||
       !window.google ||
@@ -152,7 +156,7 @@ export default function AuthModal() {
       return;
     }
 
-    if (googleInitializedRef.current) {
+    if (googleInitializedRef.current && googleButtonRef.current.childElementCount > 0) {
       return;
     }
 
@@ -170,7 +174,7 @@ export default function AuthModal() {
       size: 'large',
       shape: 'rectangular',
       text: 'continue_with',
-      width: 400,
+      width: 320,
     });
 
     googleInitializedRef.current = true;
@@ -181,6 +185,15 @@ export default function AuthModal() {
     canRenderGoogleLogin,
     isGoogleScriptReady,
   ]);
+
+  const handleAuthModeChange = () => {
+    setIsLogin((current) => !current);
+    setLoginMethod('password');
+    setOtpChallengeId('');
+    setOtpMaskedMobile('');
+    setOtp('');
+    setError('');
+  };
 
   if (!isAuthModalOpen) return null;
 
@@ -282,54 +295,58 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#05070b]/55 px-3 py-4 backdrop-blur-[2px] sm:px-4">
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={() => setIsGoogleScriptReady(true)}
       />
       <div className="flex min-h-full items-center justify-center">
-        <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
-          <div className="relative flex items-center justify-center bg-[#1A1A1A] px-6 py-4 min-h-[64px]">
+        <div className="w-full max-w-[390px] overflow-hidden rounded-[4px] border border-[#d9dde3] bg-white shadow-[0_18px_55px_rgba(0,0,0,0.25)] animate-in fade-in zoom-in duration-200">
+          <div className="relative flex min-h-[78px] items-center justify-center border-b border-[#edf0f3] bg-white px-8 py-3">
             <SiteBrand variant="navbar" align="center" />
             <button
               onClick={() => setAuthModalOpen(false)}
-              className="absolute right-6 text-gray-400 transition-colors hover:text-white"
+              aria-label="Close login"
+              className="absolute right-3 top-2 flex h-8 w-8 items-center justify-center rounded-full text-[#7d8792] transition-colors hover:bg-[#f3f4f6] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-jcb-yellow"
             >
-              <X size={24} />
+              <X size={17} strokeWidth={1.8} />
             </button>
           </div>
 
-          <div className="p-5 sm:p-6">
-            <div className="mb-3 text-center">
-              <h4 className="text-2xl font-bold text-gray-900">
+          <div className="px-5 pb-5 pt-4 sm:px-7 sm:pb-6 sm:pt-5">
+            <div className="mb-4 text-center">
+              <h4 className="text-[21px] font-extrabold tracking-[-0.02em] text-[#101828]">
                 {isLogin ? t('auth.welcomeBack') : t('auth.createAccount')}
               </h4>
+              <p className="mt-1 text-[11px] leading-4 text-[#667085]">
+                {isLogin ? 'Login to continue buying and selling machines' : 'Create your account to get started'}
+              </p>
             </div>
 
             {error ? (
-              <div className="mb-4 rounded-md border border-red-100 bg-red-50 p-3 text-center text-sm font-semibold text-red-600">
+              <div role="alert" className="mb-3 rounded-md border border-red-100 bg-red-50 p-2.5 text-center text-xs font-semibold text-red-600">
                 {error}
               </div>
             ) : null}
 
           <form
             onSubmit={isLogin && loginMethod === 'otp' ? (otpChallengeId ? handleVerifyOtp : handleSendOtp) : handleSubmit}
-            className="space-y-3"
+            className="space-y-2.5"
           >
             {!isLogin ? (
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.fullName')}</label>
+                <label className="mb-1 block text-[11px] font-semibold text-[#344054]">{t('auth.fullName')}</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="block w-full rounded-md border border-gray-300 px-4 py-2 pl-10 text-sm outline-none focus:border-jcb-yellow focus:ring-jcb-yellow"
+                    className="block h-10 w-full rounded-[4px] border border-[#d0d5dd] bg-white px-3 py-2 pl-9 text-xs text-[#101828] outline-none transition-shadow placeholder:text-[#98a2b3] focus:border-[#fdbb05] focus:ring-2 focus:ring-[#fdbb05]/20"
                     placeholder={t('auth.fullName')}
                     required={!isLogin}
                   />
-                  <User className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                  <User className="absolute left-3 top-3 text-[#98a2b3]" size={14} />
                 </div>
               </div>
             ) : null}
@@ -337,34 +354,34 @@ export default function AuthModal() {
             {isLogin && isMobileOtpEnabled && loginMethod === 'otp' ? (
               <>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.mobileNumber')}</label>
+                  <label className="mb-1 block text-[11px] font-semibold text-[#344054]">{t('auth.mobileNumber')}</label>
                   <div className="relative">
                     <input
                       type="tel"
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      className="block w-full rounded-md border border-gray-300 px-4 py-2 pl-10 text-sm outline-none focus:border-jcb-yellow focus:ring-jcb-yellow"
+                      className="block h-10 w-full rounded-[4px] border border-[#d0d5dd] bg-white px-3 py-2 pl-9 text-xs text-[#101828] outline-none transition-shadow placeholder:text-[#98a2b3] focus:border-[#fdbb05] focus:ring-2 focus:ring-[#fdbb05]/20"
                       placeholder={t('auth.mobileNumber')}
                       required
                     />
-                    <Smartphone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                    <Smartphone className="absolute left-3 top-3 text-[#98a2b3]" size={14} />
                   </div>
                 </div>
 
                 {otpChallengeId ? (
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.otp')}</label>
+                    <label className="mb-1 block text-[11px] font-semibold text-[#344054]">{t('auth.otp')}</label>
                     <div className="relative">
                       <input
                         type="text"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        className="block w-full rounded-md border border-gray-300 px-4 py-2 text-sm outline-none focus:border-jcb-yellow focus:ring-jcb-yellow"
+                        className="block h-10 w-full rounded-[4px] border border-[#d0d5dd] bg-white px-3 py-2 text-xs tracking-[0.2em] text-[#101828] outline-none transition-shadow placeholder:text-[#98a2b3] focus:border-[#fdbb05] focus:ring-2 focus:ring-[#fdbb05]/20"
                         placeholder={t('auth.otp')}
                         required
                       />
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-1.5 text-[10px] text-[#667085]">
                       {t('auth.otpSentTo', { mobile: otpMaskedMobile || t('auth.mobileNumber').toLowerCase() })}
                     </p>
                   </div>
@@ -373,53 +390,54 @@ export default function AuthModal() {
             ) : (
               <>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.emailAddress')}</label>
+                  <label className="mb-1 block text-[11px] font-semibold text-[#344054]">{t('auth.emailAddress')}</label>
                   <div className="relative">
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full rounded-md border border-gray-300 px-4 py-2 pl-10 text-sm outline-none focus:border-jcb-yellow focus:ring-jcb-yellow"
+                      className="block h-10 w-full rounded-[4px] border border-[#d0d5dd] bg-white px-3 py-2 pl-9 text-xs text-[#101828] outline-none transition-shadow placeholder:text-[#98a2b3] focus:border-[#fdbb05] focus:ring-2 focus:ring-[#fdbb05]/20"
                       placeholder="you@example.com"
                       required
                     />
-                    <Mail className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                    <Mail className="absolute left-3 top-3 text-[#98a2b3]" size={14} />
                   </div>
                 </div>
 
                 {!isLogin ? (
                   <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.mobileNumber')}</label>
+                  <label className="mb-1 block text-[11px] font-semibold text-[#344054]">{t('auth.mobileNumber')}</label>
                     <div className="relative">
                       <input
                         type="tel"
                         value={mobile}
                         onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        className="block w-full rounded-md border border-gray-300 px-4 py-2 pl-10 text-sm outline-none focus:border-jcb-yellow focus:ring-jcb-yellow"
+                        className="block h-10 w-full rounded-[4px] border border-[#d0d5dd] bg-white px-3 py-2 pl-9 text-xs text-[#101828] outline-none transition-shadow placeholder:text-[#98a2b3] focus:border-[#fdbb05] focus:ring-2 focus:ring-[#fdbb05]/20"
                         placeholder={t('auth.mobileNumber')}
                         required
                       />
-                      <Smartphone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                      <Smartphone className="absolute left-3 top-3 text-[#98a2b3]" size={14} />
                     </div>
                   </div>
                 ) : null}
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.password')}</label>
+                  <label className="mb-1 block text-[11px] font-semibold text-[#344054]">{t('auth.password')}</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full rounded-md border border-gray-300 px-4 py-2 pl-10 pr-10 text-sm outline-none focus:border-jcb-yellow focus:ring-jcb-yellow"
+                      className="block h-10 w-full rounded-[4px] border border-[#d0d5dd] bg-white px-3 py-2 pl-9 pr-10 text-xs text-[#101828] outline-none transition-shadow placeholder:text-[#98a2b3] focus:border-[#fdbb05] focus:ring-2 focus:ring-[#fdbb05]/20"
                       placeholder="********"
                       required
                     />
-                    <Lock className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                    <Lock className="absolute left-3 top-3 text-[#98a2b3]" size={14} />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-2.5 top-2.5 rounded p-0.5 text-[#98a2b3] hover:text-[#344054] focus:outline-none focus:ring-2 focus:ring-jcb-yellow/40"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -430,11 +448,20 @@ export default function AuthModal() {
 
 
 
-            <div className="pt-2 space-y-3">
+            <div className="space-y-2.5 pt-2">
+              {isLogin && loginMethod === 'password' ? (
+                <div className="flex items-center justify-between pb-0.5 text-[10px]">
+                  <label className="flex items-center gap-1.5 text-[#667085]">
+                    <input type="checkbox" defaultChecked className="h-3 w-3 accent-[#fdbb05]" />
+                    Remember me
+                  </label>
+                  <span className="font-semibold text-[#f29f05]">Forgot Password?</span>
+                </div>
+              ) : null}
               <button
                 type="submit"
                 disabled={isSubmitting || isOtpSending || isOtpVerifying}
-                className="flex w-full justify-center rounded-md border border-transparent bg-jcb-yellow px-4 py-2.5 text-sm font-bold text-jcb-dark shadow-sm transition-colors hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-jcb-yellow focus:ring-offset-2 disabled:opacity-50"
+                className="flex h-10 w-full justify-center rounded-[4px] border border-transparent bg-[#fdbb05] px-4 py-2.5 text-xs font-extrabold text-[#101828] shadow-sm transition-colors hover:bg-[#f5ad00] focus:outline-none focus:ring-2 focus:ring-[#fdbb05] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLogin && loginMethod === 'otp'
                   ? otpChallengeId
@@ -460,7 +487,7 @@ export default function AuthModal() {
                     setOtp('');
                     setError('');
                   }}
-                  className="w-full text-sm font-semibold text-jcb-dark hover:underline"
+                  className="w-full text-xs font-semibold text-[#344054] hover:underline"
                 >
                   {t('auth.changeMobileNumber')}
                 </button>
@@ -478,7 +505,7 @@ export default function AuthModal() {
                       setOtp('');
                     }
                   }}
-                  className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="flex h-10 w-full justify-center rounded-[4px] border border-[#d0d5dd] bg-white px-4 py-2.5 text-xs font-bold text-[#344054] shadow-sm transition-colors hover:bg-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#d0d5dd]"
                 >
                   {loginMethod === 'password' ? t('auth.loginWithOtp') : t('auth.loginWithPassword')}
                 </button>
@@ -488,32 +515,32 @@ export default function AuthModal() {
 
           {canRenderGoogleLogin ? (
             <>
-              <div className="relative my-4">
+              <div className="relative my-3.5">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300" />
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-2 text-gray-500">{t('auth.orContinueWithGoogle')}</span>
+                <div className="relative flex justify-center text-[10px]">
+                  <span className="bg-white px-2 text-[#98a2b3]">{t('auth.orContinueWithGoogle')}</span>
                 </div>
               </div>
 
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="space-y-2">
-                  <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" />
+                  <div ref={googleButtonRef} className="flex min-h-[40px] items-center justify-center overflow-hidden [&>div]:max-w-full" />
                   {!isGoogleScriptReady ? (
-                    <p className="text-center text-xs text-gray-500">{t('auth.loadingGoogleLogin')}</p>
+                    <p className="text-center text-[10px] text-[#667085]">{t('auth.loadingGoogleLogin')}</p>
                   ) : null}
                 </div>
               </div>
             </>
           ) : null}
 
-          <div className="mt-4 text-center text-sm text-gray-600">
+          <div className="mt-3 text-center text-[10px] text-[#667085]">
             {isLogin ? `${t('auth.dontHaveAccount')} ` : `${t('auth.alreadyHaveAccount')} `}
             <button
               type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="font-bold text-jcb-dark hover:underline focus:outline-none"
+              onClick={handleAuthModeChange}
+              className="font-bold text-[#f29f05] hover:underline focus:outline-none focus:ring-2 focus:ring-[#fdbb05]/40"
             >
               {isLogin ? t('auth.signUp') : t('auth.logIn')}
             </button>

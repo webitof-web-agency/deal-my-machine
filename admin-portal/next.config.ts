@@ -58,6 +58,36 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'dealmymachine.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.dealmymachine.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dealmymachine.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'admin.dealmymachine.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'jcbexchange.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.jcbexchange.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
