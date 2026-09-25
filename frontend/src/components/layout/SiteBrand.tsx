@@ -19,18 +19,20 @@ export default function SiteBrand({
   align = 'left',
 }: SiteBrandProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [footerLogoUrl, setFooterLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadLogo = async () => {
       try {
-        const response = await api.get<{ data?: { imageUrl?: string | null } }>('/master/site-logo');
+        const response = await api.get<{ data?: { imageUrl?: string | null; footerLogoUrl?: string | null } }>('/master/site-logo');
         if (!isMounted) {
           return;
         }
 
         setLogoUrl(getAbsoluteFileUrl(response.data?.data?.imageUrl || null) || null);
+        setFooterLogoUrl(getAbsoluteFileUrl(response.data?.data?.footerLogoUrl || null) || null);
       } catch {
         if (isMounted) {
           setLogoUrl(null);
@@ -51,10 +53,10 @@ export default function SiteBrand({
 
   return (
     <Link href={href} className={`inline-flex items-center gap-2.5 ${widthClass}`}>
-      {logoUrl ? (
+      {(variant === 'footer' ? footerLogoUrl || logoUrl : logoUrl) ? (
         <div className={`relative flex items-center ${widthClass}`}>
           <Image
-            src={logoUrl}
+            src={(variant === 'footer' ? footerLogoUrl || logoUrl : logoUrl) as string}
             alt={SITE_NAME}
             width={300}
             height={80}

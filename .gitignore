@@ -35,6 +35,22 @@ runtime/
 generated/prisma/
 */generated/prisma/
 
+# Database exports and local backups (never commit production data)
+*.dump
+*.dump.*
+*.backup
+*.bak
+*.sql.bak
+
+# Cloud/service credentials and private certificates
+serviceAccountKey*.json
+*service-account*.json
+*credentials*.json
+*.p12
+*.pfx
+*.key
+*.crt
+
 # Uploads & Temporary Directories
 uploads/
 */uploads/

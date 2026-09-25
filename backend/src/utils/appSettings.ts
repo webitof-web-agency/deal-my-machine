@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import prisma from '../lib/prisma';
-import { uploadRootDir } from './documentUpload';
+import { publicUploadDirectories, storageBaseDir, uploadRootDir } from './documentUpload';
 import {
   type CustomerPrimeSettings,
   normalizeCustomerPrimeSettings,
@@ -51,10 +51,17 @@ export type InspectionSectionSettings = {
 export type SiteLogoSettings = {
   imageUrl: string | null;
   darkLogoUrl: string | null;
+  footerLogoUrl: string | null;
   faviconUrl: string | null;
   manifestIconUrl: string | null;
   updatedAt: string | null;
   updatedByUserId: string | null;
+};
+
+type PublicBrandingAsset = {
+  base64: string;
+  mimeType: string;
+  updatedAt: string;
 };
 
 export type FooterSocialLink = {
@@ -218,6 +225,7 @@ type AppSettings = {
   };
   inspectionSection: InspectionSectionSettings;
   siteLogo: SiteLogoSettings;
+  publicAssets: Record<string, PublicBrandingAsset>;
   footer: FooterSettings;
 };
 
@@ -230,12 +238,12 @@ const resolveRuntimeStorageBaseDir = () => {
     process.env.APP_STORAGE_DIR?.trim();
 
   if (!configuredDirectory) {
-    return process.cwd();
+    return storageBaseDir;
   }
 
   return path.isAbsolute(configuredDirectory)
     ? configuredDirectory
-    : path.resolve(process.cwd(), configuredDirectory);
+    : path.resolve(storageBaseDir, configuredDirectory);
 };
 
 const runtimeStorageBaseDir = resolveRuntimeStorageBaseDir();
@@ -250,6 +258,7 @@ const settingsFileCandidates = Array.from(
 );
 const siteLogoPublicUrlPrefix = '/uploads/public/site-logo/';
 const siteDarkLogoPublicUrlPrefix = '/uploads/public/site-dark-logo/';
+const siteFooterLogoPublicUrlPrefix = '/uploads/public/site-footer-logo/';
 const siteFaviconPublicUrlPrefix = '/uploads/public/site-favicon/';
 const siteManifestIconPublicUrlPrefix = '/uploads/public/site-manifest-icon/';
 const supportedFooterSocialPlatforms = new Set(['FACEBOOK', 'INSTAGRAM', 'TWITTER']);
@@ -329,11 +338,13 @@ const defaultSettings: AppSettings = {
   siteLogo: {
     imageUrl: null,
     darkLogoUrl: null,
+    footerLogoUrl: null,
     faviconUrl: null,
     manifestIconUrl: null,
     updatedAt: null,
     updatedByUserId: null,
   },
+  publicAssets: {},
   footer: {
     socialLinks: [],
     contact: {
@@ -435,11 +446,13 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
   siteLogo: {
     imageUrl: parsed?.siteLogo?.imageUrl?.trim() || null,
     darkLogoUrl: parsed?.siteLogo?.darkLogoUrl?.trim() || null,
+    footerLogoUrl: parsed?.siteLogo?.footerLogoUrl?.trim() || null,
     faviconUrl: parsed?.siteLogo?.faviconUrl?.trim() || null,
     manifestIconUrl: parsed?.siteLogo?.manifestIconUrl?.trim() || null,
     updatedAt: parsed?.siteLogo?.updatedAt || null,
     updatedByUserId: parsed?.siteLogo?.updatedByUserId || null,
   },
+  publicAssets: normalizePublicBrandingAssets(parsed?.publicAssets),
   footer: {
     socialLinks: normalizeFooterSocialLinks(parsed?.footer?.socialLinks),
     contact: {
@@ -485,6 +498,7 @@ const isMeaningfulSettings = (settings: AppSettings) =>
     settings.inspectionSection.description ||
     settings.inspectionSection.imageUrl ||
     settings.siteLogo.imageUrl ||
+    settings.siteLogo.footerLogoUrl ||
     settings.siteLogo.faviconUrl ||
     settings.siteLogo.manifestIconUrl ||
     settings.footer.socialLinks.length > 0 ||
@@ -566,6 +580,27 @@ const normalizeExternalUrl = (value?: string | null) => {
   }
 };
 
+const normalizePublicBrandingAssets = (
+  assets?: Partial<Record<string, Partial<PublicBrandingAsset>>>,
+): Record<string, PublicBrandingAsset> => {
+  const normalizedAssets: Record<string, PublicBrandingAsset> = {};
+
+  for (const [fileUrl, asset] of Object.entries(assets || {})) {
+    const normalizedUrl = fileUrl.trim();
+    const base64 = asset?.base64?.trim();
+    const mimeType = asset?.mimeType?.trim();
+    const updatedAt = asset?.updatedAt?.trim();
+
+    if (!normalizedUrl || !base64 || !mimeType || !updatedAt) {
+      continue;
+    }
+
+    normalizedAssets[normalizedUrl] = { base64, mimeType, updatedAt };
+  }
+
+  return normalizedAssets;
+};
+
 const normalizeFinanceSupportItems = (items?: Partial<FinanceSupportItem>[]): FinanceSupportItem[] => {
   const normalizedItems: FinanceSupportItem[] = [];
 
@@ -635,20 +670,28 @@ const resolveManagedBrandingFilePath = (fileUrl?: string | null) => {
     return null;
   }
 
-  if (normalizedUrl.startsWith(siteLogoPublicUrlPrefix)) {
-    return path.join(uploadRootDir, normalizedUrl.replace(siteLogoPublicUrlPrefix, `public${path.sep}site-logo${path.sep}`));
-  }
+  const managedDirectories: Array<[string, string]> = [
+    ['/uploads/public/finance-support/', 'finance-support'],
+    ['/uploads/public/hero-image/', 'hero-image'],
+    ['/uploads/public/inspection-section/', 'inspection-section'],
+    [siteLogoPublicUrlPrefix, 'site-logo'],
+    [siteDarkLogoPublicUrlPrefix, 'site-dark-logo'],
+    [siteFooterLogoPublicUrlPrefix, 'site-footer-logo'],
+    [siteFaviconPublicUrlPrefix, 'site-favicon'],
+    [siteManifestIconPublicUrlPrefix, 'site-manifest-icon'],
+  ];
 
-  if (normalizedUrl.startsWith(siteDarkLogoPublicUrlPrefix)) {
-    return path.join(uploadRootDir, normalizedUrl.replace(siteDarkLogoPublicUrlPrefix, `public${path.sep}site-dark-logo${path.sep}`));
-  }
+  for (const [prefix, directory] of managedDirectories) {
+    if (!normalizedUrl.startsWith(prefix)) {
+      continue;
+    }
 
-  if (normalizedUrl.startsWith(siteFaviconPublicUrlPrefix)) {
-    return path.join(uploadRootDir, normalizedUrl.replace(siteFaviconPublicUrlPrefix, `public${path.sep}site-favicon${path.sep}`));
-  }
+    const fileName = normalizedUrl.slice(prefix.length);
+    if (!fileName || fileName.includes('/') || fileName.includes('\\')) {
+      return null;
+    }
 
-  if (normalizedUrl.startsWith(siteManifestIconPublicUrlPrefix)) {
-    return path.join(uploadRootDir, normalizedUrl.replace(siteManifestIconPublicUrlPrefix, `public${path.sep}site-manifest-icon${path.sep}`));
+    return path.join(uploadRootDir, 'public', directory, fileName);
   }
 
   return null;
@@ -668,6 +711,129 @@ const removeManagedBrandingFile = async (fileUrl?: string | null) => {
       throw error;
     }
   }
+};
+
+export const persistPublicBrandingAsset = async (
+  fileUrl: string,
+  buffer: Buffer,
+  mimeType: string,
+) => {
+  const normalizedUrl = fileUrl.trim();
+  if (!resolveManagedBrandingFilePath(normalizedUrl)) {
+    return;
+  }
+
+  const currentSettings = await getAppSettings();
+  const nextSettings: AppSettings = {
+    ...currentSettings,
+    publicAssets: {
+      ...currentSettings.publicAssets,
+      [normalizedUrl]: {
+        base64: buffer.toString('base64'),
+        mimeType: mimeType.trim() || 'application/octet-stream',
+        updatedAt: new Date().toISOString(),
+      },
+    },
+  };
+
+  await persistSettings(nextSettings);
+};
+
+export const getPersistedPublicBrandingAsset = async (fileUrl: string) => {
+  const normalizedUrl = fileUrl.trim();
+  if (!resolveManagedBrandingFilePath(normalizedUrl)) {
+    return null;
+  }
+
+  const settings = await getAppSettings();
+  return settings.publicAssets[normalizedUrl] || null;
+};
+
+const getBrandingMimeType = (filePath: string) => {
+  switch (path.extname(filePath).toLowerCase()) {
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.png':
+      return 'image/png';
+    case '.webp':
+      return 'image/webp';
+    default:
+      return 'application/octet-stream';
+  }
+};
+
+const getManagedBrandingFileCandidates = (fileUrl: string) => {
+  const primaryPath = resolveManagedBrandingFilePath(fileUrl);
+  if (!primaryPath) {
+    return [];
+  }
+
+  const relativePath = path.relative(path.join(uploadRootDir, 'public'), primaryPath);
+  return publicUploadDirectories.map((directory) => path.join(directory, relativePath));
+};
+
+export const backfillPersistedPublicBrandingAssets = async () => {
+  const currentSettings = await getAppSettings();
+  const configuredUrls = [
+    ...currentSettings.financeSupport.items.map((item) => item.imageUrl),
+    currentSettings.heroImage.imageUrl,
+    currentSettings.inspectionSection.imageUrl,
+    currentSettings.siteLogo.imageUrl,
+    currentSettings.siteLogo.darkLogoUrl,
+    currentSettings.siteLogo.footerLogoUrl,
+    currentSettings.siteLogo.faviconUrl,
+    currentSettings.siteLogo.manifestIconUrl,
+  ].filter((fileUrl): fileUrl is string => Boolean(fileUrl?.trim()));
+
+  const nextPublicAssets = { ...currentSettings.publicAssets };
+  let changed = false;
+
+  for (const fileUrl of new Set(configuredUrls)) {
+    if (nextPublicAssets[fileUrl]) {
+      continue;
+    }
+
+    for (const candidatePath of getManagedBrandingFileCandidates(fileUrl)) {
+      try {
+        const buffer = await fs.readFile(candidatePath);
+        nextPublicAssets[fileUrl] = {
+          base64: buffer.toString('base64'),
+          mimeType: getBrandingMimeType(candidatePath),
+          updatedAt: new Date().toISOString(),
+        };
+        changed = true;
+        break;
+      } catch {
+        // Try the next legacy storage location.
+      }
+    }
+  }
+
+  if (changed) {
+    await persistSettings({
+      ...currentSettings,
+      publicAssets: nextPublicAssets,
+    });
+  }
+};
+
+export const removePersistedPublicBrandingAsset = async (fileUrl?: string | null) => {
+  const normalizedUrl = fileUrl?.trim();
+  if (!normalizedUrl || !resolveManagedBrandingFilePath(normalizedUrl)) {
+    return;
+  }
+
+  const currentSettings = await getAppSettings();
+  if (!currentSettings.publicAssets[normalizedUrl]) {
+    return;
+  }
+
+  const { [normalizedUrl]: _removedAsset, ...remainingAssets } = currentSettings.publicAssets;
+  await persistSettings({
+    ...currentSettings,
+    publicAssets: remainingAssets,
+  });
 };
 
 const ensureSettingsFile = async () => {
@@ -1057,12 +1223,14 @@ export const updateInspectionSectionSettings = async ({
 export const updateSiteLogoSettings = async ({
   imageUrl,
   darkLogoUrl,
+  footerLogoUrl,
   faviconUrl,
   manifestIconUrl,
   updatedByUserId,
 }: {
   imageUrl?: string | null;
   darkLogoUrl?: string | null;
+  footerLogoUrl?: string | null;
   faviconUrl?: string | null;
   manifestIconUrl?: string | null;
   updatedByUserId?: string | null;
@@ -1070,11 +1238,13 @@ export const updateSiteLogoSettings = async ({
   const currentSettings = await getAppSettings();
   const normalizedImageUrl = imageUrl?.trim() || null;
   const normalizedDarkLogoUrl = darkLogoUrl === undefined ? currentSettings.siteLogo.darkLogoUrl : darkLogoUrl?.trim() || null;
+  const normalizedFooterLogoUrl = footerLogoUrl === undefined ? currentSettings.siteLogo.footerLogoUrl : footerLogoUrl?.trim() || null;
   const normalizedFaviconUrl = faviconUrl?.trim() || null;
   const normalizedManifestIconUrl = manifestIconUrl?.trim() || null;
 
   const previousImageUrl = currentSettings.siteLogo.imageUrl;
   const previousDarkLogoUrl = currentSettings.siteLogo.darkLogoUrl;
+  const previousFooterLogoUrl = currentSettings.siteLogo.footerLogoUrl;
   const previousFaviconUrl = currentSettings.siteLogo.faviconUrl;
   const previousManifestIconUrl = currentSettings.siteLogo.manifestIconUrl;
 
@@ -1083,6 +1253,7 @@ export const updateSiteLogoSettings = async ({
     siteLogo: {
       imageUrl: normalizedImageUrl,
       darkLogoUrl: normalizedDarkLogoUrl,
+      footerLogoUrl: normalizedFooterLogoUrl,
       faviconUrl: normalizedFaviconUrl,
       manifestIconUrl: normalizedManifestIconUrl,
       updatedAt: new Date().toISOString(),
@@ -1099,6 +1270,9 @@ export const updateSiteLogoSettings = async ({
   if (previousDarkLogoUrl && previousDarkLogoUrl !== normalizedDarkLogoUrl) {
     cleanupTargets.push(previousDarkLogoUrl);
   }
+  if (previousFooterLogoUrl && previousFooterLogoUrl !== normalizedFooterLogoUrl) {
+    cleanupTargets.push(previousFooterLogoUrl);
+  }
   if (previousFaviconUrl && previousFaviconUrl !== normalizedFaviconUrl) {
     cleanupTargets.push(previousFaviconUrl);
   }
@@ -1106,7 +1280,12 @@ export const updateSiteLogoSettings = async ({
     cleanupTargets.push(previousManifestIconUrl);
   }
 
-  await Promise.all(cleanupTargets.map((target) => removeManagedBrandingFile(target)));
+  await Promise.all(
+    cleanupTargets.flatMap((target) => [
+      removeManagedBrandingFile(target),
+      removePersistedPublicBrandingAsset(target),
+    ]),
+  );
 
   return nextSettings;
 };

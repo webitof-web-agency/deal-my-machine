@@ -128,9 +128,11 @@ export default function Home() {
     [t]
   );
   const [financeSupportItems, setFinanceSupportItems] = React.useState<FinanceSupportItem[]>([]);
+  const [failedFinanceSupportIds, setFailedFinanceSupportIds] = React.useState<Set<string>>(() => new Set());
   const [heroImageUrl, setHeroImageUrl] = React.useState<string | null>(null);
   const [heroHeadline, setHeroHeadline] = React.useState('');
   const [inspectionContent, setInspectionContent] = React.useState<InspectionSectionContent | null>(null);
+  const [inspectionImageFailed, setInspectionImageFailed] = React.useState(false);
   const [browseCategories, setBrowseCategories] = React.useState<PublicCategory[]>([]);
   const [searchLocations, setSearchLocations] = React.useState<PublicSearchLocation[]>([]);
   const [homeStats, setHomeStats] = React.useState<PublicHomeStats | null>(null);
@@ -224,6 +226,7 @@ export default function Home() {
 
         if (financeRes?.data?.success) {
           setFinanceSupportItems(financeRes.data.data || []);
+          setFailedFinanceSupportIds(new Set());
         } else {
           setFinanceSupportItems([]);
         }
@@ -240,6 +243,7 @@ export default function Home() {
 
         if (inspectionRes?.data?.success) {
           setInspectionContent(inspectionRes.data.data || null);
+          setInspectionImageFailed(false);
         } else {
           setInspectionContent(null);
         }
@@ -290,8 +294,8 @@ export default function Home() {
   }, []);
 
   const financeDisplayItems = React.useMemo(
-    () => uniqueFinanceSupportItems.filter((item) => item.imageUrl),
-    [uniqueFinanceSupportItems]
+    () => uniqueFinanceSupportItems.filter((item) => item.imageUrl && !failedFinanceSupportIds.has(item.id)),
+    [failedFinanceSupportIds, uniqueFinanceSupportItems]
   );
   const financeMarqueeItems = React.useMemo(
     () => Array.from({ length: 4 }).flatMap(() => financeDisplayItems),
@@ -309,6 +313,13 @@ export default function Home() {
         fill
         sizes="(max-width: 640px) 130px, 150px"
         className="object-contain p-3"
+        onError={() => {
+          setFailedFinanceSupportIds((current) => {
+            const next = new Set(current);
+            next.add(item.id);
+            return next;
+          });
+        }}
       />
 
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/85 px-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -763,7 +774,7 @@ export default function Home() {
           <h2 className="text-left text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl">{t('home.financeSupportTitle')}</h2>
         </div>
 
-        {uniqueFinanceSupportItems.length === 0 ? (
+        {financeDisplayItems.length === 0 ? (
           <div className="mx-auto max-w-7xl text-left text-sm text-gray-500">
             {t('home.financeSupportEmpty')}
           </div>
@@ -844,13 +855,14 @@ export default function Home() {
       <section className="relative w-full overflow-hidden bg-gray-950 py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-12 text-white">
         {/* Background Image with light readability treatment */}
         <div className="absolute inset-0 z-0">
-          {inspectionContent?.imageUrl ? (
+          {inspectionContent?.imageUrl && !inspectionImageFailed ? (
             <Image
               src={getMediaUrl(inspectionContent.imageUrl) || inspectionContent.imageUrl}
               alt={inspectionContent?.title || 'Bottom CTA banner background'}
               fill
               sizes="100vw"
               className="object-cover"
+              onError={() => setInspectionImageFailed(true)}
             />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-r from-black/72 via-black/24 to-transparent" />

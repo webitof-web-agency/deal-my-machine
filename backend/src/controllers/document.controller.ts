@@ -19,6 +19,7 @@ import {
 } from '../utils/documentUpload';
 import { uploadFileToDrive } from '../services/googleDrive.service';
 import { randomUUID } from 'crypto';
+import { persistPublicBrandingAsset } from '../utils/appSettings';
 
 /**
  * Save a branding image buffer to the server's public upload directory.
@@ -37,6 +38,7 @@ const saveBrandingImageToDisk = async (
 
   await fs.mkdir(targetDir, { recursive: true });
   await fs.writeFile(targetPath, file.buffer);
+  await persistPublicBrandingAsset(`/uploads/public/${subfolder}/${fileName}`, file.buffer, file.mimetype);
 
   return `/uploads/public/${subfolder}/${fileName}`;
 };
@@ -72,7 +74,7 @@ const saveSecureFile = async (file: Express.Multer.File) => {
 
 const enforceStoredFileSizePolicy = async (
   file: Express.Multer.File,
-  purpose: 'document' | 'listing-media' | 'finance-support' | 'hero-image' | 'inspection-section' | 'site-logo' | 'site-dark-logo' | 'site-favicon' | 'site-manifest-icon' = 'document'
+  purpose: 'document' | 'listing-media' | 'finance-support' | 'hero-image' | 'inspection-section' | 'site-logo' | 'site-dark-logo' | 'site-footer-logo' | 'site-favicon' | 'site-manifest-icon' = 'document'
 ) => {
   if (isPdfMimeType(file.mimetype) && file.size > 3 * 1024 * 1024) {
     await cleanupFile(file.path);
@@ -119,6 +121,11 @@ const enforceStoredFileSizePolicy = async (
   if (purpose === 'site-dark-logo' && file.size > MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE) {
     await cleanupFile(file.path);
     throw new Error('Dark logo image must be 2MB or smaller.');
+  }
+
+  if (purpose === 'site-footer-logo' && file.size > MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE) {
+    await cleanupFile(file.path);
+    throw new Error('Site footer logo image must be 2MB or smaller.');
   }
 
   if (purpose === 'site-favicon' && file.size > MAX_SITE_FAVICON_IMAGE_UPLOAD_SIZE) {
@@ -366,6 +373,22 @@ export const uploadPublicSiteDarkLogoImage = async (req: Request, res: Response,
 
     await enforceStoredFileSizePolicy(file, 'site-dark-logo');
     const localPath = await saveBrandingImageToDisk(file, 'site-dark-logo');
+    res.status(201).json(buildUploadResponse(req, file, 'public', localPath, path.basename(localPath)));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadPublicSiteFooterLogoImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const file = getUploadedFile(req);
+
+    if (!file) {
+      return res.status(400).json({ error: 'A file is required.' });
+    }
+
+    await enforceStoredFileSizePolicy(file, 'site-footer-logo');
+    const localPath = await saveBrandingImageToDisk(file, 'site-footer-logo');
     res.status(201).json(buildUploadResponse(req, file, 'public', localPath, path.basename(localPath)));
   } catch (error) {
     next(error);

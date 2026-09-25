@@ -2,7 +2,8 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors, { CorsOptions } from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes';
-import { publicUploadDir } from './utils/documentUpload';
+import { publicUploadDirectories } from './utils/documentUpload';
+import { getPersistedPublicBrandingAsset } from './utils/appSettings';
 
 dotenv.config();
 
@@ -40,7 +41,35 @@ app.use(express.urlencoded({ extended: true }));
 // Serve branding images (hero, logo, certification) stored on the server's
 // public upload directory. These are written to disk by the upload handlers
 // and fetched directly by the frontend — no Drive dependency needed.
-app.use('/uploads/public', express.static(publicUploadDir));
+for (const publicUploadDirectory of publicUploadDirectories) {
+  app.use('/uploads/public', express.static(publicUploadDirectory));
+}
+// Branding uploads are also persisted in the platform settings record so they
+// remain available after a deployment replaces the application filesystem.
+app.use('/uploads/public', async (req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return next();
+  }
+
+  if (!/^\/(?:finance-support|hero-image|inspection-section|site-logo|site-dark-logo|site-footer-logo|site-favicon|site-manifest-icon)\//.test(req.path)) {
+    return next();
+  }
+
+  try {
+    const fileUrl = `/uploads/public${req.path}`;
+    const asset = await getPersistedPublicBrandingAsset(fileUrl);
+
+    if (!asset) {
+      return next();
+    }
+
+    res.setHeader('Content-Type', asset.mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(Buffer.from(asset.base64, 'base64'));
+  } catch (error) {
+    next(error);
+  }
+});
 
 // API Routes
 app.use('/api', apiRoutes);

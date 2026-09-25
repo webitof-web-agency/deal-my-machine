@@ -14,6 +14,7 @@ import {
   MAX_INSPECTION_SECTION_IMAGE_INPUT_SIZE,
   MAX_SITE_FAVICON_IMAGE_INPUT_SIZE,
   MAX_SITE_DARK_LOGO_IMAGE_INPUT_SIZE,
+  MAX_SITE_FOOTER_LOGO_IMAGE_INPUT_SIZE,
   MAX_SITE_MANIFEST_ICON_IMAGE_INPUT_SIZE,
   MAX_SITE_LOGO_IMAGE_INPUT_SIZE,
   uploadFinanceSupportImageToServer,
@@ -21,6 +22,7 @@ import {
   uploadInspectionSectionImageToServer,
   uploadSiteFaviconImageToServer,
   uploadSiteDarkLogoImageToServer,
+  uploadSiteFooterLogoImageToServer,
   uploadSiteManifestIconImageToServer,
   uploadSiteLogoImageToServer,
 } from '@/lib/fileUpload';
@@ -49,6 +51,7 @@ type InspectionSectionResponse = {
 type SiteLogoResponse = {
   imageUrl?: string | null;
   darkLogoUrl?: string | null;
+  footerLogoUrl?: string | null;
   faviconUrl?: string | null;
   manifestIconUrl?: string | null;
 };
@@ -74,6 +77,8 @@ export default function HomepageContentSettings() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [darkLogoUrl, setDarkLogoUrl] = useState<string | null>(null);
   const [darkLogoPreviewUrl, setDarkLogoPreviewUrl] = useState<string | null>(null);
+  const [footerLogoUrl, setFooterLogoUrl] = useState<string | null>(null);
+  const [footerLogoPreviewUrl, setFooterLogoPreviewUrl] = useState<string | null>(null);
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
   const [faviconPreviewUrl, setFaviconPreviewUrl] = useState<string | null>(null);
   const [manifestIconUrl, setManifestIconUrl] = useState<string | null>(null);
@@ -147,6 +152,8 @@ export default function HomepageContentSettings() {
           setLogoPreviewUrl(getAbsoluteFileUrl(siteLogoResult.value.data.imageUrl || null));
           setDarkLogoUrl(siteLogoResult.value.data.darkLogoUrl || null);
           setDarkLogoPreviewUrl(getAbsoluteFileUrl(siteLogoResult.value.data.darkLogoUrl || null));
+          setFooterLogoUrl(siteLogoResult.value.data.footerLogoUrl || null);
+          setFooterLogoPreviewUrl(getAbsoluteFileUrl(siteLogoResult.value.data.footerLogoUrl || null));
           setFaviconUrl(siteLogoResult.value.data.faviconUrl || null);
           setFaviconPreviewUrl(getAbsoluteFileUrl(siteLogoResult.value.data.faviconUrl || null));
           setManifestIconUrl(siteLogoResult.value.data.manifestIconUrl || null);
@@ -156,6 +163,8 @@ export default function HomepageContentSettings() {
           setLogoPreviewUrl(null);
           setDarkLogoUrl(null);
           setDarkLogoPreviewUrl(null);
+          setFooterLogoUrl(null);
+          setFooterLogoPreviewUrl(null);
           setFaviconUrl(null);
           setFaviconPreviewUrl(null);
           setManifestIconUrl(null);
@@ -322,6 +331,22 @@ export default function HomepageContentSettings() {
     }
   };
 
+  const handleSiteFooterLogoUpload = async (file: File) => {
+    setUploadingId('site-footer-logo');
+
+    try {
+      const uploaded = await uploadSiteFooterLogoImageToServer(file);
+      await persistSiteLogoSettings({
+        nextFooterLogoUrl: uploaded.fileUrl,
+        nextFooterLogoPreviewUrl: uploaded.absoluteUrl,
+      });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to upload footer logo.'));
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
   const handleSiteManifestIconUpload = async (file: File) => {
     setUploadingId('site-manifest-icon');
 
@@ -343,6 +368,8 @@ export default function HomepageContentSettings() {
     nextLogoPreviewUrl = logoPreviewUrl,
     nextDarkLogoUrl = darkLogoUrl,
     nextDarkLogoPreviewUrl = darkLogoPreviewUrl,
+    nextFooterLogoUrl = footerLogoUrl,
+    nextFooterLogoPreviewUrl = footerLogoPreviewUrl,
     nextFaviconUrl = faviconUrl,
     nextFaviconPreviewUrl = faviconPreviewUrl,
     nextManifestIconUrl = manifestIconUrl,
@@ -353,6 +380,8 @@ export default function HomepageContentSettings() {
     nextLogoPreviewUrl?: string | null;
     nextDarkLogoUrl?: string | null;
     nextDarkLogoPreviewUrl?: string | null;
+    nextFooterLogoUrl?: string | null;
+    nextFooterLogoPreviewUrl?: string | null;
     nextFaviconUrl?: string | null;
     nextFaviconPreviewUrl?: string | null;
     nextManifestIconUrl?: string | null;
@@ -363,11 +392,13 @@ export default function HomepageContentSettings() {
       message: string;
       imageUrl: string | null;
       darkLogoUrl: string | null;
+      footerLogoUrl: string | null;
       faviconUrl: string | null;
       manifestIconUrl: string | null;
     }>('/superadmin/site-logo', {
       imageUrl: nextLogoUrl,
       darkLogoUrl: nextDarkLogoUrl,
+      footerLogoUrl: nextFooterLogoUrl,
       faviconUrl: nextFaviconUrl,
       manifestIconUrl: nextManifestIconUrl,
     });
@@ -376,6 +407,8 @@ export default function HomepageContentSettings() {
     setLogoPreviewUrl(nextLogoPreviewUrl ?? getAbsoluteFileUrl(response.data.imageUrl));
     setDarkLogoUrl(response.data.darkLogoUrl);
     setDarkLogoPreviewUrl(nextDarkLogoPreviewUrl ?? getAbsoluteFileUrl(response.data.darkLogoUrl));
+    setFooterLogoUrl(response.data.footerLogoUrl);
+    setFooterLogoPreviewUrl(nextFooterLogoPreviewUrl ?? getAbsoluteFileUrl(response.data.footerLogoUrl));
     setFaviconUrl(response.data.faviconUrl);
     setFaviconPreviewUrl(nextFaviconPreviewUrl ?? getAbsoluteFileUrl(response.data.faviconUrl));
     setManifestIconUrl(response.data.manifestIconUrl);
@@ -910,6 +943,54 @@ export default function HomepageContentSettings() {
                           nextLogoPreviewUrl: null,
                           successMessage: t('homepageSettings.siteLogoRemoved', 'Site logo removed successfully.'),
                         })}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t('homepageSettings.removeImage', 'Remove Image')}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-6">
+                    <h4 className="mb-4 text-sm font-semibold text-gray-900">Footer Logo</h4>
+                    {footerLogoPreviewUrl ? (
+                      <div
+                        className="relative mb-4 overflow-hidden rounded-xl shadow-sm ring-1 ring-gray-900/5 h-32 w-full flex items-center justify-center p-4"
+                        style={{
+                          backgroundColor: '#1a1a1a',
+                          backgroundImage: 'linear-gradient(45deg, #262626 25%, transparent 25%), linear-gradient(-45deg, #262626 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #262626 75%), linear-gradient(-45deg, transparent 75%, #262626 75%)',
+                          backgroundSize: '24px 24px',
+                          backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
+                        }}
+                      >
+                        <Image src={footerLogoPreviewUrl} alt="Footer Logo Preview" width={240} height={80} unoptimized className="object-contain max-h-full" />
+                      </div>
+                    ) : null}
+
+                    <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-white py-10 transition hover:border-[#FFC107] hover:bg-[#FFFDF7]">
+                      <div className="rounded-full bg-gray-100 p-3 text-gray-500"><UploadCloud className="h-6 w-6" /></div>
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-800">
+                          {uploadingId === 'site-footer-logo' ? t('homepageSettings.uploading', 'Uploading...') : 'Upload footer logo image'}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">{t('homepageSettings.maxUploadSize', { size: Math.round(MAX_SITE_FOOTER_LOGO_IMAGE_INPUT_SIZE / (1024 * 1024)) })}</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void handleSiteFooterLogoUpload(file);
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
+
+                    {footerLogoPreviewUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => void persistSiteLogoSettings({ nextFooterLogoUrl: null, nextFooterLogoPreviewUrl: null, successMessage: 'Footer logo removed successfully.' })}
                         className="mt-4 inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
                       >
                         <Trash2 className="h-4 w-4" />

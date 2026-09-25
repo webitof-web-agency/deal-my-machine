@@ -1161,6 +1161,7 @@ export const getSiteLogoContent = async (req: Request, res: Response, next: Next
     res.json({
       imageUrl: settings.siteLogo.imageUrl,
       darkLogoUrl: settings.siteLogo.darkLogoUrl,
+      footerLogoUrl: settings.siteLogo.footerLogoUrl,
       faviconUrl: settings.siteLogo.faviconUrl,
       manifestIconUrl: settings.siteLogo.manifestIconUrl,
       updatedAt: settings.siteLogo.updatedAt,
@@ -1231,12 +1232,14 @@ export const updateSiteLogoContent = async (req: Request, res: Response, next: N
   try {
     const imageUrl = req.body?.imageUrl;
     const darkLogoUrl = req.body?.darkLogoUrl;
+    const footerLogoUrl = req.body?.footerLogoUrl;
     const faviconUrl = req.body?.faviconUrl;
     const manifestIconUrl = req.body?.manifestIconUrl;
 
     const settings = await updateSiteLogoSettings({
       imageUrl,
       darkLogoUrl,
+      footerLogoUrl,
       faviconUrl,
       manifestIconUrl,
       updatedByUserId: req.user?.id || null,

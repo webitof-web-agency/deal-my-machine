@@ -880,6 +880,7 @@ export const getSiteLogo = async (req: Request, res: Response, next: NextFunctio
       data: {
         imageUrl: settings.siteLogo.imageUrl,
         darkLogoUrl: settings.siteLogo.darkLogoUrl,
+        footerLogoUrl: settings.siteLogo.footerLogoUrl,
         faviconUrl: settings.siteLogo.faviconUrl,
         manifestIconUrl: settings.siteLogo.manifestIconUrl,
         updatedAt: settings.siteLogo.updatedAt,

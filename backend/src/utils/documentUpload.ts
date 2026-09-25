@@ -12,6 +12,7 @@ export type UploadPurpose =
   | 'inspection-section'
   | 'site-logo'
   | 'site-dark-logo'
+  | 'site-footer-logo'
   | 'site-favicon'
   | 'site-manifest-icon';
 
@@ -72,20 +73,32 @@ export const MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE = 2 * 1024 * 1024;
 export const MAX_SITE_FAVICON_IMAGE_UPLOAD_SIZE = 512 * 1024;
 export const MAX_SITE_MANIFEST_ICON_IMAGE_UPLOAD_SIZE = 1024 * 1024;
 
+const backendRootCandidate = path.resolve(__dirname, '..', '..');
+const backendRootDir = path.basename(backendRootCandidate) === 'dist'
+  ? path.resolve(backendRootCandidate, '..')
+  : backendRootCandidate;
+
 const resolveStorageBaseDir = () => {
   const configuredDirectory = process.env.APP_STORAGE_DIR?.trim();
   if (!configuredDirectory) {
-    return process.cwd();
+    return backendRootDir;
   }
 
   return path.isAbsolute(configuredDirectory)
     ? configuredDirectory
-    : path.resolve(process.cwd(), configuredDirectory);
+    : path.resolve(backendRootDir, configuredDirectory);
 };
 
 export const storageBaseDir = resolveStorageBaseDir();
 export const uploadRootDir = path.join(storageBaseDir, 'uploads');
 export const publicUploadDir = path.join(uploadRootDir, 'public');
+export const publicUploadDirectories = Array.from(
+  new Set([
+    publicUploadDir,
+    path.resolve(process.cwd(), 'uploads', 'public'),
+    path.resolve(backendRootDir, '..', 'uploads', 'public'),
+  ]),
+);
 export const secureUploadDir = path.join(uploadRootDir, 'secure');
 export const publicListingMediaUploadDir = path.join(publicUploadDir, 'listings');
 
@@ -143,7 +156,7 @@ export const getDocumentUploadMiddleware = (
           ? isAllowedResumeFile(file.mimetype, file.originalname)
           : purpose === 'listing-media'
             ? isAllowedListingMediaFile(file.mimetype, file.originalname)
-              : purpose === 'finance-support' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
+              : purpose === 'finance-support' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-footer-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
               ? isAllowedFinanceSupportImageFile(file.mimetype, file.originalname)
               : isAllowedDocumentFile(file.mimetype, file.originalname);
 
@@ -154,7 +167,7 @@ export const getDocumentUploadMiddleware = (
               ? 'Only PDF, DOC, and DOCX files are allowed for resumes and documents.'
               : purpose === 'listing-media'
                 ? 'Only JPG, PNG, WEBP, MP4, WEBM, and MOV files are allowed.'
-                : purpose === 'finance-support' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
+                : purpose === 'finance-support' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-footer-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
                   ? 'Only JPG, PNG, and WEBP images are allowed.'
                   : 'Only JPG, PNG, WEBP, and PDF files are allowed.'
           )
@@ -173,6 +186,8 @@ export const getDocumentUploadMiddleware = (
           : purpose === 'site-logo'
             ? MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE
           : purpose === 'site-dark-logo'
+            ? MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE
+          : purpose === 'site-footer-logo'
             ? MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE
           : purpose === 'site-favicon'
             ? MAX_SITE_FAVICON_IMAGE_UPLOAD_SIZE

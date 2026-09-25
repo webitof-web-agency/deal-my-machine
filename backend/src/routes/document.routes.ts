@@ -7,6 +7,7 @@ import {
   uploadPublicSiteFaviconImage,
   uploadPublicSiteLogoImage,
   uploadPublicSiteDarkLogoImage,
+  uploadPublicSiteFooterLogoImage,
   getSecureDocument,
   uploadPublicListingMedia,
   uploadPublicDocument,
@@ -27,6 +28,7 @@ const publicHeroImageUpload = getDocumentUploadMiddleware('public', 'hero-image'
 const publicInspectionSectionUpload = getDocumentUploadMiddleware('public', 'inspection-section');
 const publicSiteLogoUpload = getDocumentUploadMiddleware('public', 'site-logo');
 const publicSiteDarkLogoUpload = getDocumentUploadMiddleware('public', 'site-dark-logo');
+const publicSiteFooterLogoUpload = getDocumentUploadMiddleware('public', 'site-footer-logo');
 const publicSiteFaviconUpload = getDocumentUploadMiddleware('public', 'site-favicon');
 const publicSiteManifestIconUpload = getDocumentUploadMiddleware('public', 'site-manifest-icon');
 
@@ -68,6 +70,13 @@ router.post(
   requirePortalOperator,
   publicSiteDarkLogoUpload.single('file'),
   uploadPublicSiteDarkLogoImage
+);
+router.post(
+  '/upload/public/site-footer-logo',
+  requireAuth,
+  requirePortalOperator,
+  publicSiteFooterLogoUpload.single('file'),
+  uploadPublicSiteFooterLogoImage
 );
 router.post(
   '/upload/public/site-favicon',
