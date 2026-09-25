@@ -3,6 +3,7 @@
 import React from 'react';
 import { useSiteLogo } from '@/hooks/useSiteLogo';
 import { APP_NAME } from '@/lib/appConfig';
+import { STATIC_LOADING_LOGO } from '@/lib/staticBranding';
 
 export type BrandLoaderSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type BrandLoaderVariant = 'inline' | 'section' | 'overlay' | 'fullscreen';
@@ -65,35 +66,22 @@ function ArcRing({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
   );
 }
 
-function LoaderLogo({ ring, logo, logoUrl, darkLogoUrl, initialLogoUrl }: { ring: number; logo: number; logoUrl: string | null; darkLogoUrl: string | null; initialLogoUrl?: string | null }) {
-  const activeLogoUrl = initialLogoUrl || darkLogoUrl || logoUrl;
-  const [remoteLogoUrl, setRemoteLogoUrl] = React.useState(activeLogoUrl);
+function LoaderLogo({ ring, logoUrl, darkLogoUrl, initialLogoUrl }: { ring: number; logoUrl: string | null; darkLogoUrl: string | null; initialLogoUrl?: string | null }) {
+  const candidates = [initialLogoUrl, darkLogoUrl, logoUrl, STATIC_LOADING_LOGO].filter((value): value is string => Boolean(value));
+  const [failedLogoUrls, setFailedLogoUrls] = React.useState<string[]>([]);
+  const activeLogoUrl = candidates.find((candidate) => !failedLogoUrls.includes(candidate)) || null;
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {!activeLogoUrl && (
+      {activeLogoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src="/icon.svg"
-          alt=""
-          aria-hidden="true"
-          style={{ width: Math.min(logo, ring * 0.34), height: Math.min(logo, ring * 0.34), objectFit: 'contain', display: 'block' }}
-        />
-      )}
-      {remoteLogoUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={remoteLogoUrl}
+          key={activeLogoUrl}
+          src={activeLogoUrl}
           alt={APP_NAME}
           fetchPriority="high"
           decoding="async"
-          onError={() => {
-            if (darkLogoUrl && logoUrl && remoteLogoUrl === darkLogoUrl) {
-              setRemoteLogoUrl(logoUrl);
-              return;
-            }
-            setRemoteLogoUrl(null);
-          }}
+          onError={() => setFailedLogoUrls((current) => current.includes(activeLogoUrl) ? current : [...current, activeLogoUrl])}
           style={{ width: 'auto', height: 'auto', maxWidth: ring * 0.76, maxHeight: ring * 0.46, objectFit: 'contain', display: 'block' }}
         />
       )}
@@ -103,7 +91,7 @@ function LoaderLogo({ ring, logo, logoUrl, darkLogoUrl, initialLogoUrl }: { ring
 
 function Spinner({ size, bg, initialLogoUrl }: { size: BrandLoaderSize; bg: BrandLoaderBg; initialLogoUrl?: string | null }) {
   const { logoUrl, darkLogoUrl } = useSiteLogo();
-  const { ring, logo } = SIZE_MAP[size];
+  const { ring } = SIZE_MAP[size];
 
   return (
     <div style={{ position: 'relative', width: ring, height: ring, flexShrink: 0 }} role="status" aria-label="Loading">
@@ -112,7 +100,6 @@ function Spinner({ size, bg, initialLogoUrl }: { size: BrandLoaderSize; bg: Bran
         <LoaderLogo
           key={initialLogoUrl || darkLogoUrl || logoUrl || 'fallback'}
           ring={ring}
-          logo={logo}
           logoUrl={logoUrl}
           darkLogoUrl={darkLogoUrl}
           initialLogoUrl={initialLogoUrl}

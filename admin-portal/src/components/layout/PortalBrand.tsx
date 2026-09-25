@@ -2,13 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSiteLogo } from '@/hooks/useSiteLogo';
 import { APP_NAME } from '@/lib/appConfig';
+import { STATIC_ADMIN_LOGIN_LOGO, STATIC_ADMIN_PORTAL_LOGO } from '@/lib/staticBranding';
 
 type PortalBrandProps = {
   href: string;
-  size?: 'header' | 'footer';
+  size?: 'header' | 'footer' | 'login';
   subtitle?: string | null;
   className?: string;
   showSubtitle?: boolean;
@@ -22,22 +23,62 @@ export default function PortalBrand({
   showSubtitle = true,
 }: PortalBrandProps) {
   const { logoUrl, darkLogoUrl } = useSiteLogo();
-  const logoCandidates = useMemo(
-    () => [logoUrl, darkLogoUrl].filter((value): value is string => Boolean(value)),
-    [logoUrl, darkLogoUrl]
+  const staticLogoUrl = size === 'login' ? STATIC_ADMIN_LOGIN_LOGO : STATIC_ADMIN_PORTAL_LOGO;
+  const dynamicLogoCandidates = useMemo(
+    () => [logoUrl, darkLogoUrl].filter(
+      (value): value is string => Boolean(value) && value !== staticLogoUrl
+    ),
+    [logoUrl, darkLogoUrl, staticLogoUrl]
   );
-  const logoSignature = logoCandidates.join('|');
-  const [failedLogoState, setFailedLogoState] = useState<{ signature: string; urls: string[] }>({
+  const dynamicLogoSignature = dynamicLogoCandidates.join('|');
+  const [loadedDynamicLogo, setLoadedDynamicLogo] = useState<{ signature: string; url: string | null }>({
     signature: '',
-    urls: [],
+    url: null,
   });
-  const failedLogoUrls = failedLogoState.signature === logoSignature ? failedLogoState.urls : [];
-  const activeLogoUrl = logoCandidates.find((candidate) => !failedLogoUrls.includes(candidate)) || null;
+
+  useEffect(() => {
+    if (dynamicLogoCandidates.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    let candidateIndex = 0;
+
+    const preloadNextLogo = () => {
+      const candidate = dynamicLogoCandidates[candidateIndex];
+      candidateIndex += 1;
+
+      if (!candidate) {
+        return;
+      }
+
+      const image = new window.Image();
+      image.onload = () => {
+        if (!cancelled) {
+          setLoadedDynamicLogo({ signature: dynamicLogoSignature, url: candidate });
+        }
+      };
+      image.onerror = preloadNextLogo;
+      image.src = candidate;
+    };
+
+    preloadNextLogo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dynamicLogoCandidates, dynamicLogoSignature]);
+
+  const activeLogoUrl = loadedDynamicLogo.signature === dynamicLogoSignature
+    ? loadedDynamicLogo.url || staticLogoUrl
+    : staticLogoUrl;
 
   const wrapperClass = size === 'footer'
     ? 'max-w-[240px] sm:max-w-[360px]'
-    : 'max-w-[160px] sm:max-w-[190px]';
-  const maxHeightClass = size === 'footer' ? 'max-h-[80px]' : 'max-h-[56px]';
+    : size === 'login'
+      ? 'max-w-[180px] sm:max-w-[220px]'
+      : 'max-w-[160px] sm:max-w-[190px]';
+  const maxHeightClass = size === 'footer' ? 'max-h-[80px]' : size === 'login' ? 'max-h-[64px]' : 'max-h-[56px]';
 
   return (
     <div className={`flex flex-col items-center justify-center text-center ${className}`}>
@@ -51,22 +92,9 @@ export default function PortalBrand({
               width={300}
               height={80}
               unoptimized
-              priority={size === 'header'}
-              loading={size === 'header' ? 'eager' : 'lazy'}
+              priority={size !== 'footer'}
+              loading={size === 'footer' ? 'lazy' : 'eager'}
               className={`w-full h-auto object-contain object-center mx-auto ${maxHeightClass}`}
-              onError={() => {
-                setFailedLogoState((current) => {
-                  const urls = current.signature === logoSignature ? current.urls : [];
-                  if (urls.includes(activeLogoUrl)) {
-                    return current;
-                  }
-
-                  return {
-                    signature: logoSignature,
-                    urls: [...urls, activeLogoUrl],
-                  };
-                });
-              }}
             />
           </div>
         ) : (

@@ -1,4 +1,5 @@
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
+import { STATIC_FRONTEND_LOGO } from '@/lib/staticBranding';
 
 export type SiteBranding = {
   logoUrl: string | null;
@@ -20,6 +21,10 @@ const toAbsoluteUrl = (value?: string | null) => {
   }
 
   if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (value.startsWith('/branding/')) {
     return value;
   }
 
@@ -60,7 +65,7 @@ export const getSiteBranding = async (): Promise<SiteBranding> => {
     const updatedAt = payload.data?.updatedAt || null;
 
     return {
-      logoUrl: appendVersionToUrl(toAbsoluteUrl(payload.data?.imageUrl), updatedAt),
+      logoUrl: appendVersionToUrl(toAbsoluteUrl(payload.data?.imageUrl), updatedAt) || STATIC_FRONTEND_LOGO,
       darkLogoUrl: appendVersionToUrl(toAbsoluteUrl(payload.data?.darkLogoUrl), updatedAt),
       faviconUrl: appendVersionToUrl(toAbsoluteUrl(payload.data?.faviconUrl), updatedAt),
       manifestIconUrl: appendVersionToUrl(toAbsoluteUrl(payload.data?.manifestIconUrl), updatedAt),
@@ -70,7 +75,7 @@ export const getSiteBranding = async (): Promise<SiteBranding> => {
     };
   } catch {
     return {
-      logoUrl: null,
+      logoUrl: STATIC_FRONTEND_LOGO,
       darkLogoUrl: null,
       faviconUrl: null,
       manifestIconUrl: null,

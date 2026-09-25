@@ -6,10 +6,15 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { getAbsoluteFileUrl } from '@/lib/fileUpload';
 import { SITE_NAME } from '@/lib/site';
+import {
+  STATIC_FOOTER_LOGO,
+  STATIC_FRONTEND_LOGIN_LOGO,
+  STATIC_FRONTEND_LOGO,
+} from '@/lib/staticBranding';
 
 type SiteBrandProps = {
   href?: string;
-  variant?: 'navbar' | 'footer';
+  variant?: 'navbar' | 'footer' | 'login';
   align?: 'left' | 'center';
 };
 
@@ -20,6 +25,7 @@ export default function SiteBrand({
 }: SiteBrandProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [footerLogoUrl, setFooterLogoUrl] = useState<string | null>(null);
+  const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,22 +56,37 @@ export default function SiteBrand({
   const widthClass = variant === 'footer'
     ? 'w-full max-w-[240px] md:max-w-[360px]'
     : 'w-full max-w-[200px] sm:max-w-[240px] md:max-w-[300px]';
+  const staticLogoUrl = variant === 'footer'
+    ? STATIC_FOOTER_LOGO
+    : variant === 'login'
+      ? STATIC_FRONTEND_LOGIN_LOGO
+      : STATIC_FRONTEND_LOGO;
+  const logoCandidates = (variant === 'footer'
+    ? [footerLogoUrl, logoUrl, STATIC_FOOTER_LOGO, STATIC_FRONTEND_LOGO]
+    : [logoUrl, staticLogoUrl]
+  ).filter((value): value is string => typeof value === 'string' && !failedLogoUrls.includes(value));
+  const activeLogoUrl = logoCandidates[0] || null;
 
   return (
     <Link href={href} className={`inline-flex items-center gap-2.5 ${widthClass}`}>
-      {(variant === 'footer' ? footerLogoUrl || logoUrl : logoUrl) ? (
+      {activeLogoUrl ? (
         <div className={`relative flex items-center ${widthClass}`}>
           <Image
-            src={(variant === 'footer' ? footerLogoUrl || logoUrl : logoUrl) as string}
+            key={activeLogoUrl}
+            src={activeLogoUrl}
             alt={SITE_NAME}
             width={300}
             height={80}
             sizes={variant === 'footer' ? '(max-width: 768px) 240px, 360px' : '(max-width: 640px) 200px, (max-width: 768px) 240px, 300px'}
             unoptimized
             priority={variant === 'navbar'}
-            loading={variant === 'navbar' ? 'eager' : 'lazy'}
+            loading={variant === 'footer' ? 'lazy' : 'eager'}
             style={{ width: '100%', height: 'auto' }}
             className={`object-contain ${align === 'center' ? 'object-center mx-auto' : 'object-left'} ${variant === 'footer' ? 'max-h-[80px]' : 'max-h-[54px]'}`}
+            onError={() => {
+              if (!activeLogoUrl) return;
+              setFailedLogoUrls((current) => current.includes(activeLogoUrl) ? current : [...current, activeLogoUrl]);
+            }}
           />
         </div>
       ) : (

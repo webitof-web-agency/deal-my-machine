@@ -304,7 +304,7 @@ export default function AuthModal() {
       <div className="flex min-h-full items-center justify-center">
         <div className="w-full max-w-[390px] overflow-hidden rounded-[4px] border border-[#d9dde3] bg-white shadow-[0_18px_55px_rgba(0,0,0,0.25)] animate-in fade-in zoom-in duration-200">
           <div className="relative flex min-h-[78px] items-center justify-center border-b border-[#edf0f3] bg-white px-8 py-3">
-            <SiteBrand variant="navbar" align="center" />
+            <SiteBrand variant="login" align="center" />
             <button
               onClick={() => setAuthModalOpen(false)}
               aria-label="Close login"
