@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "JCB Exchange",
-  "short_name": "JCB Exchange",
+  "name": "DealMyMachine",
+  "short_name": "DealMyMachine",
   "description": "Buy and sell used heavy machinery",
   "start_url": "/",
   "scope": "/",

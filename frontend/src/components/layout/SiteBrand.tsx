@@ -98,8 +98,8 @@ export default function SiteBrand({
           </div>
           <div className="flex flex-col leading-none">
             <div className="flex items-center gap-1 font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 uppercase">
-              <span>JCB</span>
-              <span className="text-amber-500">EXCHANGE</span>
+              <span>DEAL</span>
+              <span className="text-amber-500">MY MACHINE</span>
             </div>
             <span className="text-[9px] font-bold text-gray-400 tracking-wider uppercase mt-0.5">Heavy Machinery</span>
           </div>

@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "JCB Exchange Admin",
-  "short_name": "JCB Admin",
-  "description": "Admin Portal for JCB Exchange",
+  "name": "DealMyMachine Admin",
+  "short_name": "DealMyMachine Admin",
+  "description": "Admin Portal for DealMyMachine",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
