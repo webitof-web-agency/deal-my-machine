@@ -13,6 +13,8 @@ import {
   getInspectionSectionContent,
   getSiteLogoContent,
   getPlatformSettings,
+  getGoogleDriveSettings,
+  revealGoogleDriveSecrets,
   getAdminUsers,
   getCustomerVisitors,
   getDashboardSummary,
@@ -23,6 +25,8 @@ import {
   getListingPaymentSubmissionById,
   getListingPaymentSubmissions,
   updatePlatformSettings,
+  updateGoogleDriveSettingsContent,
+  testGoogleDriveConnection,
   saveAdminPartnerOnboarding,
   submitAdminPartnerOnboarding,
   resetManagedUserPassword,
@@ -43,7 +47,7 @@ import {
   getTranslationCatalog,
   saveTranslationCatalog,
 } from '../controllers/translationAdmin.controller';
-import { requireAuth, requireSuperAdminOrEmployeePermissions } from '../middlewares/auth.middleware';
+import { requireAuth, requireSuperAdmin, requireSuperAdminOrEmployeePermissions } from '../middlewares/auth.middleware';
 
 import { createRole, deleteRole, getRoles, updateRole } from '../controllers/role.controller';
 
@@ -89,6 +93,10 @@ router.get('/site-logo', canManageSettings, getSiteLogoContent);
 router.put('/site-logo', canManageSettings, updateSiteLogoContent);
 router.get('/settings', canManageSettings, getPlatformSettings);
 router.patch('/settings', canManageSettings, updatePlatformSettings);
+router.get('/google-drive', canManageSettings, getGoogleDriveSettings);
+router.get('/google-drive/reveal-secrets', requireSuperAdmin, revealGoogleDriveSecrets);
+router.put('/google-drive', canManageSettings, updateGoogleDriveSettingsContent);
+router.post('/google-drive/test-connection', canManageSettings, testGoogleDriveConnection);
 router.get('/translations/catalog', canManageTranslations, getTranslationCatalog);
 router.put('/translations/catalog', canManageTranslations, saveTranslationCatalog);
 router.get('/customer-prime-payments', canManageRecurrence, getCustomerPrimePayments);

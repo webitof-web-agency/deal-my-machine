@@ -1,6 +1,8 @@
 import prisma from '../lib/prisma';
+import { isAcceptedReceiptUrl } from './receiptUrl';
 import { getAppSettings } from './appSettings';
 import { APP_NAME } from '../config/appConfig';
+import { normalizeBillingLocation } from './billingLocation';
 import {
   buildPrimeSettingsSnapshot,
   buildUpiPaymentUri,
@@ -18,6 +20,8 @@ type PrimeDbRecord = {
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
   transactionRef?: string | null;
   receiptUrl?: string | null;
+  customerState?: string | null;
+  customerCity?: string | null;
   paidAmount: unknown;
   paidUpiId?: string | null;
   settingsSnapshot: unknown;
@@ -76,6 +80,8 @@ const mapSubscriptionRecord = (record: PrimeDbRecord) => ({
   status: record.status,
   transactionRef: record.transactionRef || null,
   receiptUrl: record.receiptUrl || null,
+  customerState: record.customerState || null,
+  customerCity: record.customerCity || null,
   paidAmount: toNumber(record.paidAmount) || 0,
   paidUpiId: record.paidUpiId || null,
   settingsSnapshot: normalizeSettingsSnapshot(record.settingsSnapshot),
@@ -199,10 +205,14 @@ export const createCustomerPrimeSubscriptionRequest = async ({
   userId,
   role,
   receiptUrl,
+  customerState,
+  customerCity,
 }: {
   userId: string;
   role?: string | null | undefined;
   receiptUrl?: string | null | undefined;
+  customerState?: string | null | undefined;
+  customerCity?: string | null | undefined;
 }) => {
   const accessPayload = await getCustomerPrimeAccessPayload({ userId, role });
 
@@ -223,8 +233,13 @@ export const createCustomerPrimeSubscriptionRequest = async ({
   }
 
   const normalizedReceiptUrl = normalizeText(receiptUrl);
-  if (!normalizedReceiptUrl) {
+  if (!normalizedReceiptUrl || !isAcceptedReceiptUrl(normalizedReceiptUrl)) {
     throw new Error('Payment receipt upload is required to submit Prime payment.');
+  }
+
+  const billingLocation = normalizeBillingLocation({ state: customerState, city: customerCity });
+  if (!billingLocation.ok) {
+    throw new Error(billingLocation.error);
   }
 
   const settingsSnapshot = buildPrimeSettingsSnapshot(accessPayload.settings);
@@ -234,6 +249,8 @@ export const createCustomerPrimeSubscriptionRequest = async ({
       userId,
       status: 'PENDING',
       receiptUrl: normalizedReceiptUrl,
+      customerState: billingLocation.value.state,
+      customerCity: billingLocation.value.city,
       paidAmount: accessPayload.settings.amount,
       paidUpiId: accessPayload.settings.upiId,
       settingsSnapshot,

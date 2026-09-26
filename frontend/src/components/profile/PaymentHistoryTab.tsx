@@ -18,6 +18,8 @@ type PrimePaymentHistoryItem = {
   startedAt?: string | null;
   expiresAt?: string | null;
   receiptUrl?: string | null;
+  customerState?: string | null;
+  customerCity?: string | null;
 };
 
 type HistoryResponse = {
@@ -88,6 +90,15 @@ const formatAmount = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount || 0);
 
+const getDaysRemainingLocal = (expiry?: string | null) => {
+  if (!expiry) return null;
+  const expiryDate = new Date(expiry);
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfExpiry = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate());
+  return Math.ceil((startOfExpiry.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
+};
+
 export default function PaymentHistoryTab() {
   const user = useAuthStore((state) => state.user);
   const [primeLoading, setPrimeLoading] = useState(() => !!user?.id);
@@ -100,9 +111,15 @@ export default function PaymentHistoryTab() {
   const [selectedInvoicePayment, setSelectedInvoicePayment] = useState<InvoicePaymentData | null>(null);
   const visibleHistory = useMemo(() => (user?.id ? history : []), [history, user?.id]);
   const visibleListingPayments = useMemo(() => (user?.id ? listingPayments : []), [listingPayments, user?.id]);
+
+  // Calculate if prime is currently active based on user store data
+  const daysRemaining = useMemo(() => getDaysRemainingLocal(user?.primeSubscriptionExpiresAt), [user?.primeSubscriptionExpiresAt]);
+  const isPrimeActive = Boolean(user?.isPrimeCustomer && daysRemaining !== null && daysRemaining >= 0);
+
+  // Only show expired banner if there is NO active membership
   const latestExpiredPayment = useMemo(
-    () => visibleHistory.find((payment) => payment.status === 'EXPIRED') || null,
-    [visibleHistory],
+    () => (!isPrimeActive ? visibleHistory.find((payment) => payment.status === 'EXPIRED') || null : null),
+    [visibleHistory, isPrimeActive],
   );
 
   const loadHistory = useCallback(async () => {
@@ -252,7 +269,8 @@ export default function PaymentHistoryTab() {
                             submittedAt: payment.submittedAt,
                             customerEmail: user?.email,
                             customerMobile: user?.mobile,
-                            customerState: user?.state || null,
+                            customerState: payment.customerState || user?.state || null,
+                            customerCity: payment.customerCity || user?.city || null,
                           })}
                           className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400 bg-yellow-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-yellow-900 transition hover:bg-yellow-400 hover:text-black shadow-sm"
                         >
@@ -260,14 +278,30 @@ export default function PaymentHistoryTab() {
                           Download Invoice
                         </button>
                       ) : null}
-                      {payment.status === 'EXPIRED' && payment.id === latestExpiredPayment?.id ? (
-                        <button
-                          type="button"
-                          onClick={() => setIsRenewModalOpen(true)}
-                          className="inline-flex items-center rounded-full bg-[#FFC107] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition hover:bg-yellow-400"
-                        >
-                          Renew
-                        </button>
+                      {payment.status === 'EXPIRED' ? (
+                        isPrimeActive ? (
+                          // Membership is already active — block renew with tooltip
+                          <div className="group/renew relative inline-flex">
+                            <button
+                              type="button"
+                              disabled
+                              className="inline-flex cursor-not-allowed items-center rounded-full bg-gray-200 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 opacity-60"
+                            >
+                              Renew
+                            </button>
+                            <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-48 -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-center text-[10px] leading-4 text-white opacity-0 shadow-lg transition-opacity group-hover/renew:opacity-100">
+                              Your membership is still active. Renew after it expires.
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setIsRenewModalOpen(true)}
+                            className="inline-flex items-center rounded-full bg-[#FFC107] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition hover:bg-yellow-400"
+                          >
+                            Renew
+                          </button>
+                        )
                       ) : null}
                     </div>
                   </div>

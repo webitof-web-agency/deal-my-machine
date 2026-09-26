@@ -105,6 +105,14 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     return res.status(404).json({ success: false, error: 'Requested file was not found.' });
   }
 
+  if ((err as Error & { statusCode?: number }).statusCode) {
+    return res.status((err as Error & { statusCode: number }).statusCode).json({
+      success: false,
+      error: err.message,
+      code: (err as Error & { code?: string }).code,
+    });
+  }
+
   res.status(500).json({ success: false, message: 'Internal Server Error' });
 });
 

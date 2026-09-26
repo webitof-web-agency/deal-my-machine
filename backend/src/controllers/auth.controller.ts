@@ -33,6 +33,7 @@ import {
   listCustomerPrimeSubscriptionsForUser,
 } from '../utils/customerPrimeSubscriptions';
 import { APP_NAME } from '../config/appConfig';
+import { normalizeBillingLocation } from '../utils/billingLocation';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jcbexchange_super_secret_key_123';
 const prismaAny = prisma as any;
@@ -387,10 +388,15 @@ const signAuthToken = (user: any) =>
       role: user.role,
       rawRole: user.rawRole ?? user.role,
       status: user.status,
+      authVersion: user.authVersion ?? 0,
     },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
+
+const hasCredentialChanged = (currentUser: { email?: string | null; mobile?: string | null }, next: { email?: string | null; mobile?: string | null }) =>
+  (next.email !== undefined && next.email !== currentUser.email) ||
+  (next.mobile !== undefined && next.mobile !== currentUser.mobile);
 
 const assertAccountAccessOrRespond = (res: Response, user: unknown) => {
   const accessState = getAccountAccessState(user as any);
@@ -1382,6 +1388,8 @@ export const getCustomerPrimeHistory = async (req: Request, res: Response, next:
         startedAt: subscription.startedAt,
         expiresAt: subscription.expiresAt,
         receiptUrl: subscription.receiptUrl || null,
+        customerState: subscription.customerState || null,
+        customerCity: subscription.customerCity || null,
       };
     });
 
@@ -1401,14 +1409,28 @@ export const submitCustomerPrimeSubscription = async (req: Request, res: Respons
       return res.status(403).json({ error: 'Prime subscription is available for customers only.' });
     }
 
-    const { receiptUrl } = req.body as {
+    const { receiptUrl, customerState, customerCity } = req.body as {
       receiptUrl?: string;
+      customerState?: string;
+      customerCity?: string;
     };
+
+    const billingLocation = normalizeBillingLocation({ state: customerState, city: customerCity });
+    if (!billingLocation.ok) {
+      return res.status(400).json({ error: billingLocation.error });
+    }
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: billingLocation.value,
+    });
 
     const subscription = await createCustomerPrimeSubscriptionRequest({
       userId: req.user.id,
       role: req.user.role,
       receiptUrl,
+      customerState: billingLocation.value.state,
+      customerCity: billingLocation.value.city,
     });
 
     const refreshedUser = await prisma.user.findUnique({
@@ -1431,6 +1453,35 @@ export const submitCustomerPrimeSubscription = async (req: Request, res: Respons
       return res.status(400).json({ error: error.message });
     }
 
+    next(error);
+  }
+};
+
+export const updateProfileLocation = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    const location = normalizeBillingLocation({
+      state: req.body?.state,
+      city: req.body?.city,
+    });
+
+    if (!location.ok) {
+      return res.status(400).json({ error: location.error });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: location.value,
+    });
+
+    return res.json({
+      message: 'Billing location updated successfully.',
+      user: await buildAuthUserPayload(updatedUser),
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -1551,6 +1602,11 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         ? currentUser.partnerProfile || (await ensurePartnerProfileForUser(currentUser))
         : null;
 
+    const credentialsChanged = hasCredentialChanged(currentUser, {
+      email: normalizedEmail,
+      mobile: normalizedMobile || null,
+    });
+
     const updatedUser = await prisma.$transaction(async (tx) => {
       const nextUser = await tx.user.update({
         where: { id: userId },
@@ -1562,12 +1618,16 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
               whatsappNumber: normalizedWhatsapp || null,
               city: normalizedCity || null,
               state: normalizedState || null,
+              ...(credentialsChanged ? { authVersion: { increment: 1 } } : {}),
             }
           : {
               name: normalizedName || currentUser.name || null,
               email: normalizedEmail,
               mobile: normalizedMobile || null,
               whatsappNumber: normalizedWhatsapp || null,
+              city: normalizedCity || null,
+              state: normalizedState || null,
+              ...(credentialsChanged ? { authVersion: { increment: 1 } } : {}),
             },
         include: {
           adminProfile: true,
@@ -1649,6 +1709,7 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
       where: { id: req.user.id },
       data: {
         password: hashedPassword,
+        authVersion: { increment: 1 },
       },
     });
 

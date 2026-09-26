@@ -19,6 +19,7 @@ export type ListingMedia = {
 
 export type ListingPartner = {
   id?: string;
+  ownerUserId?: string | null;
   name?: string | null;
   partnerType?: string | null;
   district?: string | null;

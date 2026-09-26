@@ -11,6 +11,7 @@ import {
   resolveEffectiveUserRole,
 } from '../utils/accountAccess';
 import prisma from '../lib/prisma';
+import { isAuthVersionCurrent } from '../utils/authVersion';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jcbexchange_super_secret_key_123';
 
@@ -21,6 +22,7 @@ interface AuthTokenPayload {
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'CLOSED';
   iat?: number;
   exp?: number;
+  authVersion?: number;
 }
 
 const getBearerToken = (authorizationHeader?: string) => {
@@ -50,6 +52,13 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
         }
 
         const accessState = getAccountAccessState(user as any);
+
+        if (!isAuthVersionCurrent({ tokenVersion: decoded.authVersion, databaseVersion: user.authVersion ?? 0 })) {
+          return res.status(401).json({
+            error: 'Your session has been revoked. Please sign in again.',
+            code: 'SESSION_REVOKED',
+          });
+        }
 
         if (accessState === 'inactive') {
           return res.status(403).json({

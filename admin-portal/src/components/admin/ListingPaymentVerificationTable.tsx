@@ -18,8 +18,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api, { API_ORIGIN } from '@/lib/api';
+import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
+import { getReceiptPreviewUrl } from '@/lib/fileUpload';
 import { formatPartnerTypeLabel } from '@/lib/partnerType';
 import { generateAdminListingPaymentDetailPath } from '@/lib/routePaths';
 import { useAuthStore } from '@/store/authStore';
@@ -124,12 +125,6 @@ type PaymentMethodFilter = 'ALL' | ListingPaymentRecord['method'];
 const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
   const axiosError = error as AxiosError<{ error?: string }>;
   return axiosError.response?.data?.error || fallbackMessage;
-};
-
-const getAbsoluteFileUrl = (url?: string | null) => {
-  if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const getStatusMeta = (status: ListingPaymentRecord['status']) => {
@@ -505,7 +500,7 @@ export default function ListingPaymentVerificationTable({ onPendingCountChange, 
             ) : (
               filteredPayments.map((payment, index) => {
                 const statusMeta = getStatusMeta(payment.status);
-                const receiptUrl = getAbsoluteFileUrl(payment.receiptUrl);
+                const receiptUrl = getReceiptPreviewUrl(payment.receiptUrl);
                 const partnerType = formatPartnerTypeLabel(payment.partner?.partnerProfile?.partnerType, 'Partner');
                 const isPending = payment.status === 'PENDING_VERIFICATION';
 
@@ -772,7 +767,7 @@ export default function ListingPaymentVerificationTable({ onPendingCountChange, 
                 <div className="relative flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-900 p-2">
                   <div className="relative h-[50vh] w-full overflow-hidden rounded-lg bg-white">
                     <Image
-                      src={getAbsoluteFileUrl(previewPayment.receiptUrl)}
+                      src={getReceiptPreviewUrl(previewPayment.receiptUrl)}
                       alt="Payment Receipt"
                       fill
                       unoptimized
@@ -855,7 +850,7 @@ export default function ListingPaymentVerificationTable({ onPendingCountChange, 
               <div className="relative h-[72vh] w-full overflow-hidden rounded-2xl bg-white">
                 {receiptViewerPayment.receiptUrl ? (
                   <Image
-                    src={getAbsoluteFileUrl(receiptViewerPayment.receiptUrl)}
+                  src={getReceiptPreviewUrl(receiptViewerPayment.receiptUrl)}
                     alt="Payment Receipt"
                     fill
                     unoptimized

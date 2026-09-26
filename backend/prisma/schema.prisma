@@ -202,6 +202,7 @@ model User {
   customRoleId     String?
   fcmToken         String?
   pushSubscription Json?
+  authVersion      Int        @default(0)
 
   createdBy          User?                @relation("UserCreation", fields: [createdById], references: [id])
   createdUsers       User[]               @relation("UserCreation")
@@ -452,6 +453,8 @@ model ListingPaymentSubmission {
   transactionRef     String?
   paymentNote        String?              @db.Text
   receiptUrl         String?
+  customerState      String?
+  customerCity       String?
   razorpayOrderId    String?
   razorpayPaymentId  String?
   razorpaySignature  String?
@@ -500,6 +503,7 @@ model Media {
   id            String    @id @default(uuid())
   listingId     String
   url           String
+  driveFileId   String?
   type          String
   slot          String?
   isFeatured    Boolean   @default(false)
@@ -672,6 +676,8 @@ model CustomerPrimeSubscription {
   transactionRef     String?
   paymentNote        String?                         @db.Text
   receiptUrl         String?
+  customerState      String?
+  customerCity       String?
   paidAmount         Decimal
   paidUpiId          String?
   settingsSnapshot   Json

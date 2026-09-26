@@ -1,15 +1,16 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, ShieldCheck, Clock, Smartphone, Receipt, QrCode, Loader2, Upload } from 'lucide-react';
+import { X, Receipt, QrCode, Loader2, Upload } from 'lucide-react';
 import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
-import { getAbsoluteFileUrl, uploadCustomerPrimeReceiptToServer } from '@/lib/fileUpload';
+import { getReceiptPreviewUrl, uploadCustomerPrimeReceiptToServer } from '@/lib/fileUpload';
 import { useAuthStore, type AuthUser } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SITE_NAME } from '@/lib/site';
+import BillingLocationFields from '@/components/payments/BillingLocationFields';
 
 type CustomerPrimeFeature = 'CALL' | 'WHATSAPP' | 'SELL_LISTING' | 'BUY_NOW';
 
@@ -99,6 +100,24 @@ export default function CustomerPrimePaymentModal({
   const [access, setAccess] = useState<PrimeAccessPayload | null>(null);
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [receiptName, setReceiptName] = useState<string | null>(null);
+  const [billingState, setBillingState] = useState(user?.state || '');
+  const [billingCity, setBillingCity] = useState(user?.city || '');
+
+  const handleBillingLocationChange = useCallback(async ({ state, city }: { state: string; city: string }) => {
+    setBillingState(state);
+    setBillingCity(city);
+    if (!state || !city || !token) return;
+    try {
+      const response = await api.patch<{ user: AuthUser }>('/auth/profile/location', { state, city });
+      if (response.data.user && user) setAuth(token, { ...user, ...response.data.user });
+    } catch (locationError) {
+      setError(getApiErrorMessage(locationError, 'Unable to save billing location.'));
+    }
+  }, [setAuth, token, user]);
+
+  const handleBillingLocationError = useCallback((locationError: string | null) => {
+    if (locationError) setError(locationError);
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !user?.id) {
@@ -188,11 +207,18 @@ export default function CustomerPrimePaymentModal({
       return;
     }
 
+    // In renewal mode: never auto-close even if subscription is active.
+    // User explicitly opened to renew/pay again, so always show QR.
+    if (isRenewalMode) {
+      return;
+    }
+
+    // In feature-gate mode: auto-grant access if subscription is active or not required.
     if (!featureRequiresPrime || access.hasActiveSubscription) {
       onAccessGranted();
       onClose();
     }
-  }, [access, featureRequiresPrime, isOpen, onAccessGranted, onClose]);
+  }, [access, featureRequiresPrime, isOpen, isRenewalMode, onAccessGranted, onClose]);
 
   const qrImageUrl = access?.qrPaymentUri
     ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(access.qrPaymentUri)}`
@@ -233,6 +259,8 @@ export default function CustomerPrimePaymentModal({
     try {
       const response = await api.post<SubmitResponse>('/auth/customer-prime/subscribe', {
         receiptUrl,
+        customerState: billingState,
+        customerCity: billingCity,
       });
 
       if (token && user && response.data.user) {
@@ -351,7 +379,7 @@ export default function CustomerPrimePaymentModal({
                   </div>
                   {access.pendingSubscription.receiptUrl ? (
                     <a
-                      href={getAbsoluteFileUrl(access.pendingSubscription.receiptUrl)}
+                      href={getReceiptPreviewUrl(access.pendingSubscription.receiptUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50"
@@ -367,6 +395,15 @@ export default function CustomerPrimePaymentModal({
                 {error ? (
                   <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
                 ) : null}
+
+                <div className="rounded-[26px] border border-gray-200 bg-white p-5 shadow-sm">
+                  <BillingLocationFields
+                    state={billingState}
+                    city={billingCity}
+                    onChange={(location) => void handleBillingLocationChange(location)}
+                    onError={handleBillingLocationError}
+                  />
+                </div>
 
                 <div className="rounded-[26px] border border-gray-200 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
@@ -420,7 +457,7 @@ export default function CustomerPrimePaymentModal({
                   <button
                     type="button"
                     onClick={() => void handleSubmit()}
-                    disabled={submitting || uploadingReceipt || !receiptUrl}
+                    disabled={submitting || uploadingReceipt || !receiptUrl || !billingState || !billingCity}
                     className="inline-flex w-full items-center justify-center rounded-xl bg-[#111827] px-5 py-3 text-sm font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? t('primeModal.submitting') : t('primeModal.submitForApproval')}

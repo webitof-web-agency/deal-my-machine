@@ -16,8 +16,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api, { API_ORIGIN } from '@/lib/api';
+import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
+import { getReceiptPreviewUrl } from '@/lib/fileUpload';
 import { formatPartnerTypeLabel } from '@/lib/partnerType';
 import { useHeaderStore } from '@/store/headerStore';
 import { resolveListingPaymentId } from '@/lib/routeResolvers';
@@ -51,12 +52,6 @@ type ListingPaymentRecord = {
 const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
   const axiosError = error as AxiosError<{ error?: string }>;
   return axiosError.response?.data?.error || fallbackMessage;
-};
-
-const getAbsoluteFileUrl = (url?: string | null) => {
-  if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const formatDateTime = (value?: string | null) => {
@@ -444,7 +439,7 @@ export default function ListingPaymentDetailPage({
           {payment.receiptUrl ? (
             <div className="relative h-48 sm:h-56 w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-950">
               <Image
-                src={getAbsoluteFileUrl(payment.receiptUrl)}
+                src={getReceiptPreviewUrl(payment.receiptUrl)}
                 alt={`${payment.listing?.title || 'Listing'} receipt`}
                 fill
                 unoptimized
@@ -525,7 +520,7 @@ export default function ListingPaymentDetailPage({
             <div className="bg-gray-950 p-4 sm:p-6">
               <div className="relative h-[72vh] w-full overflow-hidden rounded-2xl bg-white">
                 <Image
-                  src={getAbsoluteFileUrl(payment.receiptUrl)}
+                  src={getReceiptPreviewUrl(payment.receiptUrl)}
                   alt={`${payment.listing?.title || 'Listing'} receipt`}
                   fill
                   unoptimized

@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'crypto';
 import prisma from '../lib/prisma';
 import { publicUploadDirectories, storageBaseDir, uploadRootDir } from './documentUpload';
 import {
@@ -54,6 +54,17 @@ export type SiteLogoSettings = {
   footerLogoUrl: string | null;
   faviconUrl: string | null;
   manifestIconUrl: string | null;
+  updatedAt: string | null;
+  updatedByUserId: string | null;
+};
+
+export type GoogleDriveSettings = {
+  enabled: boolean;
+  clientId: string | null;
+  clientSecret: string | null;
+  refreshToken: string | null;
+  mediaRootFolderId: string | null;
+  backupRootFolderId: string | null;
   updatedAt: string | null;
   updatedByUserId: string | null;
 };
@@ -208,6 +219,7 @@ export const normalizeCompanyInvoiceSettings = (
 
 type AppSettings = {
   googleAuth: GoogleAuthSettings;
+  googleDrive: GoogleDriveSettings;
   partnerRegistrationEnabled: boolean;
   mobileOtp: MobileOtpSettings;
   publicLeadRouting: PublicLeadRoutingSettings;
@@ -231,6 +243,47 @@ type AppSettings = {
 
 const platformRuntimeSettingsKey = 'platform';
 const prismaAny = prisma as any;
+const DRIVE_SECRET_PREFIX = 'enc:v1:';
+
+const getSettingsEncryptionKey = () => {
+  const configuredKey = process.env.APP_SETTINGS_ENCRYPTION_KEY?.trim() || process.env.JWT_SECRET?.trim();
+  return configuredKey ? createHash('sha256').update(configuredKey).digest() : null;
+};
+
+const encryptDriveSecret = (value: string | null) => {
+  if (!value || value.startsWith(DRIVE_SECRET_PREFIX)) return value;
+  const key = getSettingsEncryptionKey();
+  if (!key) return value;
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `${DRIVE_SECRET_PREFIX}${Buffer.concat([iv, authTag, encrypted]).toString('base64')}`;
+};
+
+const decryptDriveSecret = (value?: string | null) => {
+  const normalized = value?.trim();
+  if (!normalized || !normalized.startsWith(DRIVE_SECRET_PREFIX)) return normalized || null;
+  const key = getSettingsEncryptionKey();
+  if (!key) return null;
+  try {
+    const payload = Buffer.from(normalized.slice(DRIVE_SECRET_PREFIX.length), 'base64');
+    const decipher = createDecipheriv('aes-256-gcm', key, payload.subarray(0, 12));
+    decipher.setAuthTag(payload.subarray(12, 28));
+    return Buffer.concat([decipher.update(payload.subarray(28)), decipher.final()]).toString('utf8');
+  } catch {
+    return null;
+  }
+};
+
+const serializeSettingsForPersistence = (settings: AppSettings): AppSettings => ({
+  ...settings,
+  googleDrive: {
+    ...settings.googleDrive,
+    clientSecret: encryptDriveSecret(settings.googleDrive.clientSecret),
+    refreshToken: encryptDriveSecret(settings.googleDrive.refreshToken),
+  },
+});
 
 const resolveRuntimeStorageBaseDir = () => {
   const configuredDirectory =
@@ -267,6 +320,16 @@ const defaultSettings: AppSettings = {
   googleAuth: {
     enabled: false,
     clientId: null,
+    updatedAt: null,
+    updatedByUserId: null,
+  },
+  googleDrive: {
+    enabled: false,
+    clientId: null,
+    clientSecret: null,
+    refreshToken: null,
+    mediaRootFolderId: null,
+    backupRootFolderId: null,
     updatedAt: null,
     updatedByUserId: null,
   },
@@ -393,6 +456,7 @@ const getSettingsFreshnessScore = (settings?: AppSettings | null) => {
 
   return Math.max(
     parseTimestamp(settings.googleAuth.updatedAt),
+    parseTimestamp(settings.googleDrive.updatedAt),
     parseTimestamp(settings.mobileOtp.updatedAt),
     parseTimestamp(settings.publicLeadRouting.updatedAt),
     parseTimestamp(settings.customerPrime.updatedAt),
@@ -414,6 +478,16 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
     clientId: normalizeClientId(parsed?.googleAuth?.clientId) || null,
     updatedAt: parsed?.googleAuth?.updatedAt || null,
     updatedByUserId: parsed?.googleAuth?.updatedByUserId || null,
+  },
+  googleDrive: {
+    enabled: parsed?.googleDrive?.enabled === true,
+    clientId: parsed?.googleDrive?.clientId?.trim() || null,
+    clientSecret: decryptDriveSecret(parsed?.googleDrive?.clientSecret),
+    refreshToken: decryptDriveSecret(parsed?.googleDrive?.refreshToken),
+    mediaRootFolderId: parsed?.googleDrive?.mediaRootFolderId?.trim() || null,
+    backupRootFolderId: parsed?.googleDrive?.backupRootFolderId?.trim() || null,
+    updatedAt: parsed?.googleDrive?.updatedAt || null,
+    updatedByUserId: parsed?.googleDrive?.updatedByUserId || null,
   },
   partnerRegistrationEnabled: normalizePartnerRegistrationEnabled(parsed?.partnerRegistrationEnabled),
   mobileOtp: normalizeMobileOtpSettings(parsed?.mobileOtp),
@@ -479,6 +553,12 @@ const isMeaningfulSettings = (settings: AppSettings) =>
     settings.partnerRegistrationEnabled === false ||
     settings.googleAuth.enabled ||
     settings.googleAuth.clientId ||
+    settings.googleDrive.enabled ||
+    settings.googleDrive.clientId ||
+    settings.googleDrive.clientSecret ||
+    settings.googleDrive.refreshToken ||
+    settings.googleDrive.mediaRootFolderId ||
+    settings.googleDrive.backupRootFolderId ||
     settings.mobileOtp.enabled ||
     settings.mobileOtp.apiKey ||
     settings.mobileOtp.senderId ||
@@ -863,7 +943,7 @@ const ensureSettingsFile = async () => {
 
 const writeSettingsFileSnapshot = async (settings: AppSettings) => {
   await ensureSettingsFile();
-  await fs.writeFile(settingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
+  await fs.writeFile(settingsFilePath, JSON.stringify(serializeSettingsForPersistence(settings), null, 2), 'utf8');
 };
 
 const readDatabaseSettings = async (): Promise<AppSettings | null> => {
@@ -885,14 +965,15 @@ const readDatabaseSettings = async (): Promise<AppSettings | null> => {
 
 const persistDatabaseSettings = async (settings: AppSettings) => {
   try {
+    const persistedSettings = serializeSettingsForPersistence(settings);
     await prismaAny.platformRuntimeSettings.upsert({
       where: { key: platformRuntimeSettingsKey },
       update: {
-        payload: settings,
+        payload: persistedSettings,
       },
       create: {
         key: platformRuntimeSettingsKey,
-        payload: settings,
+        payload: persistedSettings,
       },
     });
   } catch {
@@ -1000,6 +1081,43 @@ export const updateGoogleAuthSettings = async ({
 
   await persistSettings(nextSettings);
 
+  return nextSettings;
+};
+
+export const updateGoogleDriveSettings = async ({
+  enabled,
+  clientId,
+  clientSecret,
+  refreshToken,
+  mediaRootFolderId,
+  backupRootFolderId,
+  updatedByUserId,
+}: {
+  enabled?: boolean | undefined;
+  clientId?: string | null | undefined;
+  clientSecret?: string | null | undefined;
+  refreshToken?: string | null | undefined;
+  mediaRootFolderId?: string | null | undefined;
+  backupRootFolderId?: string | null | undefined;
+  updatedByUserId?: string | null | undefined;
+}) => {
+  const currentSettings = await getAppSettings();
+  const timestamp = new Date().toISOString();
+  const nextSettings: AppSettings = {
+    ...currentSettings,
+    googleDrive: {
+      enabled: enabled ?? currentSettings.googleDrive.enabled,
+      clientId: clientId === undefined ? currentSettings.googleDrive.clientId : clientId?.trim() || null,
+      clientSecret: clientSecret === undefined ? currentSettings.googleDrive.clientSecret : clientSecret?.trim() || null,
+      refreshToken: refreshToken === undefined ? currentSettings.googleDrive.refreshToken : refreshToken?.trim() || null,
+      mediaRootFolderId: mediaRootFolderId === undefined ? currentSettings.googleDrive.mediaRootFolderId : mediaRootFolderId?.trim() || null,
+      backupRootFolderId: backupRootFolderId === undefined ? currentSettings.googleDrive.backupRootFolderId : backupRootFolderId?.trim() || null,
+      updatedAt: timestamp,
+      updatedByUserId: updatedByUserId || null,
+    },
+  };
+
+  await persistSettings(nextSettings);
   return nextSettings;
 };
 

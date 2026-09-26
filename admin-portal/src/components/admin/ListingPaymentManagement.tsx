@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AxiosError } from 'axios';
 import { Building2, CheckCircle2, CreditCard, ExternalLink, RefreshCcw, Save, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api, { API_ORIGIN } from '@/lib/api';
+import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
+import { getReceiptPreviewUrl } from '@/lib/fileUpload';
 
 type ListingPaymentFormState = {
   rtgs: {
@@ -86,12 +87,6 @@ const emptyListingPaymentForm: ListingPaymentFormState = {
 const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
   const axiosError = error as AxiosError<{ error?: string }>;
   return axiosError.response?.data?.error || fallbackMessage;
-};
-
-const getAbsoluteFileUrl = (url?: string | null) => {
-  if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const detectRazorpayModeFromKeyId = (keyId?: string | null): 'TEST' | 'LIVE' | null => {
@@ -612,7 +607,7 @@ export default function ListingPaymentManagement() {
                 </tr>
               ) : (
                 listingPayments.map((payment) => {
-                  const receiptUrl = getAbsoluteFileUrl(payment.receiptUrl);
+                  const receiptUrl = getReceiptPreviewUrl(payment.receiptUrl);
                   const statusApproved = payment.status === 'APPROVED' || payment.status === 'PAID';
                   const statusRejected = payment.status === 'REJECTED' || payment.status === 'FAILED';
 

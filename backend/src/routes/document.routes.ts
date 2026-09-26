@@ -10,6 +10,8 @@ import {
   uploadPublicSiteFooterLogoImage,
   getSecureDocument,
   uploadPublicListingMedia,
+  getPublicDriveListingMedia,
+  getReceiptDriveFile,
   uploadPublicDocument,
   uploadCustomerPrimeReceipt,
   uploadListingPaymentReceipt,
@@ -98,6 +100,8 @@ router.post(
   publicListingMediaUpload.single('file'),
   uploadPublicListingMedia
 );
+router.get('/upload/public/listing-media/drive/:fileId', getPublicDriveListingMedia);
+router.get('/receipt/drive/:fileId', getReceiptDriveFile);
 router.get('/secure/:filename', requireAuth, requirePortalOperator, getSecureDocument);
 
 export default router;

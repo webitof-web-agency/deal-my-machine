@@ -14,6 +14,7 @@ import {
   FooterSocialLink,
   ListingPaymentSettings,
   getAppSettings,
+  updateGoogleDriveSettings,
   updatePlatformRuntimeSettings,
   updateFinanceSupportSettings,
   updateFooterSettings,
@@ -22,6 +23,7 @@ import {
   updateSiteLogoSettings,
 } from '../utils/appSettings';
 import { PushNotificationService } from '../services/pushNotification.service';
+import { testDriveConnection } from '../services/googleDrive.service';
 import { getCustomerPrimeAccessState, normalizePrimeValidityUnit } from '../utils/customerPrime';
 import {
   approveCustomerPrimeSubscription,
@@ -37,6 +39,7 @@ const MASKED_SECRET = '********';
 
 const maskSecret = (value?: string | null) => (value ? MASKED_SECRET : '');
 const isMaskedSecret = (value?: string | null) => /^\*+$/.test(String(value || '').trim());
+const isValidDriveFolderId = (value: unknown) => value === undefined || value === null || (typeof value === 'string' && (value.trim() === '' || /^[A-Za-z0-9_-]{10,}$/.test(value.trim())));
 
 const serializeListingPaymentSettingsForAdmin = (settings: ListingPaymentSettings) => ({
   ...settings,
@@ -50,6 +53,80 @@ const serializeListingPaymentSettingsForAdmin = (settings: ListingPaymentSetting
     clientSecret: maskSecret(settings.phonepe.clientSecret),
   },
 });
+
+const serializeGoogleDriveSettingsForAdmin = (settings: Awaited<ReturnType<typeof getAppSettings>>['googleDrive']) => ({
+  enabled: settings.enabled,
+  clientId: settings.clientId || '',
+  clientSecret: maskSecret(settings.clientSecret),
+  refreshToken: maskSecret(settings.refreshToken),
+  mediaRootFolderId: settings.mediaRootFolderId || '',
+  backupRootFolderId: settings.backupRootFolderId || '',
+  updatedAt: settings.updatedAt,
+  updatedByUserId: settings.updatedByUserId,
+});
+
+export const getGoogleDriveSettings = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAppSettings();
+    res.json(serializeGoogleDriveSettingsForAdmin(settings.googleDrive));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const revealGoogleDriveSecrets = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAppSettings();
+    res.json({
+      clientSecret: settings.googleDrive.clientSecret || '',
+      refreshToken: settings.googleDrive.refreshToken || '',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateGoogleDriveSettingsContent = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const current = (await getAppSettings()).googleDrive;
+    const body = req.body as Record<string, unknown>;
+    if (body.enabled !== undefined && typeof body.enabled !== 'boolean') {
+      return res.status(400).json({ error: 'Google Drive enabled must be a boolean.' });
+    }
+    if (!isValidDriveFolderId(body.mediaRootFolderId) || !isValidDriveFolderId(body.backupRootFolderId)) {
+      return res.status(400).json({ error: 'Google Drive folder IDs are invalid.' });
+    }
+    for (const field of ['clientId', 'clientSecret', 'refreshToken'] as const) {
+      if (body[field] !== undefined && typeof body[field] !== 'string') {
+        return res.status(400).json({ error: `${field} must be a string.` });
+      }
+      if (typeof body[field] === 'string' && body[field].length > 4096) {
+        return res.status(400).json({ error: `${field} is too long.` });
+      }
+    }
+    const nextSettings = await updateGoogleDriveSettings({
+      enabled: body.enabled === undefined ? current.enabled : body.enabled === true,
+      clientId: typeof body.clientId === 'string' ? body.clientId : undefined,
+      clientSecret: isMaskedSecret(String(body.clientSecret || '')) ? undefined : typeof body.clientSecret === 'string' ? body.clientSecret : undefined,
+      refreshToken: isMaskedSecret(String(body.refreshToken || '')) ? undefined : typeof body.refreshToken === 'string' ? body.refreshToken : undefined,
+      mediaRootFolderId: typeof body.mediaRootFolderId === 'string' ? body.mediaRootFolderId : undefined,
+      backupRootFolderId: typeof body.backupRootFolderId === 'string' ? body.backupRootFolderId : undefined,
+      updatedByUserId: req.user?.id || null,
+    });
+    res.json({ message: 'Google Drive settings updated successfully.', googleDrive: serializeGoogleDriveSettingsForAdmin(nextSettings.googleDrive) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const testGoogleDriveConnection = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await testDriveConnection();
+    res.json({ message: 'Google Drive connection successful.', ...result });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const normalizePhoneNumber = (value?: string | null) => {
   const trimmedValue = value?.trim();
@@ -627,6 +704,7 @@ export const getPlatformSettings = async (req: Request, res: Response, next: Nex
         updatedAt: settings.googleAuth.updatedAt,
         updatedByUserId: settings.googleAuth.updatedByUserId,
       },
+      googleDrive: serializeGoogleDriveSettingsForAdmin(settings.googleDrive),
       partnerRegistrationEnabled: settings.partnerRegistrationEnabled,
       mobileOtp: {
         enabled: settings.mobileOtp.enabled,
@@ -1415,6 +1493,8 @@ export const updateManagedUserAccount = async (req: Request, res: Response, next
       return res.status(400).json({ error: 'Another user with the same email or mobile already exists.' });
     }
 
+    const credentialsChanged = normalizedEmail !== targetUser.email || normalizedMobile !== targetUser.mobile;
+
     await prisma.user.update({
       where: { id },
       data: {
@@ -1423,6 +1503,7 @@ export const updateManagedUserAccount = async (req: Request, res: Response, next
         mobile: normalizedMobile,
         city: normalizedCity,
         state: normalizedState,
+        ...(credentialsChanged ? { authVersion: { increment: 1 } } : {}),
       },
     });
 
@@ -1537,6 +1618,7 @@ export const resetManagedUserPassword = async (req: Request, res: Response, next
       where: { id },
       data: {
         password: hashedPassword,
+        authVersion: { increment: 1 },
       },
     });
 
@@ -2307,12 +2389,15 @@ export const updatePartnerUser = async (req: Request, res: Response, next: NextF
       return res.status(400).json({ error: 'Another user with the same email or mobile already exists.' });
     }
 
+    const credentialsChanged = normalizedEmail !== targetUser.email || normalizedMobile !== targetUser.mobile;
+
     await prisma.user.update({
       where: { id },
       data: {
         name: normalizedName,
         email: normalizedEmail,
         mobile: normalizedMobile || null,
+        ...(credentialsChanged ? { authVersion: { increment: 1 } } : {}),
       },
     });
 

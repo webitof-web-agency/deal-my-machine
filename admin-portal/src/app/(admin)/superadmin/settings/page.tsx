@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AxiosError } from 'axios';
-import { Building2, CreditCard, FileText, ImagePlus, KeyRound, Phone, Save, ShieldCheck } from 'lucide-react';
+import { Building2, CreditCard, Eye, EyeOff, FileText, HardDrive, ImagePlus, KeyRound, Phone, Save, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '@/lib/api';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import HomepageContentSettings from '@/components/admin/HomepageContentSettings';
 import { APP_NAME } from '@/lib/appConfig';
+
+const MASKED_DRIVE_SECRET = '********';
 
 const INDIAN_STATES = [
   'Andhra Pradesh',
@@ -86,6 +88,14 @@ type SettingsResponse = {
     clientId: string;
     updatedAt?: string | null;
     updatedByUserId?: string | null;
+  };
+  googleDrive?: {
+    enabled: boolean;
+    clientId: string | null;
+    clientSecret: string | null;
+    refreshToken: string | null;
+    mediaRootFolderId: string | null;
+    backupRootFolderId: string | null;
   };
   partnerRegistrationEnabled?: boolean;
   mobileOtp: {
@@ -218,7 +228,7 @@ const detectRazorpayModeFromKeyId = (keyId?: string | null): 'TEST' | 'LIVE' | n
 };
 
 export default function SuperAdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'security' | 'leadRouting' | 'homepage' | 'payments' | 'invoice'>('security');
+  const [activeTab, setActiveTab] = useState<'security' | 'googleDrive' | 'leadRouting' | 'homepage' | 'payments' | 'invoice'>('security');
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
   const [partnerRegistrationEnabled, setPartnerRegistrationEnabled] = useState(true);
@@ -229,6 +239,12 @@ export default function SuperAdminSettingsPage() {
   });
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [googleSaving, setGoogleSaving] = useState(false);
+  const [driveForm, setDriveForm] = useState({ enabled: false, clientId: '', clientSecret: '', refreshToken: '', mediaRootFolderId: '', backupRootFolderId: '' });
+  const [driveSaving, setDriveSaving] = useState(false);
+  const [driveTesting, setDriveTesting] = useState(false);
+  const [showDriveClientId, setShowDriveClientId] = useState(false);
+  const [showDriveClientSecret, setShowDriveClientSecret] = useState(false);
+  const [showDriveRefreshToken, setShowDriveRefreshToken] = useState(false);
   const [googleToggleSaving, setGoogleToggleSaving] = useState(false);
   const [partnerRegistrationToggleSaving, setPartnerRegistrationToggleSaving] = useState(false);
   const [leadRoutingSaving, setLeadRoutingSaving] = useState(false);
@@ -331,6 +347,15 @@ export default function SuperAdminSettingsPage() {
 
       setGoogleClientId(response.data.googleAuth.clientId || '');
       setGoogleAuthEnabled(response.data.googleAuth.enabled === true);
+      if (response.data.googleDrive) setDriveForm((current) => ({
+        ...current,
+        enabled: response.data.googleDrive!.enabled,
+        clientId: response.data.googleDrive!.clientId || '',
+        clientSecret: response.data.googleDrive!.clientSecret || '',
+        refreshToken: response.data.googleDrive!.refreshToken || '',
+        mediaRootFolderId: response.data.googleDrive!.mediaRootFolderId || '',
+        backupRootFolderId: response.data.googleDrive!.backupRootFolderId || '',
+      }));
       setPartnerRegistrationEnabled(response.data.partnerRegistrationEnabled !== false);
       setLeadRoutingForm({
         useSellerContact: response.data.publicLeadRouting.useSellerContact,
@@ -393,6 +418,45 @@ export default function SuperAdminSettingsPage() {
       setLoadingError(getApiErrorMessage(error, 'Unable to load platform settings.'));
     }
   }, []);
+
+  const handleDriveSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setDriveSaving(true);
+    try {
+      const response = await api.put<{ googleDrive?: { clientSecret?: string; refreshToken?: string } }>('/superadmin/google-drive', driveForm);
+      toast.success('Google Drive settings saved.');
+      setDriveForm((current) => ({
+        ...current,
+        clientSecret: response.data.googleDrive?.clientSecret || current.clientSecret,
+        refreshToken: response.data.googleDrive?.refreshToken || current.refreshToken,
+      }));
+    } catch (error) {
+      toast.error((error as AxiosError<{ error?: string }>)?.response?.data?.error || 'Unable to save Google Drive settings.');
+    } finally { setDriveSaving(false); }
+  };
+
+  const handleDriveTest = async () => {
+    setDriveTesting(true);
+    try {
+      const response = await api.post<{ folderName?: string }>('/superadmin/google-drive/test-connection');
+      toast.success(`Google Drive connection is working${response.data.folderName ? ` (${response.data.folderName})` : ''}.`);
+    } catch (error) {
+      toast.error((error as AxiosError<{ error?: string }>)?.response?.data?.error || 'Google Drive connection test failed.');
+    } finally {
+      setDriveTesting(false);
+    }
+  };
+
+  const revealDriveSecrets = async () => {
+    try {
+      const response = await api.get<{ clientSecret: string; refreshToken: string }>('/superadmin/google-drive/reveal-secrets');
+      setDriveForm((current) => ({ ...current, clientSecret: response.data.clientSecret, refreshToken: response.data.refreshToken }));
+      setShowDriveClientSecret(true);
+      setShowDriveRefreshToken(true);
+    } catch (error) {
+      toast.error((error as AxiosError<{ error?: string }>)?.response?.data?.error || 'Unable to reveal Drive secrets.');
+    }
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -777,6 +841,18 @@ export default function SuperAdminSettingsPage() {
             </button>
             <button
               type="button"
+              onClick={() => setActiveTab('googleDrive')}
+              className={`flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                activeTab === 'googleDrive'
+                  ? 'border-yellow-400 bg-yellow-50 text-yellow-800'
+                  : 'border-transparent text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <HardDrive className="h-4 w-4" />
+              Google Drive
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab('leadRouting')}
               className={`flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-semibold transition-colors ${
                 activeTab === 'leadRouting'
@@ -1080,6 +1156,179 @@ export default function SuperAdminSettingsPage() {
                     </button>
                   </div>
                 </form>
+              </section>
+            </>
+          ) : null}
+
+          {activeTab === 'googleDrive' ? (
+            <>
+              <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div className="relative overflow-hidden bg-gray-900 px-6 py-8 sm:px-8">
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-[#FFC107]/20" />
+                  <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-yellow-200">Media Storage</p>
+                      <h2 className="mt-2 text-3xl font-bold tracking-tight text-white">Google Drive</h2>
+                      <p className="mt-2 max-w-2xl text-sm text-gray-300">Configure where new listing photos, videos, and private documents are stored.</p>
+                    </div>
+                    <HardDrive className="hidden h-10 w-10 text-yellow-300 sm:block" />
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">Drive connection settings</h3>
+                  <p className="mt-1 text-sm text-gray-600">Existing seeded/external media remains unchanged. New listing media uses Drive when enabled.</p>
+                </div>
+                <form onSubmit={handleDriveSubmit} className="space-y-6">
+                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Google Drive uploads</p>
+                      <p className="mt-0.5 text-xs text-gray-600">{driveForm.enabled ? 'ON — new eligible uploads go to Drive.' : 'OFF — existing media remains available; new uploads use local storage.'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={driveForm.enabled}
+                      aria-label="Toggle Google Drive uploads"
+                      onClick={() => setDriveForm((current) => ({ ...current, enabled: !current.enabled }))}
+                      className={`relative inline-flex h-8 w-[3.75rem] shrink-0 items-center rounded-full p-1 transition-colors focus:outline-none focus:ring-2 focus:ring-[#FFC107] focus:ring-offset-2 ${driveForm.enabled ? 'bg-emerald-600' : 'bg-gray-400'}`}
+                    >
+                      <span className={`h-6 w-6 rounded-full bg-white shadow-md transition-transform ${driveForm.enabled ? 'translate-x-7' : 'translate-x-0'}`} />
+                      <span className="sr-only">{driveForm.enabled ? 'Turn Google Drive uploads off' : 'Turn Google Drive uploads on'}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1.5 block text-sm font-bold text-gray-900">OAuth Client ID</span>
+                      <div className="relative">
+                        <input
+                          type={showDriveClientId ? 'text' : 'password'}
+                          value={driveForm.clientId}
+                          onChange={(event) => setDriveForm((current) => ({ ...current, clientId: event.target.value }))}
+                          placeholder="Paste OAuth client ID"
+                          autoComplete="off"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#FFC107] focus:ring-2 focus:ring-[#FFC107]/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDriveClientId((visible) => !visible)}
+                          aria-label={showDriveClientId ? 'Hide OAuth client ID' : 'Show OAuth client ID'}
+                          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-600 transition hover:text-gray-950"
+                        >
+                          {showDriveClientId ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-sm font-bold text-gray-900">OAuth Client Secret</span>
+                      <div className="relative">
+                        <input
+                          type={showDriveClientSecret ? 'text' : 'password'}
+                          value={driveForm.clientSecret}
+                          onFocus={() => setDriveForm((current) => current.clientSecret === MASKED_DRIVE_SECRET ? { ...current, clientSecret: '' } : current)}
+                          onChange={(event) => setDriveForm((current) => ({ ...current, clientSecret: event.target.value }))}
+                          placeholder="Leave blank to keep saved secret"
+                          autoComplete="new-password"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#FFC107] focus:ring-2 focus:ring-[#FFC107]/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (driveForm.clientSecret === MASKED_DRIVE_SECRET) {
+                              void revealDriveSecrets();
+                            } else {
+                              setShowDriveClientSecret((visible) => !visible);
+                            }
+                          }}
+                          aria-label={showDriveClientSecret ? 'Hide OAuth client secret' : 'Show OAuth client secret'}
+                          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-600 transition hover:text-gray-950"
+                        >
+                          {showDriveClientSecret ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-sm font-bold text-gray-900">Refresh Token</span>
+                      <div className="relative">
+                        <input
+                          type={showDriveRefreshToken ? 'text' : 'password'}
+                          value={driveForm.refreshToken}
+                          onFocus={() => setDriveForm((current) => current.refreshToken === MASKED_DRIVE_SECRET ? { ...current, refreshToken: '' } : current)}
+                          onChange={(event) => setDriveForm((current) => ({ ...current, refreshToken: event.target.value }))}
+                          placeholder="Leave blank to keep saved token"
+                          autoComplete="new-password"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#FFC107] focus:ring-2 focus:ring-[#FFC107]/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (driveForm.refreshToken === MASKED_DRIVE_SECRET) {
+                              void revealDriveSecrets();
+                            } else {
+                              setShowDriveRefreshToken((visible) => !visible);
+                            }
+                          }}
+                          aria-label={showDriveRefreshToken ? 'Hide refresh token' : 'Show refresh token'}
+                          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-600 transition hover:text-gray-950"
+                        >
+                          {showDriveRefreshToken ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-sm font-bold text-gray-900">Public Media Root Folder ID</span>
+                      <input
+                        type="text"
+                        value={driveForm.mediaRootFolderId}
+                        onChange={(event) => setDriveForm((current) => ({ ...current, mediaRootFolderId: event.target.value }))}
+                        placeholder="Google Drive folder ID"
+                        autoComplete="off"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#FFC107] focus:ring-2 focus:ring-[#FFC107]/20"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-sm font-bold text-gray-900">Private / Backup Root Folder ID</span>
+                      <input
+                        type="text"
+                        value={driveForm.backupRootFolderId}
+                        onChange={(event) => setDriveForm((current) => ({ ...current, backupRootFolderId: event.target.value }))}
+                        placeholder="Optional separate private folder ID"
+                        autoComplete="off"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#FFC107] focus:ring-2 focus:ring-[#FFC107]/20"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col justify-end gap-3 border-t border-gray-100 pt-5 sm:flex-row">
+                    <button type="button" onClick={() => void handleDriveTest()} disabled={driveTesting || driveSaving} className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-900 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-60">
+                      {driveTesting ? 'Testing connection...' : 'Test connection'}
+                    </button>
+                    <button type="submit" disabled={driveSaving || driveTesting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#FFC107] px-5 py-2.5 text-sm font-bold text-black transition hover:bg-[#E5AD06] disabled:cursor-not-allowed disabled:opacity-60">
+                      <Save className="h-4 w-4" />
+                      {driveSaving ? 'Saving...' : 'Save Drive Settings'}
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 shadow-sm">
+                <div className="mb-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Storage coverage</p>
+                  <h3 className="mt-1 text-xl font-bold text-gray-900">What uses Google Drive?</h3>
+                  <p className="mt-1 text-sm text-gray-700">Drive is selected only when this toggle is ON. Existing seeded/external URLs are never migrated or overwritten.</p>
+                </div>
+                <div className="grid gap-3 text-sm md:grid-cols-2">
+                  <div className="rounded-lg border border-blue-100 bg-white p-4"><p className="font-bold text-gray-900">Uses Drive</p><p className="mt-1 text-gray-700">Listing photos and videos, secure KYC/private documents, public documents, and payment receipts.</p></div>
+                  <div className="rounded-lg border border-gray-200 bg-white p-4"><p className="font-bold text-gray-900">Still local storage</p><p className="mt-1 text-gray-700">Branding assets such as hero images, logos, finance-support images, and recruitment resumes.</p></div>
+                </div>
+                <p className="mt-4 text-xs leading-relaxed text-blue-900">Private documents do not receive public Drive permission. Public listing media is fetched through the application’s owned Drive media route with video range support.</p>
               </section>
             </>
           ) : null}

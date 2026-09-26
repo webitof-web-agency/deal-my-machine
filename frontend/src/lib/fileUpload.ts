@@ -1,6 +1,6 @@
 'use client';
 
-import api from '@/lib/api';
+import api, { API_ORIGIN } from '@/lib/api';
 
 export const MAX_IMAGE_INPUT_SIZE = 5 * 1024 * 1024;
 export const MAX_PDF_INPUT_SIZE = 3 * 1024 * 1024;
@@ -72,6 +72,17 @@ export const getAbsoluteFileUrl = (fileUrl?: string | null) => {
     return '';
   }
 
+  if (/^\/api\/documents\/upload\/public\/listing-media\/drive\/[A-Za-z0-9_-]{10,}$/i.test(trimmed)) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) throw new Error('NEXT_PUBLIC_API_URL is not set');
+    const origin = apiUrl.replace(/\/api\/?$/, '');
+    return `${origin}${trimmed}`;
+  }
+
+  if (/^[A-Za-z0-9_-]{10,}$/.test(trimmed)) {
+    return `https://drive.google.com/uc?id=${encodeURIComponent(trimmed)}`;
+  }
+
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
@@ -106,6 +117,16 @@ export const getAbsoluteFileUrl = (fileUrl?: string | null) => {
   const origin = apiUrl.replace(/\/api\/?$/, '');
   const normalizedPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return `${origin}${normalizedPath}`;
+};
+
+export const getReceiptPreviewUrl = (fileUrl?: string | null) => {
+  const trimmed = fileUrl?.trim() || '';
+  const match = trimmed.match(/^https:\/\/drive\.google\.com\/uc\?id=([A-Za-z0-9_-]{10,})$/i);
+  if (match?.[1]) {
+    return `${API_ORIGIN}/api/documents/receipt/drive/${encodeURIComponent(match[1])}`;
+  }
+
+  return getAbsoluteFileUrl(fileUrl);
 };
 
 const blobToFile = (blob: Blob, fileName: string) =>

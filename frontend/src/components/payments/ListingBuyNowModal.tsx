@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
 import {
@@ -24,10 +24,10 @@ import {
 import { toast } from 'react-toastify';
 import api from '@/lib/api';
 import { SITE_NAME } from '@/lib/site';
-import { getAbsoluteMediaUrl } from '@/lib/api';
-import { uploadListingPaymentReceiptToServer } from '@/lib/fileUpload';
+import { uploadListingPaymentReceiptToServer, getReceiptPreviewUrl } from '@/lib/fileUpload';
 import { useToastStore } from '@/store/toastStore';
 import BrandLoader from '@/components/ui/BrandLoader';
+import BillingLocationFields from '@/components/payments/BillingLocationFields';
 
 type ListingPaymentSettings = {
   rtgs: {
@@ -57,6 +57,8 @@ type PaymentSubmissionRecord = {
   amount: number;
   transactionRef: string | null;
   receiptUrl: string | null;
+  customerState?: string | null;
+  customerCity?: string | null;
   paymentNote: string | null;
   submittedAt: string;
 };
@@ -199,6 +201,8 @@ export default function ListingBuyNowModal({
     name?: string | null;
     email?: string | null;
     mobile?: string | null;
+    state?: string | null;
+    city?: string | null;
   } | null;
   onClose: () => void;
 }) {
@@ -219,6 +223,23 @@ export default function ListingBuyNowModal({
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState<string | null>(null);
+  const [billingState, setBillingState] = useState(buyer?.state || '');
+  const [billingCity, setBillingCity] = useState(buyer?.city || '');
+
+  const handleBillingLocationChange = useCallback(async ({ state, city }: { state: string; city: string }) => {
+    setBillingState(state);
+    setBillingCity(city);
+    if (!state || !city) return;
+    try {
+      await api.patch('/auth/profile/location', { state, city });
+    } catch (locationError) {
+      setError(getApiErrorMessage(locationError, 'Unable to save billing location.'));
+    }
+  }, []);
+
+  const handleBillingLocationError = useCallback((locationError: string | null) => {
+    if (locationError) setError(locationError);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -368,6 +389,8 @@ export default function ListingBuyNowModal({
           transactionRef,
           receiptUrl,
           paymentNote,
+          customerState: billingState,
+          customerCity: billingCity,
         },
       );
       const successMsg = response.data.message || 'Payment proof submitted successfully for verification.';
@@ -422,7 +445,10 @@ export default function ListingBuyNowModal({
         return;
       }
 
-      const orderResponse = await api.post<RazorpayOrderResponse>(`/listings/${listingId}/razorpay-order`);
+      const orderResponse = await api.post<RazorpayOrderResponse>(`/listings/${listingId}/razorpay-order`, {
+        customerState: billingState,
+        customerCity: billingCity,
+      });
       const order = orderResponse.data.order;
 
       const checkout = new window.Razorpay({
@@ -455,6 +481,8 @@ export default function ListingBuyNowModal({
               razorpayOrderId: razorpayResponse.razorpay_order_id,
               razorpayPaymentId: razorpayResponse.razorpay_payment_id,
               razorpaySignature: razorpayResponse.razorpay_signature,
+              customerState: billingState,
+              customerCity: billingCity,
             })
             .then((submitResponse) => {
               const msg = submitResponse.data.message || 'Payment successful!';
@@ -493,7 +521,10 @@ export default function ListingBuyNowModal({
     setMessage(null);
 
     try {
-      const orderResponse = await api.post<PhonePeOrderResponse>(`/listings/${listingId}/phonepe-order`);
+      const orderResponse = await api.post<PhonePeOrderResponse>(`/listings/${listingId}/phonepe-order`, {
+        customerState: billingState,
+        customerCity: billingCity,
+      });
       window.location.href = orderResponse.data.order.redirectUrl;
     } catch (paymentError) {
       const errMsg = getApiErrorMessage(paymentError, 'Unable to start PhonePe payment.');
@@ -532,6 +563,15 @@ export default function ListingBuyNowModal({
             </div>
 
             <h2 className="mt-1.5 text-base font-bold text-gray-900 sm:text-lg">{title}</h2>
+
+            <div className="mt-4">
+              <BillingLocationFields
+                state={billingState}
+                city={billingCity}
+                onChange={(location) => void handleBillingLocationChange(location)}
+                onError={handleBillingLocationError}
+              />
+            </div>
 
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs font-medium text-gray-500">Amount Payable:</span>
@@ -920,7 +960,7 @@ export default function ListingBuyNowModal({
                       <button
                         type="button"
                         onClick={() => void handleRtgsSubmit()}
-                        disabled={submitting || uploading || !receiptUrl || !transactionRef.trim()}
+                        disabled={submitting || uploading || !receiptUrl || !transactionRef.trim() || !billingState || !billingCity}
                         className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFC107] py-3 text-xs font-bold text-black shadow-2xs transition-all hover:bg-[#e5ad06] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin text-black" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -957,7 +997,7 @@ export default function ListingBuyNowModal({
                     <button
                       type="button"
                       onClick={() => void handleRazorpayPayment()}
-                      disabled={submitting}
+                      disabled={submitting || !billingState || !billingCity}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#111827] py-3 text-xs font-bold text-white shadow-2xs transition-all hover:bg-black active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin text-amber-400" /> : <ShieldCheck className="h-4 w-4 text-[#FFC107]" />}
@@ -993,7 +1033,7 @@ export default function ListingBuyNowModal({
                     <button
                       type="button"
                       onClick={() => void handlePhonePePayment()}
-                      disabled={submitting}
+                      disabled={submitting || !billingState || !billingCity}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5f259f] py-3 text-xs font-bold text-white shadow-2xs transition-all hover:bg-[#4d1f82] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
@@ -1076,7 +1116,7 @@ function ReceiptPreviewModal({
   fileUrl: string;
   onClose: () => void;
 }) {
-  const absoluteUrl = getAbsoluteMediaUrl(fileUrl);
+  const absoluteUrl = getReceiptPreviewUrl(fileUrl);
   const isPdf = /\.pdf$/i.test(fileUrl) || fileUrl.includes('/pdf');
 
   return (

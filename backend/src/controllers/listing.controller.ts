@@ -9,6 +9,14 @@ import { getSellerDisplayName, isPublicMarketplaceListingVisible } from '../util
 import { PushNotificationService } from '../services/pushNotification.service';
 import { detectRazorpayModeFromKeyId, getAppSettings } from '../utils/appSettings';
 import { finalizeListingPaymentSale } from '../utils/listingPaymentFinalization';
+import { deleteDriveFile } from '../services/googleDrive.service';
+import {
+  SELF_PURCHASE_NOT_ALLOWED_CODE,
+  SELF_PURCHASE_NOT_ALLOWED_MESSAGE,
+  isSelfPurchase,
+} from '../utils/selfPurchase';
+import { isAcceptedReceiptUrl } from '../utils/receiptUrl';
+import { normalizeBillingLocation } from '../utils/billingLocation';
 
 const prismaAny = prisma as any;
 const REVIEW_PENDING_STATUSES = ['PENDING_APPROVAL', 'CHANGES_REQUESTED'] as const;
@@ -19,6 +27,11 @@ const isReviewPendingStatus = (status?: string | null) =>
 
 const isPublicListingStatus = (status?: string | null) =>
   PUBLIC_LISTING_STATUSES.includes(String(status || '').toUpperCase() as (typeof PUBLIC_LISTING_STATUSES)[number]);
+
+const extractOwnedListingDriveFileId = (value: string) => {
+  const match = value.match(/^\/api\/documents\/upload\/public\/listing-media\/drive\/([A-Za-z0-9_-]{10,})$/);
+  return match?.[1] || null;
+};
 
 const sanitizeListingPaymentSettings = (settings: Awaited<ReturnType<typeof getAppSettings>>['listingPayment']) => ({
   rtgs: {
@@ -1006,6 +1019,10 @@ export const updateListing = async (req: Request, res: Response, next: NextFunct
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
+    const previousDriveFileIds = (existingListing.media || [])
+      .map((item: { url?: string | null; driveFileId?: string | null }) => item.driveFileId || (item.url ? extractOwnedListingDriveFileId(item.url) : null))
+      .filter((id: string | null): id is string => Boolean(id));
+
     if (!isAdmin && !isCustomer && !partnerProfile) {
       return res.status(403).json({
         error: 'Your partner account must complete KYC and receive super admin approval before updating listings.',
@@ -1203,6 +1220,11 @@ export const updateListing = async (req: Request, res: Response, next: NextFunct
 
     const responseListing = await getOwnedListingForUser(updatedListing.id, req.user.id);
 
+    if (hasMediaField) {
+      const nextDriveFileIds = new Set((normalizedMedia as Array<{ driveFileId?: string; url: string }>).map((item) => item.driveFileId || extractOwnedListingDriveFileId(item.url)).filter((id): id is string => Boolean(id)));
+      await Promise.all(previousDriveFileIds.filter((id: string) => !nextDriveFileIds.has(id)).map((id: string) => deleteDriveFile(id).catch(() => undefined)));
+    }
+
     return res.json({
       message: isAdmin
         ? 'Listing updated successfully.'
@@ -1241,6 +1263,7 @@ export const deleteListing = async (req: Request, res: Response, next: NextFunct
                 role: true,
               },
             },
+            media: true,
           },
         })
       : await getOwnedListingForUser(listingId, req.user.id);
@@ -1270,6 +1293,11 @@ export const deleteListing = async (req: Request, res: Response, next: NextFunct
         where: { id: listingId },
       });
     });
+
+    const deletedDriveFileIds = (existingListing.media || [])
+      .map((item: { url?: string | null; driveFileId?: string | null }) => item.driveFileId || (item.url ? extractOwnedListingDriveFileId(item.url) : null))
+      .filter((id: string | null): id is string => Boolean(id));
+    await Promise.all(deletedDriveFileIds.map((id: string) => deleteDriveFile(id).catch(() => undefined)));
 
     return res.json({ message: 'Listing deleted successfully.' });
   } catch (error) {
@@ -1545,6 +1573,12 @@ const mapPartnerListingPaymentSubmission = (payment: any) => ({
     : null,
 });
 
+const getBillingLocationFromRequest = (req: Request) =>
+  normalizeBillingLocation({
+    state: req.body?.customerState,
+    city: req.body?.customerCity,
+  });
+
 export const getPartnerListingPaymentSubmissions = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user?.id) {
@@ -1570,6 +1604,8 @@ export const getPartnerListingPaymentSubmissions = async (req: Request, res: Res
         amount: true,
         transactionRef: true,
         receiptUrl: true,
+        customerState: true,
+        customerCity: true,
         paymentNote: true,
         razorpayPaymentId: true,
         submittedAt: true,
@@ -1628,6 +1664,8 @@ export const getCustomerListingPaymentSubmissions = async (req: Request, res: Re
         amount: true,
         transactionRef: true,
         receiptUrl: true,
+        customerState: true,
+        customerCity: true,
         paymentNote: true,
         submittedAt: true,
         reviewedAt: true,
@@ -1662,6 +1700,13 @@ export const createListingRazorpayOrder = async (req: Request, res: Response, ne
       return res.status(403).json({ error: 'Buy Now payments are available for customers only.' });
     }
 
+    const billingLocation = getBillingLocationFromRequest(req);
+    if (!billingLocation.ok) {
+      return res.status(400).json({ error: billingLocation.error });
+    }
+
+    await prismaAny.user.update({ where: { id: req.user.id }, data: billingLocation.value });
+
     const listingId = String(req.params.id || '').trim();
     const listing = await getPaymentReadyListing(listingId);
     const listingError = assertListingCanAcceptPayment(listing);
@@ -1670,8 +1715,11 @@ export const createListingRazorpayOrder = async (req: Request, res: Response, ne
       return res.status(listingError === 'Listing not found.' ? 404 : 400).json({ error: listingError });
     }
 
-    if (listing!.partnerId === req.user.id) {
-      return res.status(400).json({ error: 'You cannot buy your own listing.' });
+    if (isSelfPurchase(listing!.partnerId, req.user.id)) {
+      return res.status(409).json({
+        error: SELF_PURCHASE_NOT_ALLOWED_MESSAGE,
+        code: SELF_PURCHASE_NOT_ALLOWED_CODE,
+      });
     }
 
     const blockingPayment = await findBlockingListingPayment(listing!.id);
@@ -1737,6 +1785,13 @@ export const createListingPhonePeOrder = async (req: Request, res: Response, nex
       return res.status(403).json({ error: 'Buy Now payments are available for customers only.' });
     }
 
+    const billingLocation = getBillingLocationFromRequest(req);
+    if (!billingLocation.ok) {
+      return res.status(400).json({ error: billingLocation.error });
+    }
+
+    await prismaAny.user.update({ where: { id: req.user.id }, data: billingLocation.value });
+
     const listingId = String(req.params.id || '').trim();
     const listing = await getPaymentReadyListing(listingId);
     const listingError = assertListingCanAcceptPayment(listing);
@@ -1745,8 +1800,11 @@ export const createListingPhonePeOrder = async (req: Request, res: Response, nex
       return res.status(listingError === 'Listing not found.' ? 404 : 400).json({ error: listingError });
     }
 
-    if (listing!.partnerId === req.user.id) {
-      return res.status(400).json({ error: 'You cannot buy your own listing.' });
+    if (isSelfPurchase(listing!.partnerId, req.user.id)) {
+      return res.status(409).json({
+        error: SELF_PURCHASE_NOT_ALLOWED_MESSAGE,
+        code: SELF_PURCHASE_NOT_ALLOWED_CODE,
+      });
     }
 
     const blockingPayment = await findBlockingListingPayment(listing!.id);
@@ -1825,6 +1883,8 @@ export const createListingPhonePeOrder = async (req: Request, res: Response, nex
         transactionRef: merchantOrderId,
         phonepeMerchantOrderId: merchantOrderId,
         phonepeOrderId: orderPayload.orderId || null,
+        customerState: billingLocation.value.state,
+        customerCity: billingLocation.value.city,
         settingsSnapshot: sanitizeListingPaymentSettings(settings),
       },
     });
@@ -1974,6 +2034,13 @@ export const submitListingPayment = async (req: Request, res: Response, next: Ne
       return res.status(403).json({ error: 'Buy Now payments are available for customers only.' });
     }
 
+    const billingLocation = getBillingLocationFromRequest(req);
+    if (!billingLocation.ok) {
+      return res.status(400).json({ error: billingLocation.error });
+    }
+
+    await prismaAny.user.update({ where: { id: req.user.id }, data: billingLocation.value });
+
     const listingId = String(req.params.id || '').trim();
     const method = String(req.body?.method || '').trim().toUpperCase();
     const transactionRef = String(req.body?.transactionRef || '').trim();
@@ -1994,8 +2061,11 @@ export const submitListingPayment = async (req: Request, res: Response, next: Ne
       return res.status(listingError === 'Listing not found.' ? 404 : 400).json({ error: listingError });
     }
 
-    if (listing!.partnerId === req.user.id) {
-      return res.status(400).json({ error: 'You cannot buy your own listing.' });
+    if (isSelfPurchase(listing!.partnerId, req.user.id)) {
+      return res.status(409).json({
+        error: SELF_PURCHASE_NOT_ALLOWED_MESSAGE,
+        code: SELF_PURCHASE_NOT_ALLOWED_CODE,
+      });
     }
 
     const existingPending = await prismaAny.listingPaymentSubmission.findFirst({
@@ -2035,7 +2105,7 @@ export const submitListingPayment = async (req: Request, res: Response, next: Ne
       return res.status(400).json({ error: 'Razorpay payment is not enabled.' });
     }
 
-    if (method === 'RTGS' && (!transactionRef || !receiptUrl.startsWith('/uploads/public/'))) {
+    if (method === 'RTGS' && (!transactionRef || !isAcceptedReceiptUrl(receiptUrl))) {
       return res.status(400).json({ error: 'UTR/reference number and receipt upload are required.' });
     }
 
@@ -2065,6 +2135,8 @@ export const submitListingPayment = async (req: Request, res: Response, next: Ne
         transactionRef: transactionRef || razorpayPaymentId || null,
         paymentNote: paymentNote || null,
         receiptUrl: method === 'RTGS' ? receiptUrl : null,
+        customerState: billingLocation.value.state,
+        customerCity: billingLocation.value.city,
         razorpayOrderId: razorpayOrderId || null,
         razorpayPaymentId: razorpayPaymentId || null,
         razorpaySignature: method === 'RAZORPAY' ? razorpaySignature : null,
@@ -2077,6 +2149,8 @@ export const submitListingPayment = async (req: Request, res: Response, next: Ne
         amount: true,
         transactionRef: true,
         receiptUrl: true,
+        customerState: true,
+        customerCity: true,
         submittedAt: true,
       },
     });

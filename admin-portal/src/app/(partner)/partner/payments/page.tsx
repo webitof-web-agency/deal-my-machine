@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { CheckCircle2, CreditCard, ExternalLink, ReceiptText, XCircle } from 'lucide-react';
-import api, { API_ORIGIN } from '@/lib/api';
+import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
+import { getReceiptPreviewUrl } from '@/lib/fileUpload';
 
 type ListingPaymentRecord = {
   id: string;
@@ -47,18 +48,6 @@ const formatDateTime = (value?: string | null) => {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
-};
-
-const getAbsoluteFileUrl = (url?: string | null) => {
-  if (!url) {
-    return null;
-  }
-
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-
-  return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
 };
 
 const getStatusStyles = (status: ListingPaymentRecord['status']) => {
@@ -159,7 +148,7 @@ export default function PartnerPaymentsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {payments.map((payment) => {
-                    const receiptUrl = getAbsoluteFileUrl(payment.receiptUrl);
+                    const receiptUrl = getReceiptPreviewUrl(payment.receiptUrl);
                     const statusApproved = payment.status === 'APPROVED' || payment.status === 'PAID';
                     const statusRejected = payment.status === 'REJECTED' || payment.status === 'FAILED';
 

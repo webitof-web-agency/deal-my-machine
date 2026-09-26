@@ -5,7 +5,8 @@ import axios from 'axios';
 import { CheckCircle2, ChevronDown, Search, XCircle } from 'lucide-react';
 import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
-import { getAbsoluteFileUrl } from '@/lib/fileUpload';
+import { getReceiptPreviewUrl } from '@/lib/fileUpload';
+import { getReceiptPreviewMode } from '@/lib/receiptPreviewMode.mjs';
 
 type PrimePaymentRecord = {
   id: string;
@@ -67,6 +68,7 @@ export default function CustomerPrimePaymentsPage() {
   const [paymentActionId, setPaymentActionId] = useState<string | null>(null);
   const [openFilterDropdown, setOpenFilterDropdown] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
+  const [selectedReceiptMode, setSelectedReceiptMode] = useState<'image' | 'document'>('image');
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -242,7 +244,10 @@ export default function CustomerPrimePaymentsPage() {
                       {payment.receiptUrl ? (
                         <button
                           type="button"
-                          onClick={() => setSelectedReceipt(getAbsoluteFileUrl(payment.receiptUrl))}
+                          onClick={() => {
+                            setSelectedReceipt(getReceiptPreviewUrl(payment.receiptUrl));
+                            setSelectedReceiptMode(getReceiptPreviewMode(payment.receiptUrl || ''));
+                          }}
                           className="inline-flex rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-[#9A7600] transition hover:bg-yellow-50 cursor-pointer"
                         >
                           View Receipt
@@ -328,13 +333,22 @@ export default function CustomerPrimePaymentsPage() {
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-50/50 min-h-[300px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src={selectedReceipt} 
-                alt="Payment Receipt" 
-                className="max-h-full max-w-full rounded-lg object-contain shadow-sm border border-gray-200"
-              />
+            <div className="flex min-h-[300px] flex-1 items-center justify-center overflow-auto bg-gray-50/50 p-4">
+              {selectedReceiptMode === 'document' ? (
+                <iframe
+                  src={selectedReceipt}
+                  title="Payment Receipt"
+                  className="h-[70vh] w-full rounded-lg border border-gray-200 bg-white shadow-sm"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selectedReceipt}
+                  alt="Payment Receipt"
+                  onError={() => setSelectedReceiptMode('document')}
+                  className="max-h-[70vh] max-w-full rounded-lg border border-gray-200 object-contain shadow-sm"
+                />
+              )}
             </div>
           </div>
         </div>

@@ -24,6 +24,7 @@ import {
 } from '@/lib/portalRoutes';
 import { hasAnyPermission } from '@/lib/permissionUtils';
 import PushNotificationManager from '@/components/shared/PushNotificationManager';
+import IdleSessionManager from '@/components/shared/IdleSessionManager';
 
 const navItems = [
   { href: '/superadmin/dashboard', labelKey: 'admin.dashboard', icon: LayoutDashboard },
@@ -827,6 +828,7 @@ export default function AdminLayout({
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">{children}</div>
       </main>
       <PushNotificationManager />
+      <IdleSessionManager />
     </div>
   );
 }

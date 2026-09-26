@@ -3,7 +3,8 @@
 import React from 'react';
 import { useSiteLogo } from '@/hooks/useSiteLogo';
 import { SITE_NAME } from '@/lib/site';
-import { STATIC_FRONTEND_LOGO, STATIC_LOADING_LOGO } from '@/lib/staticBranding';
+import { STATIC_LOADING_LOGO } from '@/lib/staticBranding';
+import { getLoadingLogoCandidates } from '@/lib/loadingLogoCandidates.mjs';
 
 export type BrandLoaderSize    = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type BrandLoaderVariant = 'inline' | 'section' | 'overlay' | 'fullscreen';
@@ -61,9 +62,7 @@ function ArcRing({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
 }
 
 function LoaderLogo({ ring, logoUrl, darkLogoUrl, initialLogoUrl }: { ring: number; logoUrl: string | null; darkLogoUrl: string | null; initialLogoUrl?: string | null }) {
-  const candidates = [initialLogoUrl, darkLogoUrl, logoUrl]
-    .filter((value): value is string => typeof value === 'string' && value !== STATIC_FRONTEND_LOGO)
-    .concat(STATIC_LOADING_LOGO);
+  const candidates = getLoadingLogoCandidates({ initialLogoUrl, darkLogoUrl, logoUrl, staticLogoUrl: STATIC_LOADING_LOGO });
   const [failedLogoUrls, setFailedLogoUrls] = React.useState<string[]>([]);
   const activeLogoUrl = candidates.find((candidate) => !failedLogoUrls.includes(candidate)) || null;
 

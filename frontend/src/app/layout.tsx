@@ -7,6 +7,7 @@ import AuthModal from "@/components/shared/AuthModal";
 import ToastViewport from "@/components/shared/ToastViewport";
 import LocaleSync from "@/components/shared/LocaleSync";
 import PushNotificationManager from "@/components/shared/PushNotificationManager";
+import IdleSessionManager from "@/components/shared/IdleSessionManager";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { LOCALE_COOKIE_NAME, normalizeLocale } from "@/lib/i18n/config";
@@ -139,6 +140,7 @@ export default async function RootLayout({
         {(branding.darkLogoUrl || branding.logoUrl) && (
           <link rel="preload" as="image" href={branding.darkLogoUrl || branding.logoUrl || undefined} />
         )}
+        <link rel="preload" as="image" href="/branding/loadinglogo.png" fetchPriority="high" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
@@ -160,6 +162,7 @@ export default async function RootLayout({
         <AuthModal />
         <ToastViewport />
         <PushNotificationManager />
+        <IdleSessionManager />
         <ToastContainer position="top-center" style={{ zIndex: 999999 }} />
       </body>
     </html>

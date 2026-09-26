@@ -351,6 +351,7 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
     ? `${baseWhatsappUrl}?text=${encodeURIComponent(whatsappMessage)}`
     : null;
   const dealerProfileHref = listing.partner?.id ? `/dealers/${listing.partner.id}` : null;
+  const isOwnListing = Boolean(user?.id && listing.partner?.ownerUserId === user.id);
 
   const toggleSection = (section: string) => {
     setExpandedSections((current) =>
@@ -671,7 +672,11 @@ export default function MachineDetailClient({ listing }: MachineDetailClientProp
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 mb-6">
-                    {listing.buyNowPaymentAvailable ? (
+                    {isOwnListing ? (
+                      <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold text-amber-900">
+                        This is your own listing. You cannot buy your own listing.
+                      </div>
+                    ) : listing.buyNowPaymentAvailable ? (
                       <button
                         type="button"
                         onClick={handleBuyNowClick}

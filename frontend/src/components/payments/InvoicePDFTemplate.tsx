@@ -1,4 +1,5 @@
 import React from 'react';
+/* eslint-disable jsx-a11y/alt-text */
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import { SITE_NAME } from '@/lib/site';
 
@@ -310,14 +311,41 @@ export const InvoicePDFTemplate = ({
   taxableValue,
   totalAmount,
   gstRate,
-  totalTax,
   isIntraState,
   cgstAmount,
   sgstAmount,
   igstAmount,
   invoiceNumber,
   formattedDate 
-}: any) => {
+}: {
+  invoiceSettings?: {
+    companyName?: string | null;
+    address?: string | null;
+    gstin?: string | null;
+    state?: string | null;
+    termsAndConditions?: string | null;
+  };
+  payment?: {
+    transactionRef?: string | null;
+    memberName?: string | null;
+    planName?: string | null;
+    customerEmail?: string | null;
+    customerMobile?: string | null;
+    customerState?: string | null;
+    customerCity?: string | null;
+  };
+  logoUrl?: string | null;
+  taxableValue: number;
+  totalAmount: number;
+  gstRate: number;
+  totalTax?: number;
+  isIntraState: boolean;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  invoiceNumber: string;
+  formattedDate: string;
+}) => {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -326,8 +354,6 @@ export const InvoicePDFTemplate = ({
         <View style={styles.headerRow}>
           <View style={styles.logoContainer}>
             {logoUrl ? (
-              // Use @ts-ignore for the image src if it's external to avoid type warnings
-              // @ts-ignore
               <Image src={logoUrl} style={styles.logo} />
             ) : (
               <View style={styles.fallbackLogo}>
@@ -375,6 +401,7 @@ export const InvoicePDFTemplate = ({
             )}
             <Text style={styles.addressBoxText}>
               State: <Text style={styles.addressBoxBold}>{payment?.customerState || invoiceSettings?.state || 'Maharashtra'}</Text>
+              {payment?.customerCity ? <Text style={styles.addressBoxText}>City: {payment.customerCity}</Text> : null}
             </Text>
             <Text style={styles.addressBoxText}>
               Place of Supply: {payment?.customerState || invoiceSettings?.state || 'Maharashtra'}

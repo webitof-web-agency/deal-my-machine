@@ -25,6 +25,7 @@ export type InvoicePaymentData = {
   customerEmail?: string | null;
   customerMobile?: string | null;
   customerState?: string | null;
+  customerCity?: string | null;
 };
 
 type TaxInvoiceModalProps = {
@@ -127,7 +128,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
 
   // Intra-State vs Inter-State supply test
   const supplierState = (invoiceSettings.state || 'Maharashtra').trim().toLowerCase();
-  const customerState = (payment.customerState || 'Maharashtra').trim().toLowerCase();
+  const customerState = (payment.customerState || invoiceSettings.state || 'Maharashtra').trim().toLowerCase();
   const isIntraState = !customerState || supplierState === customerState;
 
   const cgstRate = gstRate / 2;
@@ -346,6 +347,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
               )}
               <p className="text-gray-600 mt-1 text-[11px]">
                 State: <span className="font-medium text-gray-900">{payment.customerState || invoiceSettings.state || 'Maharashtra'}</span>
+                {payment.customerCity ? <span className="ml-2 font-medium text-gray-900">{payment.customerCity}</span> : null}
               </p>
               <p className="text-gray-500 mt-0.5 text-[10px]">Place of Supply: {payment.customerState || invoiceSettings.state || 'Maharashtra'}</p>
             </div>

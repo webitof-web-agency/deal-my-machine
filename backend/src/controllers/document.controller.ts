@@ -17,7 +17,7 @@ import {
   secureUploadDir,
   publicUploadDir,
 } from '../utils/documentUpload';
-import { uploadFileToDrive } from '../services/googleDrive.service';
+import { getDriveMediaStream, toDrivePublicUrl, uploadFileToDrive, uploadPrivateFileToDrive, uploadReceiptFileToDrive } from '../services/googleDrive.service';
 import { randomUUID } from 'crypto';
 import { persistPublicBrandingAsset } from '../utils/appSettings';
 
@@ -62,6 +62,8 @@ const cleanupFile = async (filePath?: string) => {
 };
 
 const saveSecureFile = async (file: Express.Multer.File) => {
+  const remote = await uploadPrivateFileToDrive(file.buffer, file.mimetype, file.originalname);
+  if (remote) return remote;
   const extension = path.extname(file.originalname).toLowerCase() || '.bin';
   const fileName = `${Date.now()}-${randomUUID()}${extension}`;
   const targetPath = path.join(secureUploadDir, fileName);
@@ -249,7 +251,7 @@ export const uploadCustomerPrimeReceipt = async (req: Request, res: Response, ne
     }
 
     await enforceStoredFileSizePolicy(file, 'document');
-    const { fileId, viewLink } = await uploadFileToDrive(file.buffer, file.mimetype, file.originalname);
+    const { fileId, viewLink } = await uploadReceiptFileToDrive(file.buffer, file.mimetype, file.originalname);
     res.status(201).json(buildUploadResponse(req, file, 'public', viewLink, fileId));
   } catch (error) {
     next(error);
@@ -273,7 +275,7 @@ export const uploadListingPaymentReceipt = async (req: Request, res: Response, n
     }
 
     await enforceStoredFileSizePolicy(file, 'document');
-    const { fileId, viewLink } = await uploadFileToDrive(file.buffer, file.mimetype, file.originalname);
+    const { fileId, viewLink } = await uploadReceiptFileToDrive(file.buffer, file.mimetype, file.originalname);
     res.status(201).json(buildUploadResponse(req, file, 'public', viewLink, fileId));
   } catch (error) {
     next(error);
@@ -290,7 +292,7 @@ export const uploadPublicListingMedia = async (req: Request, res: Response, next
 
     await enforceStoredFileSizePolicy(file, 'listing-media');
 
-    const { fileId, viewLink } = await uploadFileToDrive(file.buffer, file.mimetype, file.originalname);
+    const { fileId, viewLink } = await uploadFileToDrive(file.buffer, file.mimetype, file.originalname, { useOwnedListingProxy: true });
     res.status(201).json(buildUploadResponse(req, file, 'public', viewLink, fileId));
 
   } catch (error) {
@@ -379,6 +381,106 @@ export const uploadPublicSiteDarkLogoImage = async (req: Request, res: Response,
   }
 };
 
+export const getPublicDriveListingMedia = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fileId = String(req.params.fileId || '');
+    if (!/^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
+      return res.status(400).json({ error: 'Invalid Drive file ID.' });
+    }
+
+    // A public proxy must only expose Drive files that this application owns
+    // through a public listing-media record. This prevents the endpoint from
+    // becoming an arbitrary Google Drive file proxy.
+    const mediaRecord = await (prisma as any).media.findFirst({
+      where: {
+        OR: [
+          { url: `/api/documents/upload/public/listing-media/drive/${fileId}` },
+        ],
+      },
+      select: {
+        type: true,
+        listing: {
+          select: {
+            status: true,
+            partner: {
+              select: { role: true, status: true, partnerProfile: { select: { onboardingStatus: true, accountStatus: true, kycStatus: true } } },
+            },
+          },
+        },
+      },
+    });
+    if (!mediaRecord || !['IMAGE', 'VIDEO'].includes(String(mediaRecord.type || '').toUpperCase()) || !mediaRecord.listing) {
+      return res.status(404).json({ error: 'Media not found.' });
+    }
+
+    const media = await getDriveMediaStream(fileId, req.headers.range);
+    res.setHeader('Content-Type', media.mimeType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    if (req.headers.range) {
+      const contentLength = Math.max(media.end - media.start + 1, 0);
+      res.status(206);
+      res.setHeader('Content-Length', String(contentLength));
+      res.setHeader('Content-Range', `bytes ${media.start}-${media.end}/${media.size}`);
+    } else if (media.size > 0) {
+      res.setHeader('Content-Length', String(media.size));
+    }
+    media.stream.on('error', next);
+    media.stream.pipe(res);
+  } catch (error) {
+    if ((error as { statusCode?: number }).statusCode === 416) {
+      return res.status(416).setHeader('Content-Range', 'bytes */*').end();
+    }
+    next(error);
+  }
+};
+
+export const getReceiptDriveFile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fileId = String(req.params.fileId || '');
+    if (!/^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
+      return res.status(400).json({ error: 'Invalid Drive file ID.' });
+    }
+
+    const receiptUrl = toDrivePublicUrl(fileId);
+    const [primeReceipt, listingReceipt] = await Promise.all([
+      prismaAny.customerPrimeSubscription.findFirst({
+        where: { receiptUrl },
+        select: { id: true },
+      }),
+      prismaAny.listingPaymentSubmission.findFirst({
+        where: { receiptUrl },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!primeReceipt && !listingReceipt) {
+      return res.status(404).json({ error: 'Receipt not found.' });
+    }
+
+    const media = await getDriveMediaStream(fileId, req.headers.range);
+    res.setHeader('Content-Type', media.mimeType);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Accept-Ranges', 'bytes');
+    if (req.headers.range) {
+      res.status(206);
+      res.setHeader('Content-Length', String(Math.max(media.end - media.start + 1, 0)));
+      res.setHeader('Content-Range', `bytes ${media.start}-${media.end}/${media.size}`);
+    } else if (media.size > 0) {
+      res.setHeader('Content-Length', String(media.size));
+    }
+    media.stream.on('error', next);
+    media.stream.pipe(res);
+  } catch (error) {
+    if ((error as { statusCode?: number }).statusCode === 416) {
+      return res.status(416).setHeader('Content-Range', 'bytes */*').end();
+    }
+    next(error);
+  }
+};
+
 export const uploadPublicSiteFooterLogoImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const file = getUploadedFile(req);
@@ -450,6 +552,25 @@ export const getSecureDocument = async (req: Request, res: Response, next: NextF
 
     if (!hasAccess) {
       return res.status(403).json({ error: 'You do not have access to this document.' });
+    }
+
+    if (fileName.startsWith('drive-')) {
+      const driveFileId = fileName.slice('drive-'.length);
+      const media = await getDriveMediaStream(driveFileId, req.headers.range);
+      res.setHeader('Content-Type', media.mimeType);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (req.headers.range) {
+        res.status(206);
+        res.setHeader('Content-Length', String(Math.max(media.end - media.start + 1, 0)));
+        res.setHeader('Content-Range', `bytes ${media.start}-${media.end}/${media.size}`);
+      } else if (media.size > 0) {
+        res.setHeader('Content-Length', String(media.size));
+      }
+      media.stream.on('error', next);
+      media.stream.pipe(res);
+      return;
     }
 
     const absolutePath = path.join(secureUploadDir, fileName);

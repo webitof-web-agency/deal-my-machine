@@ -8,6 +8,7 @@ import {
   getProfile,
   updatePassword,
   updateProfile,
+  updateProfileLocation,
   submitKyc,
   checkSetup,
   getPartnerOnboarding,
@@ -33,6 +34,7 @@ router.post('/login/mobile-otp/verify', verifyLoginOtp);
 router.post('/google', googleLogin);
 router.get('/profile', requireAuth, getProfile);
 router.patch('/profile', requireAuth, updateProfile);
+router.patch('/profile/location', requireAuth, updateProfileLocation);
 router.patch('/profile/password', requireAuth, updatePassword);
 router.get('/customer-prime/access', requireAuth, getCustomerPrimeAccess);
 router.get('/customer-prime/history', requireAuth, getCustomerPrimeHistory);

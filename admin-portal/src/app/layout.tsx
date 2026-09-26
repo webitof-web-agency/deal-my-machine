@@ -68,6 +68,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {(branding.darkLogoUrl || branding.logoUrl) && (
           <link rel="preload" as="image" href={branding.darkLogoUrl || branding.logoUrl || undefined} />
         )}
+        <link rel="preload" as="image" href="/branding/loadinglogo.png" fetchPriority="high" />
         <script
           dangerouslySetInnerHTML={{
             __html: `window.__JCB_PORTAL_LOGO__=${JSON.stringify({
