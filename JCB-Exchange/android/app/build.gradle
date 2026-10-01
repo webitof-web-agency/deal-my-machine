@@ -60,6 +60,35 @@ react {
  */
 def enableProguardInReleaseBuilds = false
 
+def readBuildValue = { String environmentName, String propertyName, String defaultValue ->
+    providers.environmentVariable(environmentName)
+        .orElse(providers.gradleProperty(propertyName))
+        .orElse(defaultValue)
+        .get()
+}
+
+def releaseVersionCodeValue = readBuildValue("FINAL_VC", "VERSION_CODE", "1")
+def releaseVersionNameValue = readBuildValue("FINAL_VN", "VERSION_NAME", "1.0")
+
+try {
+    releaseVersionCodeValue = releaseVersionCodeValue.toInteger()
+    if (releaseVersionCodeValue < 1) {
+        throw new IllegalArgumentException("versionCode must be greater than 0")
+    }
+} catch (Exception exception) {
+    throw new GradleException("Invalid Android version code '${releaseVersionCodeValue}'. Set FINAL_VC or VERSION_CODE to a positive integer.", exception)
+}
+
+def releaseStoreFile = readBuildValue("MYAPP_UPLOAD_STORE_FILE", "MYAPP_UPLOAD_STORE_FILE", "")
+def releaseStorePassword = readBuildValue("MYAPP_UPLOAD_STORE_PASSWORD", "MYAPP_UPLOAD_STORE_PASSWORD", "")
+def releaseKeyAlias = readBuildValue("MYAPP_UPLOAD_KEY_ALIAS", "MYAPP_UPLOAD_KEY_ALIAS", "")
+def releaseKeyPassword = readBuildValue("MYAPP_UPLOAD_KEY_PASSWORD", "MYAPP_UPLOAD_KEY_PASSWORD", "")
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
+if (!hasReleaseSigning) {
+    throw new GradleException("Release signing is not configured. Provide MYAPP_UPLOAD_STORE_FILE, MYAPP_UPLOAD_STORE_PASSWORD, MYAPP_UPLOAD_KEY_ALIAS and MYAPP_UPLOAD_KEY_PASSWORD as Gradle properties or environment variables.")
+}
+
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
  *
@@ -83,8 +112,8 @@ android {
         applicationId "com.webitof.jcbexchangeye"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseVersionCodeValue
+        versionName releaseVersionNameValue
         manifestPlaceholders = [usesCleartextTraffic: true]
     }
     aaptOptions {
@@ -98,12 +127,10 @@ android {
             keyPassword 'android'
         }
         release {
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                storeFile file(MYAPP_UPLOAD_STORE_FILE)
-                storePassword MYAPP_UPLOAD_STORE_PASSWORD
-                keyAlias MYAPP_UPLOAD_KEY_ALIAS
-                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-            }
+            storeFile file(releaseStoreFile)
+            storePassword releaseStorePassword
+            keyAlias releaseKeyAlias
+            keyPassword releaseKeyPassword
         }
     }
     buildTypes {

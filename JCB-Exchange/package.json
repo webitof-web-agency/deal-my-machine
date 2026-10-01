@@ -5,6 +5,8 @@
   "scripts": {
     "android": "npx react-native run-android",
     "android:release": "cd android && gradlew.bat assembleRelease",
+    "android:apk:release": "cd android && gradlew.bat assembleRelease",
+    "android:aab:release": "cd android && gradlew.bat bundleRelease",
     "android:clean": "cd android && gradlew.bat clean",
     "ios": "npx react-native run-ios",
     "lint": "eslint .",

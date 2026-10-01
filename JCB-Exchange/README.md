@@ -37,16 +37,42 @@ The dev URL is resolved automatically from the Metro/packager host, so it works 
 
 If you move networks, the app should follow the new host automatically as long as Metro and the web app are started from the same machine.
 
-## Release APK
+## Android release builds
 
 ```powershell
-cd service-portal-mobile
-npm run android:release
+cd JCB-Exchange
+
+# Signed release APK for device testing/distribution
+npm run android:apk:release
+
+# Signed Android App Bundle for Google Play
+npm run android:aab:release
 ```
 
-The APK will be in:
+The outputs are generated in:
 
-`android/app/build/outputs/apk/release`
+- APK: `android/app/build/outputs/apk/release/DealMyMachine.apk`
+- AAB: `android/app/build/outputs/bundle/release/app-release.aab`
+
+The existing `android:release` command remains available and builds the release APK.
+
+### Versioning
+
+The Android version is controlled at build time without removing the existing release workflow:
+
+```powershell
+$env:FINAL_VC = "2"
+$env:FINAL_VN = "1.1.0"
+npm run android:aab:release
+```
+
+`FINAL_VC` must be a positive integer and must increase for every Play Store upload. `FINAL_VN` is the user-visible version name. `VERSION_CODE` and `VERSION_NAME` Gradle properties are supported as fallbacks.
+
+### Release signing
+
+Release signing reads `MYAPP_UPLOAD_STORE_FILE`, `MYAPP_UPLOAD_STORE_PASSWORD`, `MYAPP_UPLOAD_KEY_ALIAS`, and `MYAPP_UPLOAD_KEY_PASSWORD` from Gradle properties or environment variables. Keep these values in local/CI secrets; never print them in build logs. The same upload keystore must be retained for future Play Store updates.
+
+The Android Gradle wrapper is pinned to the React Native 0.82 / AGP 8.12-compatible Gradle version. CI should invoke `android/gradlew` (or `gradlew.bat` on Windows) instead of forcing another Gradle version.
 
 ## Firebase
 
