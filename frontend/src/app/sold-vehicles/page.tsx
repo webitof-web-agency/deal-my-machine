@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import SoldVehiclesPageClient from './SoldVehiclesPageClient';
 import { getSiteBranding } from '@/lib/siteBranding';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Sold Vehicles & Equipment',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: `Sold Vehicles & Equipment | ${SITE_NAME}`,
     description: `Explore verified heavy machinery and JCB equipment successfully sold through ${SITE_NAME} across India.`,
-    url: 'https://jcbexchange.com/sold-vehicles',
+    url: `${SITE_URL}/sold-vehicles`,
     type: 'website',
   },
   twitter: {
@@ -30,9 +30,9 @@ export default async function SoldVehiclesPage() {
     '@type': 'CollectionPage',
     name: `Sold Vehicles & Equipment | ${SITE_NAME}`,
     description: `Explore verified heavy machinery and JCB equipment successfully sold through ${SITE_NAME} across India.`,
-    url: 'https://jcbexchange.com/sold-vehicles',
+    url: `${SITE_URL}/sold-vehicles`,
     isPartOf: {
-      '@id': 'https://jcbexchange.com/#website',
+      '@id': `${SITE_URL}/#website`,
     },
     about: {
       '@type': 'Thing',

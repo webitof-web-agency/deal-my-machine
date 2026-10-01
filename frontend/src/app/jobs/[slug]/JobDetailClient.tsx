@@ -6,8 +6,6 @@ import {
   Briefcase,
   MapPin,
   Clock,
-  Building2,
-  Users,
   Calendar,
   IndianRupee,
   CheckCircle2,
@@ -18,14 +16,43 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface JobDetailClientProps {
-  job: any;
-  relatedJobs: any[];
+  job: JobDetail;
+  relatedJobs: RelatedJob[];
+}
+
+interface RelatedJob {
+  id: string;
+  slug: string;
+  title: string;
+  locationCity: string;
+  locationState: string;
+  employmentType: string;
+}
+
+interface JobDetail extends RelatedJob {
+  jobCode: string;
+  department?: { name?: string | null } | null;
+  locationAddress?: string | null;
+  workMode: string;
+  minExperience: number | null;
+  maxExperience: number | null;
+  vacancies: number;
+  deadline: string | null;
+  summary: string | null;
+  description: string;
+  responsibilities?: string[] | null;
+  requirements?: string[] | null;
+  salaryVisibility: boolean;
+  minSalary: number | null;
+  maxSalary: number | null;
+  currency: string;
+  postedAt: string | null;
 }
 
 export default function JobDetailClient({ job, relatedJobs }: JobDetailClientProps) {
   const { t } = useTranslation();
 
-  const formatSalary = (min: number | null, max: number | null, currency = 'INR') => {
+  const formatSalary = (min: number | null, max: number | null) => {
     const minVal = min ? Number(min) : null;
     const maxVal = max ? Number(max) : null;
     if (!minVal && !maxVal) return t('careers.notDisclosed', 'Not Disclosed');
@@ -117,7 +144,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
             </div>
 
             {/* Apply CTA Box in Banner */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-2xl text-center flex flex-col items-center justify-center space-y-3 w-full sm:w-auto shrink-0 shadow-lg">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-2xl text-center flex flex-col items-center justify-center space-y-3 w-full lg:w-auto shrink-0 shadow-lg">
               <div className="text-xs text-amber-300 font-extrabold uppercase tracking-wider text-center">
                 {job.vacancies === 1
                   ? t('careers.vacancyAvailable', '{count} Vacancy Available', { count: job.vacancies })
@@ -224,7 +251,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                     <span className="text-gray-400 block text-[10px] sm:text-[11px] uppercase font-bold tracking-wider mb-0.5">{t('careers.offeredCompensation', 'Offered Compensation')}</span>
                     <span className="font-extrabold text-gray-900 text-base sm:text-lg">
                       {job.salaryVisibility
-                        ? formatSalary(job.minSalary, job.maxSalary, job.currency)
+                        ? formatSalary(job.minSalary, job.maxSalary)
                         : t('careers.notDisclosed', 'Not Disclosed')}
                     </span>
                   </div>
@@ -268,7 +295,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                 </h3>
 
                 <div className="space-y-3">
-                  {relatedJobs.map((rel: any) => (
+                  {relatedJobs.map((rel) => (
                     <Link
                       key={rel.id}
                       href={`/jobs/${rel.slug}`}

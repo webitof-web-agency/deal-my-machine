@@ -160,7 +160,7 @@ export default function DualRangeSlider({ min, max, onChange, formatValue }: Dua
           <div className="absolute w-full h-1.5 bg-gray-200 rounded-full z-1"></div>
           <div
             ref={range}
-            className="absolute h-1.5 bg-jcb-yellow rounded-full z-2"
+            className="absolute h-1.5 bg-brand-yellow rounded-full z-2"
           ></div>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function DualRangeSlider({ min, max, onChange, formatValue }: Dua
                   (e.target as HTMLInputElement).blur();
                 }
               }}
-              className="w-full bg-white border border-gray-300 rounded-md pl-6 pr-2.5 py-1.5 text-gray-900 font-semibold text-xs sm:text-sm shadow-xs outline-none transition focus:border-jcb-yellow focus:ring-1 focus:ring-jcb-yellow truncate"
+            className="w-full bg-white border border-gray-300 rounded-md pl-6 pr-2.5 py-1.5 text-gray-900 font-semibold text-xs sm:text-sm shadow-xs outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow truncate"
               placeholder="0"
             />
           </div>
@@ -218,7 +218,7 @@ export default function DualRangeSlider({ min, max, onChange, formatValue }: Dua
                   (e.target as HTMLInputElement).blur();
                 }
               }}
-              className="w-full bg-white border border-gray-300 rounded-md pl-6 pr-2.5 py-1.5 text-gray-900 font-semibold text-xs sm:text-sm text-left shadow-xs outline-none transition focus:border-jcb-yellow focus:ring-1 focus:ring-jcb-yellow truncate"
+            className="w-full bg-white border border-gray-300 rounded-md pl-6 pr-2.5 py-1.5 text-gray-900 font-semibold text-xs sm:text-sm text-left shadow-xs outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow truncate"
               placeholder="1,00,00,000"
             />
           </div>

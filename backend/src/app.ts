@@ -1,18 +1,17 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors, { CorsOptions } from 'cors';
-import dotenv from 'dotenv';
 import apiRoutes from './routes';
+import { APP_NAME, DEFAULT_CORS_ORIGINS } from './config/appConfig';
+import { formatApiHealthMessage } from './config/brandText.js';
 import { publicUploadDirectories } from './utils/documentUpload';
 import { getPersistedPublicBrandingAsset } from './utils/appSettings';
-
-dotenv.config();
 
 const app: Application = express();
 
 const allowedCorsOrigins = new Set(
   (
     process.env.CORS_ORIGINS ||
-    'http://localhost:3000,http://localhost:3001,https://dealmymachine.com,https://www.dealmymachine.com,https://admin.dealmymachine.com'
+    DEFAULT_CORS_ORIGINS.join(',')
   )
     .split(',')
     .map((origin) => origin.trim().replace(/\/+$/, ''))
@@ -76,7 +75,7 @@ app.use('/api', apiRoutes);
 
 // Basic Health Check Route
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', message: 'JCB Exchange API is running' });
+  res.status(200).json({ status: 'ok', message: formatApiHealthMessage(APP_NAME) });
 });
 
 // Default Error Handler

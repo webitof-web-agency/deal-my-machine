@@ -2,13 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import axios from 'axios';
 import api from '@/lib/api';
 import { APP_NAME } from '@/lib/appConfig';
 import { getDashboardCards } from '@/lib/dashboardCardLinks';
 import { useAuthStore } from '@/store/authStore';
 import { Users, ClipboardList, Package, CheckCircle2, MessageSquare, Heart } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+
+const PlatformGrowthChart = dynamic(() => import('@/components/dashboard/PlatformGrowthChart'), {
+  ssr: false,
+  loading: () => <div className="flex h-full items-center justify-center text-sm text-gray-400">Loading chart...</div>,
+});
+
+const CategoryBreakdownChart = dynamic(() => import('@/components/dashboard/CategoryBreakdownChart'), {
+  ssr: false,
+  loading: () => <div className="flex h-full items-center justify-center text-sm text-gray-400">Loading chart...</div>,
+});
 
 interface DashboardStats {
   totalPartners: number;
@@ -197,32 +207,7 @@ export default function EmployeeDashboardPage() {
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-gray-400">Loading chart data...</div>
             ) : data.graphData && data.graphData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={data.graphData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorPartners" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorListings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FFC107" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#FFC107" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend verticalAlign="top" height={36} iconType="circle" />
-                  <Area type="monotone" name="New Partners" dataKey="partners" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorPartners)" />
-                  <Area type="monotone" name="New Listings" dataKey="listings" stroke="#FFC107" strokeWidth={3} fillOpacity={1} fill="url(#colorListings)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <PlatformGrowthChart data={data.graphData} />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-gray-400">No data available</div>
             )}
@@ -235,41 +220,7 @@ export default function EmployeeDashboardPage() {
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-gray-400">Loading chart data...</div>
             ) : data.categoryBreakdown && data.categoryBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.categoryBreakdown}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={65}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                    nameKey="name"
-                  >
-                    {data.categoryBreakdown.map((entry, index) => {
-                      const colors = ['#FFC107', '#3B82F6', '#10B981', '#F59E0B', '#6366F1', '#EC4899'];
-                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} strokeWidth={0} />;
-                    })}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    iconType="circle"
-                    wrapperStyle={{
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      paddingTop: '20px',
-                      lineHeight: '1.5',
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      justifyContent: 'center'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <CategoryBreakdownChart data={data.categoryBreakdown} />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-gray-400">No data available</div>
             )}

@@ -25,8 +25,8 @@
     "pending": "Pending",
     "rejected": "Rejected",
     "changesRequested": "Changes Requested",
-    "adminEmailFallback": "admin@jcbexchange.com",
-    "partnerEmailFallback": "partner@jcbexchange.com"
+    "adminEmailFallback": "{adminEmail}",
+    "partnerEmailFallback": "{partnerEmail}"
   },
   "admin": {
     "portalTitle": "Admin Portal",
@@ -210,11 +210,11 @@
     "phoneHelperText": "Phone Helper Text",
     "phoneHelperPlaceholder": "e.g. Mon - Sat: 9:00 AM - 6:00 PM",
     "emailAddress": "Email Address",
-    "emailPlaceholder": "e.g. hello@jcbexchange.com",
+    "emailPlaceholder": "e.g. {supportEmail}",
     "emailHelperText": "Email Helper Text",
     "emailHelperPlaceholder": "e.g. We'll get back to you",
     "address": "Address",
-    "addressPlaceholder": "JCB Exchange, Plot No. 23\nSector 18, Gurugram\nHaryana 122015, India",
+    "addressPlaceholder": "{siteName}, Plot No. 23\nSector 18, Gurugram\nHaryana 122015, India",
     "editorMode": "Editor Mode",
     "livePreview": "Live Document Preview",
     "toolbar": "Toolbar:",

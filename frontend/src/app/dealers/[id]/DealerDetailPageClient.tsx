@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { MapPin, Clock, Building2, Award, ArrowLeft, Calendar, ShieldCheck, PhoneCall, MessageCircle } from 'lucide-react';
+import { MapPin, Clock, Building2, Award, ArrowLeft, Calendar, ShieldCheck, PhoneCall, MessageCircle, Truck, CalendarRange, Gauge, Globe, ExternalLink } from 'lucide-react';
 import { formatPartnerTypeLabel } from '@/lib/partnerType';
 import { createPublicContactEnquiry } from '@/lib/enquiries';
 import { useAuthStore } from '@/store/authStore';
@@ -177,7 +177,7 @@ export default function DealerDetailPageClient({
     const text = encodeURIComponent(t('dealerDetails.whatsappIntro'));
     const targetUrl = 'https://wa.me/' + wpNumber.replace('+', '') + '?text=' + text;
 
-    const popupWindow = window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
 
     if (user.role === 'CUSTOMER') {
       void createPublicContactEnquiry({
@@ -203,7 +203,7 @@ export default function DealerDetailPageClient({
         <Building2 className="mb-4 h-16 w-16 text-gray-400" />
         <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('dealerDetails.notFound')}</h2>
         <p className="mb-6 text-gray-500">{t('dealerDetails.notFoundDescription')}</p>
-        <button onClick={() => router.back()} className="rounded-md bg-jcb-yellow px-6 py-2 font-bold text-gray-900 hover:bg-yellow-400">
+        <button onClick={() => router.back()} className="rounded-md bg-brand-yellow px-6 py-2 font-bold text-gray-900 hover:bg-yellow-400">
           {t('dealerDetails.goBack')}
         </button>
       </div>
@@ -211,19 +211,20 @@ export default function DealerDetailPageClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 pt-8 pb-32 lg:pb-40 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50/50 pb-20">
+      <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pt-8 pb-32 lg:pb-40 relative overflow-hidden text-white shadow-lg">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_50%)]"></div>
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}></div>
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Link href="/dealers" className="inline-flex items-center text-sm font-medium text-gray-300 hover:text-white transition-colors mb-8">
+          <Link href="/dealers" className="inline-flex items-center text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-amber-400 transition-colors mb-8 group bg-white/5 border border-white/10 rounded-full px-4 py-2 backdrop-blur-md">
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('dealerDetails.backToDealers')}
           </Link>
 
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-gray-800 bg-white shadow-xl">
+              <div className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white/20 bg-white shadow-2xl backdrop-blur-md">
                 {dealer.businessLogoUrl ? (
                   <Image
                     src={getAbsoluteFileUrl(dealer.businessLogoUrl)}
@@ -243,7 +244,7 @@ export default function DealerDetailPageClient({
                     {dealer.businessName || t('dealerDetails.notFound')}
                   </h1>
                   {dealer.partnerType && (
-                    <span className="inline-flex items-center rounded-full bg-jcb-yellow px-3 py-1 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-sm">
+                    <span className="inline-flex items-center rounded-full bg-[#FFC107] px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-slate-950 shadow-sm">
                       <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
                       {formatPartnerTypeLabel(dealer.partnerType)}
                     </span>
@@ -253,13 +254,13 @@ export default function DealerDetailPageClient({
                 <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-medium text-gray-300">
                   {(dealer.businessAddress || dealer.district) && (
                     <div className="flex items-center">
-                      <MapPin className="mr-2 h-4 w-4 text-jcb-yellow" />
+                      <MapPin className="mr-2 h-4 w-4 text-brand-yellow" />
                       {[dealer.businessAddress, dealer.district].filter(Boolean).join(', ')}
                     </div>
                   )}
                   {dealer.yearsInBusiness && (
                     <div className="flex items-center">
-                      <Award className="mr-2 h-4 w-4 text-jcb-yellow" />
+                      <Award className="mr-2 h-4 w-4 text-brand-yellow" />
                       {t('dealerDetails.yearsExperience', { count: dealer.yearsInBusiness })}
                     </div>
                   )}
@@ -293,10 +294,10 @@ export default function DealerDetailPageClient({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-16 lg:-mt-24 relative z-10">
         <div className="space-y-8">
           {/* Dealer Information Stats Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {dealer.createdAt && (
               <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm flex items-center gap-4 transition-all hover:shadow-md hover:border-gray-200">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-jcb-yellow">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-[#b48900] border border-amber-100">
                   <Calendar className="h-6 w-6" />
                 </div>
                 <div>
@@ -308,7 +309,7 @@ export default function DealerDetailPageClient({
 
             {dealer.workingHours && (
               <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm flex items-center gap-4 transition-all hover:shadow-md hover:border-gray-200">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-jcb-yellow">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-[#b48900] border border-amber-100">
                   <Clock className="h-6 w-6" />
                 </div>
                 <div>
@@ -320,7 +321,7 @@ export default function DealerDetailPageClient({
 
             {dealer.websiteUrl && (
               <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm flex items-center gap-4 transition-all hover:shadow-md hover:border-gray-200 overflow-hidden">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-jcb-yellow">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-brand-yellow">
                   <Building2 className="h-6 w-6" />
                 </div>
                 <div className="overflow-hidden min-w-0 flex-1">
@@ -356,7 +357,7 @@ export default function DealerDetailPageClient({
             {dealer.businessDescription && (
               <div className="rounded-2xl border border-gray-100 bg-white p-6 sm:p-8 shadow-sm">
                 <h3 className="mb-4 text-xl font-bold text-gray-900 flex items-center">
-                  <Building2 className="mr-2 h-5 w-5 text-jcb-yellow" />
+                  <Building2 className="mr-2 h-5 w-5 text-brand-yellow" />
                   {t('dealerDetails.aboutDealer')}
                 </h3>
                 <div className="prose max-w-none text-gray-600">
@@ -391,9 +392,9 @@ export default function DealerDetailPageClient({
                     <Link
                       href={generateMachineSlugPath(listing)}
                       key={listing.id}
-                      className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:border-jcb-yellow hover:shadow-md"
+                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-slate-300"
                     >
-                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
                         {listing.thumbnailUrl ? (
                           <Image
                             src={getAbsoluteFileUrl(listing.thumbnailUrl)}
@@ -411,16 +412,18 @@ export default function DealerDetailPageClient({
                           {listing.categoryName}
                         </div>
                       </div>
-                      <div className="flex flex-grow flex-col p-4">
+                      <div className="flex flex-1 flex-col p-4 sm:p-5">
                         <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{listing.brandName}</span>
-                          <span className="text-[10px] font-bold text-white bg-gray-900 px-2 py-0.5 rounded shadow-sm tracking-wider">{listing.manufacturingYear}</span>
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{listing.brandName}</span>
+                          <span className="text-[10px] font-bold text-white bg-slate-900 px-2 py-0.5 rounded shadow-sm tracking-wider">{listing.manufacturingYear}</span>
                         </div>
-                        <h4 className="mb-2 line-clamp-1 font-bold text-gray-900">{listing.title}</h4>
-                        <div className="mb-4 text-xl font-bold text-gray-900">
+                        <h3 className="line-clamp-2 text-[16px] font-bold text-slate-900 leading-tight group-hover:text-amber-600 transition-colors">
+                          {listing.title}
+                        </h3>
+                        <div className="mt-2 mb-3 text-base font-extrabold text-slate-900">
                           Rs {listing.price.toLocaleString('en-IN')}
                         </div>
-                        <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500">
+                        <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
                           <div className="flex items-center">
                             <MapPin className="mr-1 h-3 w-3" />
                             {listing.locationCity}

@@ -1311,7 +1311,7 @@ export default function SellVehicleModal({
                           type="checkbox"
                           checked={form.isNegotiable}
                           onChange={(e) => updateField('isNegotiable', e.target.checked)}
-                          className="w-4 h-4 text-jcb-yellow rounded border-gray-300 focus:ring-jcb-yellow"
+                          className="w-4 h-4 text-brand-yellow rounded border-gray-300 focus:ring-brand-yellow"
                         />
                         <span className="text-sm font-medium text-gray-700">{t('sellModal.priceNegotiable')}</span>
                       </label>

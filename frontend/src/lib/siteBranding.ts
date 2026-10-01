@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import { STATIC_FRONTEND_LOGO } from '@/lib/staticBranding';
 
@@ -40,7 +41,7 @@ const appendVersionToUrl = (value: string | null, version?: string | null) => {
   return `${value}${separator}v=${encodeURIComponent(version)}`;
 };
 
-export const getSiteBranding = async (): Promise<SiteBranding> => {
+export const getSiteBranding = cache(async (): Promise<SiteBranding> => {
   try {
     const response = await fetch(`${API_BASE_URL}/master/site-logo`, {
       cache: 'no-store',
@@ -84,7 +85,7 @@ export const getSiteBranding = async (): Promise<SiteBranding> => {
       updatedAt: null,
     };
   }
-};
+});
 
 export const getDefaultSiteMetadata = () => ({
   title: {

@@ -7,14 +7,14 @@ const withPWA = withPWAInit({
   register: true,
 });
 
-const getRemotePattern = (value: string) => {
+const getRemotePattern = (value: string, pathname = '/uploads/public/**') => {
   try {
     const parsed = new URL(value);
     return {
       protocol: parsed.protocol.replace(':', '') as 'http' | 'https',
       hostname: parsed.hostname,
       ...(parsed.port ? { port: parsed.port } : {}),
-      pathname: '/uploads/public/**',
+      pathname,
     };
   } catch {
     return null;
@@ -27,6 +27,8 @@ const isLocalHostname = (hostname: string) =>
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
 const apiOrigin = apiUrl.replace(/\/api\/?$/, '');
 const dynamicPattern = getRemotePattern(apiOrigin);
+const apiFullPattern = getRemotePattern(apiOrigin, '/**');
+const sitePattern = getRemotePattern(process.env.NEXT_PUBLIC_SITE_URL || 'https://dealmymachine.com', '/**');
 const shouldAllowLocalIpImages =
   process.env.NODE_ENV !== 'production' &&
   (!!dynamicPattern?.hostname && isLocalHostname(dynamicPattern.hostname));
@@ -48,36 +50,6 @@ const nextConfig: NextConfig = {
         hostname: '127.0.0.1',
         port: '5002',
         pathname: '/uploads/public/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'jcbexchange.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'api.dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'admin.dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'api.jcbexchange.com',
-        pathname: '/**',
       },
       {
         protocol: 'https',
@@ -136,11 +108,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'jcb-exchange.onrender.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
         hostname: 'drive.google.com',
         pathname: '/**',
       },
@@ -150,6 +117,8 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       ...(dynamicPattern ? [dynamicPattern] : []),
+      ...(apiFullPattern ? [apiFullPattern] : []),
+      ...(sitePattern ? [sitePattern] : []),
     ],
   },
 };

@@ -1,6 +1,6 @@
 import prisma from '../lib/prisma';
 import { Prisma } from '@prisma/client';
-import { APP_NAME } from '../config/appConfig';
+import { APPLICATION_REFERENCE_PREFIX, APP_NAME } from '../config/appConfig';
 
 export const DEFAULT_HIRING_STAGES = [
   { name: 'New', code: 'NEW', order: 1, color: 'blue', isSystem: false, isTerminal: false },
@@ -106,7 +106,7 @@ export const generateApplicationRef = async (): Promise<string> => {
   const currentYear = new Date().getFullYear();
   const count = await prisma.jobApplication.count();
   const nextSeq = (count + 1).toString().padStart(6, '0');
-  return `JCB-JOB-${currentYear}-${nextSeq}`;
+  return `${APPLICATION_REFERENCE_PREFIX}-${currentYear}-${nextSeq}`;
 };
 
 export const logRecruitmentActivity = async (data: {

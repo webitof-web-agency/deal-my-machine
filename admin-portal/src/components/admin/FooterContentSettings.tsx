@@ -8,7 +8,7 @@ import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import { useTranslation } from '@/hooks/useTranslation';
-import { APP_NAME } from '@/lib/appConfig';
+import { APP_NAME, SUPPORT_EMAIL } from '@/lib/appConfig';
 
 type FooterSocialLink = {
   id: string;
@@ -759,7 +759,7 @@ export default function FooterContentSettings() {
                     type="email"
                     value={contact.emailAddress || ''}
                     onChange={(event) => setContact((current) => ({ ...current, emailAddress: event.target.value }))}
-                    placeholder={t('footerSettings.emailPlaceholder', 'e.g. hello@jcbexchange.com')}
+                    placeholder={t('footerSettings.emailPlaceholder', `e.g. ${SUPPORT_EMAIL}`)}
                     className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                   />
                 </div>

@@ -8,6 +8,7 @@ import BrandLoader from '@/components/ui/BrandLoader';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import PortalBrand from '@/components/layout/PortalBrand';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -93,9 +94,7 @@ export default function SignupPage() {
         {/* Header Bar */}
         <div className="flex justify-between items-center px-6 py-4 bg-[#1A1A1A]">
           <div className="flex items-center">
-            <h2 className="text-xl font-bold italic tracking-wider text-white">
-              JCB<span className="text-[#FFC107]">EXCHANGE</span>
-            </h2>
+            <PortalBrand href="/login" size="login" showSubtitle={false} />
             <span className={`ml-3 px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded-sm ${isFirstSetup ? 'bg-red-500 text-white' : 'bg-[#FFC107] text-black'}`}>
               {badgeLabel}
             </span>

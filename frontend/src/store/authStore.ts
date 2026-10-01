@@ -1,4 +1,11 @@
 import { create } from 'zustand';
+import { AUTH_CHANGE_EVENT, LEGACY_AUTH_CHANGE_EVENT } from '@/lib/storageKeys';
+import {
+  AUTH_TOKEN_KEY,
+  AUTH_USER_KEY,
+  getAuthStorageName,
+  persistAuth,
+} from '@/lib/authPersistence.mjs';
 
 export interface AuthUser {
   id: string;
@@ -34,18 +41,12 @@ interface AuthState {
   isAuthModalOpen: boolean;
   hasHydrated: boolean;
   hydrateAuth: () => void;
-  setAuth: (token: string, user: AuthUser) => void;
+  setAuth: (token: string, user: AuthUser, rememberMe?: boolean) => void;
   setAuthModalOpen: (isOpen: boolean) => void;
   logout: () => void;
 }
 
-const getLocalStorage = (key: string) => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem(key);
-  }
-
-  return null;
-};
+const getStorageValue = (storage: Storage, key: string) => storage.getItem(key);
 
 const isUsableAuthToken = (token: string | null) => {
   if (!token) {
@@ -68,6 +69,12 @@ const isUsableAuthToken = (token: string | null) => {
   }
 };
 
+const dispatchAuthChange = () => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT));
+  window.dispatchEvent(new CustomEvent(LEGACY_AUTH_CHANGE_EVENT));
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
@@ -75,29 +82,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthModalOpen: false,
   hasHydrated: false,
   hydrateAuth: () => {
-    const token = getLocalStorage('frontend_portal_token');
-    const localStorageUser = getLocalStorage('frontend_portal_user');
-    let user: AuthUser | null = null;
-
-    try {
-      user = localStorageUser ? (JSON.parse(localStorageUser) as AuthUser) : null;
-    } catch {
-      user = null;
-    }
-
-    if (isUsableAuthToken(token) && user) {
-      set({
-        token,
-        user,
-        isAuthenticated: true,
-        hasHydrated: true,
-      });
-      return;
-    }
-
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('frontend_portal_token');
-      localStorage.removeItem('frontend_portal_user');
+      const storages = [window.localStorage, window.sessionStorage];
+
+      for (const storage of storages) {
+        const token = getStorageValue(storage, AUTH_TOKEN_KEY);
+        const storedUser = getStorageValue(storage, AUTH_USER_KEY);
+        let user: AuthUser | null = null;
+
+        try {
+          user = storedUser ? (JSON.parse(storedUser) as AuthUser) : null;
+        } catch {
+          user = null;
+        }
+
+        if (isUsableAuthToken(token) && user) {
+          set({
+            token,
+            user,
+            isAuthenticated: true,
+            hasHydrated: true,
+          });
+          return;
+        }
+      }
+
+      window.localStorage.removeItem(AUTH_TOKEN_KEY);
+      window.localStorage.removeItem(AUTH_USER_KEY);
+      window.sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      window.sessionStorage.removeItem(AUTH_USER_KEY);
     }
 
     set({
@@ -107,12 +120,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       hasHydrated: true,
     });
   },
-  setAuth: (token, user) => {
-    localStorage.setItem('frontend_portal_token', token);
-    localStorage.setItem('frontend_portal_user', JSON.stringify(user));
+  setAuth: (token, user, rememberMe) => {
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('jcbexchange-auth-change'));
+      const storageName = rememberMe === undefined
+        ? (window.sessionStorage.getItem(AUTH_TOKEN_KEY) === token ? 'session' : 'local')
+        : getAuthStorageName(rememberMe);
+      persistAuth(window.localStorage, window.sessionStorage, token, user, storageName === 'local');
     }
+
+    dispatchAuthChange();
     set({
       token,
       user,
@@ -123,11 +139,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
   logout: () => {
-    localStorage.removeItem('frontend_portal_token');
-    localStorage.removeItem('frontend_portal_user');
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('jcbexchange-auth-change'));
+      window.localStorage.removeItem(AUTH_TOKEN_KEY);
+      window.localStorage.removeItem(AUTH_USER_KEY);
+      window.sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      window.sessionStorage.removeItem(AUTH_USER_KEY);
     }
+    dispatchAuthChange();
     set({
       token: null,
       user: null,

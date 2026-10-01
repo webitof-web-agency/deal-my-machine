@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { Mail, MapPin } from 'lucide-react';
 import LegalDocumentShell from '@/components/legal/LegalDocumentShell';
 import LegalPageContent from '@/components/legal/LegalPageContent';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_SUPPORT_EMAIL, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: `Disclaimer | ${SITE_NAME} - Heavy Machinery Notice`,
@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   openGraph: {
     title: `Disclaimer | ${SITE_NAME}`,
     description: `Important legal notices and disclaimers for buyers and sellers on ${SITE_NAME}.`,
-    url: "https://jcbexchange.com/disclaimer",
+    url: `${SITE_URL}/disclaimer`,
     siteName: SITE_NAME,
     type: "website",
   },
   alternates: {
-    canonical: "https://jcbexchange.com/disclaimer",
+    canonical: `${SITE_URL}/disclaimer`,
   },
 };
 
@@ -64,7 +64,7 @@ export default function DisclaimerPage() {
                     </p>
                     <p className="flex items-center gap-2">
                       <Mail size={14} className="text-amber-600" />
-                      <a href="mailto:hello@jcbexchange.com" className="text-amber-600 hover:underline font-medium">hello@jcbexchange.com</a>
+                      <a href={`mailto:${SITE_SUPPORT_EMAIL}`} className="text-amber-600 hover:underline font-medium">{SITE_SUPPORT_EMAIL}</a>
                     </p>
                   </div>
                 </section>

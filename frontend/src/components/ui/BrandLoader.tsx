@@ -1,10 +1,9 @@
 ﻿'use client';
 
 import React from 'react';
-import { useSiteLogo } from '@/hooks/useSiteLogo';
+import Image from 'next/image';
 import { SITE_NAME } from '@/lib/site';
 import { STATIC_LOADING_LOGO } from '@/lib/staticBranding';
-import { getLoadingLogoCandidates } from '@/lib/loadingLogoCandidates.mjs';
 
 export type BrandLoaderSize    = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type BrandLoaderVariant = 'inline' | 'section' | 'overlay' | 'fullscreen';
@@ -27,7 +26,7 @@ const SIZE_MAP: Record<BrandLoaderSize, { ring: number; logo: number; strokeW: n
   xl: { ring: 172, logo: 76, strokeW: 7,   textCls: 'text-base'   },
 };
 
-const JCB_YELLOW = '#FFC107';
+const BRAND_YELLOW = '#FFC107';
 
 function ArcRing({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
   const { ring, strokeW } = SIZE_MAP[size];
@@ -51,7 +50,7 @@ function ArcRing({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
       <circle
         cx={cx} cy={cy} r={r}
         fill="none"
-        stroke={JCB_YELLOW}
+        stroke={BRAND_YELLOW}
         strokeWidth={strokeW}
         strokeLinecap="round"
         strokeDasharray={`${arcLength} ${gapLength}`}
@@ -61,22 +60,15 @@ function ArcRing({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
   );
 }
 
-function LoaderLogo({ ring, logoUrl, darkLogoUrl, initialLogoUrl }: { ring: number; logoUrl: string | null; darkLogoUrl: string | null; initialLogoUrl?: string | null }) {
-  const candidates = getLoadingLogoCandidates({ initialLogoUrl, darkLogoUrl, logoUrl, staticLogoUrl: STATIC_LOADING_LOGO });
-  const [failedLogoUrls, setFailedLogoUrls] = React.useState<string[]>([]);
-  const activeLogoUrl = candidates.find((candidate) => !failedLogoUrls.includes(candidate)) || null;
-
+function LoaderLogo({ ring }: { ring: number }) {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {activeLogoUrl && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          key={activeLogoUrl}
-          src={activeLogoUrl}
+      <Image
+          src={STATIC_LOADING_LOGO}
           alt={SITE_NAME}
-          fetchPriority="high"
-          decoding="async"
-          onError={() => setFailedLogoUrls((current) => current.includes(activeLogoUrl) ? current : [...current, activeLogoUrl])}
+          width={Math.ceil(ring * 0.76)}
+          height={Math.ceil(ring * 0.46)}
+          priority
           style={{
             position: 'absolute',
             width: 'auto',
@@ -87,34 +79,26 @@ function LoaderLogo({ ring, logoUrl, darkLogoUrl, initialLogoUrl }: { ring: numb
             display: 'block',
           }}
         />
-      )}
     </div>
   );
 }
 
-function Spinner({ size, bg, initialLogoUrl }: { size: BrandLoaderSize; bg: BrandLoaderBg; initialLogoUrl?: string | null }) {
-  const { logoUrl, darkLogoUrl } = useSiteLogo();
+function Spinner({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
   const { ring } = SIZE_MAP[size];
 
   return (
     <div style={{ position: 'relative', width: ring, height: ring, flexShrink: 0 }} role="status" aria-label="Loading">
       <ArcRing size={size} bg={bg} />
       {size !== 'xs' && (
-        <LoaderLogo
-          key={darkLogoUrl || logoUrl || 'fallback'}
-          ring={ring}
-          logoUrl={logoUrl}
-          darkLogoUrl={darkLogoUrl}
-          initialLogoUrl={initialLogoUrl}
-        />
+        <LoaderLogo ring={ring} />
       )}
     </div>
   );
 }
 
-function ResponsiveSpinner({ size, bg, initialLogoUrl }: { size: BrandLoaderSize; bg: BrandLoaderBg; initialLogoUrl?: string | null }) {
+function ResponsiveSpinner({ size, bg }: { size: BrandLoaderSize; bg: BrandLoaderBg }) {
   const cls = `bl-r-${size}`;
-  if (size === 'xs') return <Spinner size={size} bg={bg} initialLogoUrl={initialLogoUrl} />;
+  if (size === 'xs') return <Spinner size={size} bg={bg} />;
   return (
     <>
       <style>{`
@@ -124,7 +108,7 @@ function ResponsiveSpinner({ size, bg, initialLogoUrl }: { size: BrandLoaderSize
         @media (min-width: 481px) and (max-width: 768px)  { .${cls} { transform: scale(0.82); } }
         @media (min-width: 769px)                         { .${cls} { transform: scale(1); } }
       `}</style>
-      <div className={cls}><Spinner size={size} bg={bg} initialLogoUrl={initialLogoUrl} /></div>
+      <div className={cls}><Spinner size={size} bg={bg} /></div>
     </>
   );
 }
@@ -137,9 +121,9 @@ function LoaderText({ text, textCls, bg }: { text: string; textCls: string; bg: 
   );
 }
 
-export default function BrandLoader({ size = 'md', variant = 'inline', bg = 'light', text, initialLogoUrl, className = '' }: BrandLoaderProps) {
+export default function BrandLoader({ size = 'md', variant = 'inline', bg = 'light', text, className = '' }: BrandLoaderProps) {
   const { textCls } = SIZE_MAP[size];
-  const spinner = <ResponsiveSpinner size={size} bg={bg} initialLogoUrl={initialLogoUrl} />;
+  const spinner = <ResponsiveSpinner size={size} bg={bg} />;
 
   if (variant === 'inline') {
     return (

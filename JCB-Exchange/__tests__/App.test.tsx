@@ -41,7 +41,21 @@ jest.mock('@react-native-firebase/messaging', () => {
 });
 
 test('renders correctly', async () => {
-  await ReactTestRenderer.act(() => {
-    ReactTestRenderer.create(<App />);
-  });
+  jest.useFakeTimers();
+  let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  try {
+    await ReactTestRenderer.act(() => {
+      renderer = ReactTestRenderer.create(<App />);
+    });
+
+    await ReactTestRenderer.act(() => {
+      jest.advanceTimersByTime(2500);
+    });
+  } finally {
+    await ReactTestRenderer.act(() => {
+      renderer?.unmount();
+    });
+    jest.useRealTimers();
+  }
 });

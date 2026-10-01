@@ -32,10 +32,9 @@ import {
   getCustomerPrimeAccessPayload,
   listCustomerPrimeSubscriptionsForUser,
 } from '../utils/customerPrimeSubscriptions';
-import { APP_NAME } from '../config/appConfig';
+import { APP_NAME, JWT_SECRET } from '../config/appConfig';
 import { normalizeBillingLocation } from '../utils/billingLocation';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'jcbexchange_super_secret_key_123';
 const prismaAny = prisma as any;
 
 const businessPartnerTypes = new Set(['SHOWROOM']);

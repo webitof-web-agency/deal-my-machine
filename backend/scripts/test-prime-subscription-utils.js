@@ -32,10 +32,10 @@ strict_1.default.equal(expiryAt.toISOString(), '2026-10-17T00:00:00.000Z');
 const paymentUri = (0, customerPrime_1.buildUpiPaymentUri)({
     upiId: 'prime@upi',
     amount: 499,
-    payeeName: 'JCB Exchange',
+    payeeName: 'DealMyMachine',
     transactionNote: 'Prime customer subscription',
 });
-strict_1.default.equal(paymentUri, 'upi://pay?pa=prime%40upi&pn=JCB%20Exchange&am=499.00&cu=INR&tn=Prime%20customer%20subscription');
+strict_1.default.equal(paymentUri, 'upi://pay?pa=prime%40upi&pn=DealMyMachine&am=499.00&cu=INR&tn=Prime%20customer%20subscription');
 const activeAccess = (0, customerPrime_1.getCustomerPrimeAccessState)({
     role: 'CUSTOMER',
     now: new Date('2026-08-20T00:00:00.000Z'),

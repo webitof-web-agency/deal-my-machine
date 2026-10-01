@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
+import { createRequestDeduper } from '@/lib/requestDeduper';
 
 export interface PublicNotification {
   id: string;
@@ -39,6 +40,8 @@ interface NotificationState {
   initialize: () => void;
 }
 
+const recentListingsRequest = createRequestDeduper();
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   recentListings: [],
   notifications: [],
@@ -60,7 +63,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 
-  fetchRecentListings: async () => {
+  fetchRecentListings: () => recentListingsRequest(async () => {
     try {
       const res = await api.get('/master/recent-listings');
       if (res.data?.success) {
@@ -74,7 +77,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         recentListings: [],
       });
     }
-  },
+  }),
 
   fetchNotifications: async () => {
     try {

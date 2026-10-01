@@ -21,7 +21,7 @@ export default function Error({
         <button
           type="button"
           onClick={reset}
-          className="mt-6 rounded-lg bg-jcb-yellow px-6 py-3 font-bold text-black transition-colors hover:bg-yellow-400"
+          className="mt-6 rounded-lg bg-brand-yellow px-6 py-3 font-bold text-black transition-colors hover:bg-yellow-400"
         >
           {t('machineDetails.tryAgain')}
         </button>

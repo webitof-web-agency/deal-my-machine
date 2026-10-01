@@ -3,7 +3,8 @@ import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 import { dictionaries } from '@/lib/i18n/dictionaries';
 import { queueMissingTranslationRegistration } from '@/lib/i18n/missingTranslationRegistry';
 import { useLanguageStore } from '@/store/languageStore';
-import { APP_NAME } from '@/lib/appConfig';
+import { ADMIN_EMAIL_FALLBACK, APP_NAME, PARTNER_EMAIL_FALLBACK, SUPPORT_EMAIL } from '@/lib/appConfig';
+import { replaceLegacyPlatformBrand } from '@/lib/brandText.mjs';
 
 type TranslationValue = string | number | boolean | null | undefined;
 export type TranslationParams = Record<string, TranslationValue>;
@@ -25,19 +26,28 @@ const getNestedValue = (dictionary: unknown, key: string): string | null => {
 };
 
 const interpolate = (template: string, params?: TranslationParams, defaultText?: string) => {
-  const replaceBrandName = (value: string) =>
-    value.replace(/JCB\s*Exchange/gi, () => APP_NAME);
+  const replaceBrandName = (value: string) => replaceLegacyPlatformBrand(value, APP_NAME);
+  const resolvedParams: TranslationParams = {
+    siteName: APP_NAME,
+    supportEmail: SUPPORT_EMAIL,
+    adminEmail: ADMIN_EMAIL_FALLBACK,
+    partnerEmail: PARTNER_EMAIL_FALLBACK,
+    ...params,
+  };
 
   if (!params) {
-    if (defaultText?.trim() && template.includes('{')) {
+    if (defaultText?.trim() && template.includes('{') && !/\{(?:siteName|supportEmail|adminEmail|partnerEmail)\}/.test(template)) {
       return replaceBrandName(defaultText);
     }
-    return replaceBrandName(template.replace(/\{(\w+)\}\s*/g, '').trim());
+    return replaceBrandName(template.replace(/\{(\w+)\}\s*/g, (_, token: string) => {
+      const value = resolvedParams[token];
+      return value !== undefined && value !== null ? String(value) : '';
+    }).trim());
   }
 
   return replaceBrandName(template.replace(/\{(\w+)\}/g, (_, token: string) => {
-    if (params[token] !== undefined && params[token] !== null) {
-      return String(params[token]);
+    if (resolvedParams[token] !== undefined && resolvedParams[token] !== null) {
+      return String(resolvedParams[token]);
     }
     if (defaultText?.trim()) {
       return defaultText;

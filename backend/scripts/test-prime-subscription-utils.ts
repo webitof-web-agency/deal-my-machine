@@ -5,6 +5,7 @@ import {
   calculatePrimeExpiryAt,
   getCustomerPrimeAccessState,
 } from '../src/utils/customerPrime';
+import { APP_NAME } from '../src/config/appConfig';
 
 const baseSettings = {
   enabled: true,
@@ -38,13 +39,13 @@ assert.equal(expiryAt.toISOString(), '2026-10-17T00:00:00.000Z');
 const paymentUri = buildUpiPaymentUri({
   upiId: 'prime@upi',
   amount: 499,
-  payeeName: 'JCB Exchange',
+  payeeName: APP_NAME,
   transactionNote: 'Prime customer subscription',
 });
 
 assert.equal(
   paymentUri,
-  'upi://pay?pa=prime%40upi&pn=JCB%20Exchange&am=499.00&cu=INR&tn=Prime%20customer%20subscription',
+  'upi://pay?pa=prime%40upi&pn=DealMyMachine&am=499.00&cu=INR&tn=Prime%20customer%20subscription',
 );
 
 const activeAccess = getCustomerPrimeAccessState({

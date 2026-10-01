@@ -2,6 +2,7 @@ import 'dotenv/config';
 import prisma from '../src/lib/prisma';
 import { PushNotificationService } from '../src/services/pushNotification.service';
 import { isFirebaseAdminInitialized } from '../src/config/firebaseAdmin';
+import { APP_NAME } from '../src/config/appConfig';
 
 async function sendTestPushNotification() {
   console.log('=== 🚀 TRIGGERING TEST PUSH NOTIFICATION ===');
@@ -16,7 +17,7 @@ async function sendTestPushNotification() {
   if (tokenArg) {
     console.log(`📱 Sending direct test Push Notification to provided FCM token: ${tokenArg.substring(0, 20)}...`);
     await PushNotificationService.sendFcmNotification(tokenArg, {
-      title: '🚜 JCB Exchange Test Push Notification',
+      title: `🚜 ${APP_NAME} Test Push Notification`,
       body: 'Success! Your mobile APK is connected and receiving real-time push notifications.',
       data: {
         path: '/notifications',
@@ -47,7 +48,7 @@ async function sendTestPushNotification() {
 
     if (usersWithTokens.length === 0) {
       console.log('⚠️ No registered FCM tokens found in Database yet.');
-      console.log('📱 ACTION: Open the JCB Exchange Mobile APK on your phone/emulator and log in.');
+      console.log(`📱 ACTION: Open the ${APP_NAME} Mobile APK on your phone/emulator and log in.`);
       console.log('   Or run: npx tsx scripts/send-test-push.ts <YOUR_FCM_TOKEN>');
       process.exit(0);
     }
@@ -56,7 +57,7 @@ async function sendTestPushNotification() {
       console.log(`📱 Sending test Push Notification to User: ${user.name || user.mobile || user.email} (${user.role})...`);
 
       await PushNotificationService.sendFcmNotification(user.fcmToken!, {
-        title: '🚜 JCB Exchange Test Push Notification',
+        title: `🚜 ${APP_NAME} Test Push Notification`,
         body: 'Success! Your mobile APK is connected and receiving real-time push notifications.',
         data: {
           path: '/notifications',

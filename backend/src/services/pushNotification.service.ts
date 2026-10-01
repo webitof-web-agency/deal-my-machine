@@ -7,12 +7,17 @@ import {
   normalizePushSubscription,
   PushSubscriptionPayload,
 } from '../utils/pushSubscriptions';
-import { APP_NAME } from '../config/appConfig';
+import {
+  APP_NAME,
+  PUSH_NOTIFICATION_GROUP,
+  PUSH_NOTIFICATION_TAG,
+  VAPID_SUBJECT,
+} from '../config/appConfig';
 
 // Ensure you have these variables in your .env
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || '';
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || '';
-const subject = process.env.VAPID_SUBJECT || 'mailto:admin@jcbexchange.com';
+const subject = VAPID_SUBJECT;
 
 if (publicVapidKey && privateVapidKey) {
   webpush.setVapidDetails(subject, publicVapidKey, privateVapidKey);
@@ -104,10 +109,10 @@ export class PushNotificationService {
         },
         android: {
           priority: 'high',
-          collapseKey: 'jcb_notification_group',
+          collapseKey: PUSH_NOTIFICATION_GROUP,
           notification: {
             sound: 'default',
-            tag: 'jcb_notification',
+            tag: PUSH_NOTIFICATION_TAG,
             clickAction: 'FLUTTER_NOTIFICATION_CLICK',
           },
         },

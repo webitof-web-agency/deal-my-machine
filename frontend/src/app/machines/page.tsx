@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import MachinesPageClient from './MachinesPageClient';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
 
@@ -87,7 +87,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${title} | ${SITE_NAME}`,
       description,
-      url: `https://jcbexchange.com${canonical}`,
+      url: `${SITE_URL}${canonical}`,
       type: 'website',
     },
     twitter: {
@@ -104,9 +104,9 @@ export default function MachinesPage() {
     '@type': 'CollectionPage',
     name: `Used Machines for Sale | ${SITE_NAME}`,
     description: `Explore verified used JCBs, excavators, loaders, and heavy machinery for sale across India on ${SITE_NAME}.`,
-    url: 'https://jcbexchange.com/machines',
+    url: `${SITE_URL}/machines`,
     isPartOf: {
-      '@id': 'https://jcbexchange.com/#website',
+      '@id': `${SITE_URL}/#website`,
     },
     about: {
       '@type': 'Thing',

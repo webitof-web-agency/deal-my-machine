@@ -27,6 +27,8 @@ import {
   updatePlatformSettings,
   updateGoogleDriveSettingsContent,
   testGoogleDriveConnection,
+  testDatabaseBackup,
+  getDatabaseBackupStatusContent,
   saveAdminPartnerOnboarding,
   submitAdminPartnerOnboarding,
   resetManagedUserPassword,
@@ -97,6 +99,8 @@ router.get('/google-drive', canManageSettings, getGoogleDriveSettings);
 router.get('/google-drive/reveal-secrets', requireSuperAdmin, revealGoogleDriveSecrets);
 router.put('/google-drive', canManageSettings, updateGoogleDriveSettingsContent);
 router.post('/google-drive/test-connection', canManageSettings, testGoogleDriveConnection);
+router.post('/google-drive/test-backup', canManageSettings, testDatabaseBackup);
+router.get('/google-drive/backup-status', canManageSettings, getDatabaseBackupStatusContent);
 router.get('/translations/catalog', canManageTranslations, getTranslationCatalog);
 router.put('/translations/catalog', canManageTranslations, saveTranslationCatalog);
 router.get('/customer-prime-payments', canManageRecurrence, getCustomerPrimePayments);

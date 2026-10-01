@@ -25,8 +25,8 @@
     "pending": "प्रलंबित",
     "rejected": "नाकारले",
     "changesRequested": "बदल विनंती केली",
-    "adminEmailFallback": "admin@jcbexchange.com",
-    "partnerEmailFallback": "partner@jcbexchange.com"
+    "adminEmailFallback": "{adminEmail}",
+    "partnerEmailFallback": "{partnerEmail}"
   },
   "admin": {
     "portalTitle": "अॅडमिन पोर्टल",
@@ -801,11 +801,11 @@
     "phoneHelperText": "फोन मदत मजकूर",
     "phoneHelperPlaceholder": "उदा. सोमत - शनि: सकाळी 9:00 - संध्याकाळी 6:00",
     "emailAddress": "ईमेल पत्ता",
-    "emailPlaceholder": "उदा. hello@jcbexchange.com",
+    "emailPlaceholder": "उदा. {supportEmail}",
     "emailHelperText": "ईमेल मदत मजकूर",
     "emailHelperPlaceholder": "उदा. आम्ही लवकरच तुमच्याशी संपर्क साधू",
     "address": "पत्ता",
-    "addressPlaceholder": "JCB Exchange, प्लॉट क्र. 23\nसेक्टर 18, गुरुग्राम\nहरियाणा 122015, भारत",
+    "addressPlaceholder": "{siteName}, प्लॉट क्र. 23\nसेक्टर 18, गुरुग्राम\nहरियाणा 122015, भारत",
     "editorMode": "संपादक मोड",
     "livePreview": "थेट दस्तऐवज पूर्वावलोकन",
     "toolbar": "टूलबार:",

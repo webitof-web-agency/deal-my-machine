@@ -25,8 +25,8 @@
     "pending": "પેન્ડિંગ",
     "rejected": "નકારેલ",
     "changesRequested": "ફેરફાર વિનંતી કરાયેલ",
-    "adminEmailFallback": "admin@jcbexchange.com",
-    "partnerEmailFallback": "partner@jcbexchange.com"
+    "adminEmailFallback": "{adminEmail}",
+    "partnerEmailFallback": "{partnerEmail}"
   },
   "admin": {
     "portalTitle": "એડમિન પોર્ટલ",
@@ -801,11 +801,11 @@
     "phoneHelperText": "ફોન સહાય લખાણ",
     "phoneHelperPlaceholder": "ઉદા. સોમ - શનિ: સવારે 9:00 - સાંજે 6:00",
     "emailAddress": "ઈમેલ સરનામું",
-    "emailPlaceholder": "ઉદા. hello@jcbexchange.com",
+    "emailPlaceholder": "ઉદા. {supportEmail}",
     "emailHelperText": "ઈમેલ સહાય લખાણ",
     "emailHelperPlaceholder": "ઉદા. અમે ટૂંક સમયમાં તમારો સંપર્ક કરીશું",
     "address": "સરનામું",
-    "addressPlaceholder": "JCB Exchange, પ્લોટ નં. 23\nસેક્ટર 18, ગુડગાંવ\nહરિયાણા 122015, ભારત",
+    "addressPlaceholder": "{siteName}, પ્લોટ નં. 23\nસેક્ટર 18, ગુડગાંવ\nહરિયાણા 122015, ભારત",
     "editorMode": "એડિટર મોડ",
     "livePreview": "લાઇવ દસ્તાવેજ પૂર્વાવલોકન",
     "toolbar": "ટૂલબાર:",

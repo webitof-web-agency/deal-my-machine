@@ -1,5 +1,6 @@
 import {
   API_BASE_URL,
+  APP_NAME,
   BUSINESS_EMAIL,
   SUPPORT_EMAIL,
   WEB_APP_URL,
@@ -68,4 +69,4 @@ export function getWhatsappSupportUrl() {
 
 export const RELEASE_WEB_URL = getWebAppUrl();
 export const RELEASE_API_URL = getApiBaseUrl();
-export const APP_TITLE = 'JCB Exchange';
+export const APP_TITLE = normalizeText(APP_NAME, 'DealMyMachine');

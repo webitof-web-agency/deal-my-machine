@@ -25,8 +25,8 @@
     "pending": "పెండింగ్",
     "rejected": "తిరస్కరించబడింది",
     "changesRequested": "మార్పులు అభ్యర్థించబడ్డాయి",
-    "adminEmailFallback": "admin@jcbexchange.com",
-    "partnerEmailFallback": "partner@jcbexchange.com"
+    "adminEmailFallback": "{adminEmail}",
+    "partnerEmailFallback": "{partnerEmail}"
   },
   "admin": {
     "portalTitle": "అడ్మిన్ పోర్టల్",
@@ -801,11 +801,11 @@
     "phoneHelperText": "ఫోన్ సహాయ వచనం",
     "phoneHelperPlaceholder": "ఉదా. సోమ - శని: ఉదయం 9:00 - సాయంత్రం 6:00",
     "emailAddress": "ఇమెయిల్ చిరునామా",
-    "emailPlaceholder": "ఉదా. hello@jcbexchange.com",
+    "emailPlaceholder": "ఉదా. {supportEmail}",
     "emailHelperText": "ఇమెయిల్ సహాయ వచనం",
     "emailHelperPlaceholder": "ఉదా. మేము త్వరలోనే మిమ్మల్ని సంప్రదిస్తాము",
     "address": "చిరునామా",
-    "addressPlaceholder": "JCB Exchange, ప్లాట్ నం. 23\nసెక్టార్ 18, గురుగ్రామ్\nహర్యానా 122015, భారతదేశం",
+    "addressPlaceholder": "{siteName}, ప్లాట్ నం. 23\nసెక్టార్ 18, గురుగ్రామ్\nహర్యానా 122015, భారతదేశం",
     "editorMode": "ఎడిటర్ మోడ్",
     "livePreview": "లైవ్ డాక్యుమెంట్ ప్రివ్యూ",
     "toolbar": "టూల్‌బార్:",

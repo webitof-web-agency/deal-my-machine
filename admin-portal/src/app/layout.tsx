@@ -5,11 +5,8 @@ import ToastProvider from "@/components/ToastProvider";
 import "react-toastify/dist/ReactToastify.css";
 import "./globals.css";
 import { LOCALE_COOKIE_NAME, normalizeLocale } from "@/lib/i18n/config";
-import {
-  DEFAULT_PWA_THEME_COLOR,
-  getPortalBranding,
-} from '@/lib/siteBranding';
-import { SiteLogoProvider } from '@/hooks/useSiteLogo';
+import { LEGACY_LOCALE_COOKIE_NAME } from '@/lib/storageKeys';
+import { DEFAULT_PWA_THEME_COLOR } from '@/lib/staticBranding';
 import { APP_NAME, PORTAL_NAME } from '@/lib/appConfig';
 
 const getIconType = (url: string) => {
@@ -22,10 +19,8 @@ const getIconType = (url: string) => {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Force dynamic evaluation at request time to fetch latest branding settings
   await cookies();
-  const branding = await getPortalBranding();
-  const faviconUrl = branding.faviconUrl || '/icon.png';
+  const faviconUrl = '/icon.svg';
   const iconType = getIconType(faviconUrl);
 
   return {
@@ -55,8 +50,9 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const cookieStore = await cookies();
-  const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
-  const branding = await getPortalBranding();
+  const locale = normalizeLocale(
+    cookieStore.get(LOCALE_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_LOCALE_COOKIE_NAME)?.value,
+  );
 
   return (
     <html
@@ -65,24 +61,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        {(branding.darkLogoUrl || branding.logoUrl) && (
-          <link rel="preload" as="image" href={branding.darkLogoUrl || branding.logoUrl || undefined} />
-        )}
         <link rel="preload" as="image" href="/branding/loadinglogo.png" fetchPriority="high" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.__JCB_PORTAL_LOGO__=${JSON.stringify({
-              logoUrl: branding.logoUrl,
-              darkLogoUrl: branding.darkLogoUrl,
-            }).replace(/</g, '\\u003c')};`,
-          }}
-        />
-        <SiteLogoProvider value={{ logoUrl: branding.logoUrl, darkLogoUrl: branding.darkLogoUrl }}>
-          <LocaleSync />
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </SiteLogoProvider>
+        <LocaleSync />
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

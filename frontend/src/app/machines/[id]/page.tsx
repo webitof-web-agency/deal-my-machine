@@ -5,7 +5,7 @@ import { resolvePublicMachineListingId } from '@/lib/publicRouteResolvers';
 import MachineDetailClient from './MachineDetailClient';
 import { getAbsoluteMediaUrl, getMachineListing } from './data';
 import { formatListingLocation } from '@/lib/listingLocation';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,12 +106,12 @@ export default async function MachineDetailPage({
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    '@id': `https://jcbexchange.com${generateMachineSlugPath(listing)}#product`,
+    '@id': `${SITE_URL}${generateMachineSlugPath(listing)}#product`,
     name: listing.title,
     description:
       listing.description ||
       `${listing.title} available on ${SITE_NAME}${locationSummary ? ` in ${locationSummary}` : ''}.`,
-    mainEntityOfPage: `https://jcbexchange.com${generateMachineSlugPath(listing)}`,
+    mainEntityOfPage: `${SITE_URL}${generateMachineSlugPath(listing)}`,
     image: structuredImages,
     brand: listing.brand?.name
       ? {
@@ -133,7 +133,7 @@ export default async function MachineDetailPage({
         listing.status === 'SOLD'
           ? 'https://schema.org/OutOfStock'
           : 'https://schema.org/InStock',
-      url: `https://jcbexchange.com${generateMachineSlugPath(listing)}`,
+      url: `${SITE_URL}${generateMachineSlugPath(listing)}`,
       seller: listing.partner?.name
         ? {
             '@type': 'Organization',

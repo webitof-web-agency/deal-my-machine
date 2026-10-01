@@ -294,7 +294,7 @@ export default function TaxInvoiceModal({ isOpen, onClose, payment }: TaxInvoice
                 />
               ) : (
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFC107] font-bold text-black text-sm">
-                  JCB
+                  {SITE_NAME}
                 </div>
               )}
               <div>

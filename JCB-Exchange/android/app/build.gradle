@@ -123,7 +123,7 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all {
-            outputFileName = "JCB-Exchange.apk"
+            outputFileName = "DealMyMachine.apk"
         }
     }
 }

@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { Mail, MapPin } from 'lucide-react';
 import LegalDocumentShell from '@/components/legal/LegalDocumentShell';
 import LegalPageContent from '@/components/legal/LegalPageContent';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_SUPPORT_EMAIL, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: `Refund & Return Policy | ${SITE_NAME} - Marketplace Services`,
@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   openGraph: {
     title: `Refund & Return Policy | ${SITE_NAME}`,
     description: `Official refund and return guidelines for ${SITE_NAME} digital services and platform charges.`,
-    url: 'https://jcbexchange.com/refund-and-return-policy',
+    url: `${SITE_URL}/refund-and-return-policy`,
     siteName: SITE_NAME,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://jcbexchange.com/refund-and-return-policy',
+    canonical: `${SITE_URL}/refund-and-return-policy`,
   },
 };
 
@@ -96,7 +96,7 @@ export default function RefundAndReturnPolicyPage() {
                 </p>
                 <p className="flex items-center gap-2">
                   <Mail size={14} className="text-amber-600" />
-                  <a href="mailto:hello@jcbexchange.com" className="font-medium text-amber-600 hover:underline">hello@jcbexchange.com</a>
+                  <a href={`mailto:${SITE_SUPPORT_EMAIL}`} className="font-medium text-amber-600 hover:underline">{SITE_SUPPORT_EMAIL}</a>
                 </p>
               </div>
             </section>

@@ -26,7 +26,7 @@
                    "sellMachine":  "నా మిషన్ అమ్మండి",
                    "description":  "JCBs, excavators మరియు heavy construction machinery ను సులభంగా కొనడానికి, అమ్మడానికి మరియు exchange చేయడానికి మీ నమ్మకమైన వేదిక.",
                    "craftedWith":  "ప్రేమతో రూపొందించబడింది",
-                   "copyright":  "© 2026-2027 JCB Exchange. అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.",
+                   "copyright":  "© 2026-2027 {siteName}. అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.",
                    "usefulLinks":  "ఉపయోగకరమైన లింక్‌లు",
                    "quickLinks":  "త్వరిత లింక్‌లు",
                    "by":  "ద్వారా",
@@ -123,7 +123,7 @@
                           "businessHours":  "వ్యాపార సమయాలు",
                           "contactPreference":  "సంప్రదింపు ప్రాధాన్యం",
                           "website":  "వెబ్‌సైట్",
-                          "whatsappIntro":  "నమస్తే, మీ ప్రొఫైల్‌ను JCBExchange లో చూశాను. మీ మిషన్లపై నాకు ఆసక్తి ఉంది."
+                          "whatsappIntro":  "నమస్తే, మీ ప్రొఫైల్‌ను {siteName} లో చూశాను. మీ మిషన్లపై నాకు ఆసక్తి ఉంది."
                       },
     "machineDetails":  {
                            "errorTag":  "లిస్టింగ్ లోడ్ కాలేదు",
@@ -466,7 +466,7 @@
       "termsAndConditions": "నిబంధనలు మరియు షరతులు"
     },
     "careers": {
-      "badge": "JCB Exchange లో కెరీర్లు",
+      "badge": "{siteName} లో కెరీర్లు",
       "homeHeading": "భారతదేశపు ప్రముఖ హెవీ ఎక్విప్‌మెంట్ నెట్‌వర్క్‌లో చేరండి",
       "viewAllPositions": "అన్ని ఉద్యోగ అవకాశాలను చూడండి",
       "applyNow": "ఇప్పుడే దరఖాస్తు చేయండి",

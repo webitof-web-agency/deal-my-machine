@@ -35,6 +35,8 @@ const isLocalHostname = (hostname: string) =>
 const apiOrigin = configuredApiUrl.replace(/\/api\/?$/, '');
 const uploadsPattern = getRemotePattern(apiOrigin, '/uploads/public/**');
 const legacyApiUploadsPattern = getRemotePattern(apiOrigin, '/api/uploads/public/**');
+const apiFullPattern = getRemotePattern(apiOrigin, '/**');
+const sitePattern = getRemotePattern(process.env.NEXT_PUBLIC_SITE_URL || 'https://dealmymachine.com', '/**');
 const shouldAllowLocalIpImages =
   process.env.NODE_ENV !== 'production' &&
   (!!uploadsPattern?.hostname && isLocalHostname(uploadsPattern.hostname));
@@ -55,36 +57,6 @@ const nextConfig: NextConfig = {
         hostname: '127.0.0.1',
         port: '5002',
         pathname: '/uploads/public/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'api.dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'admin.dealmymachine.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'jcbexchange.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'api.jcbexchange.com',
-        pathname: '/**',
       },
       {
         protocol: 'https',
@@ -148,6 +120,8 @@ const nextConfig: NextConfig = {
       },
       ...(uploadsPattern ? [uploadsPattern] : []),
       ...(legacyApiUploadsPattern ? [legacyApiUploadsPattern] : []),
+      ...(apiFullPattern ? [apiFullPattern] : []),
+      ...(sitePattern ? [sitePattern] : []),
     ],
   },
 };

@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { generateDealerSlugPath, generateMachineSlugPath } from "@/lib/seoUtils";
-
-const SITE_URL = "https://jcbexchange.com";
+import { SITE_URL } from '@/lib/site';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002/api";
 
 type PublicListing = {

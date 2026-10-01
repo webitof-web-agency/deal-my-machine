@@ -180,9 +180,18 @@ type MobileOtpFormState = {
   templateMessage: string;
 };
 
+type DatabaseBackupStatus = {
+  running: boolean;
+  nextScheduledAt: string | null;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+  lastFileName: string | null;
+  lastError: string | null;
+};
+
 const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
-  const axiosError = error as AxiosError<{ error?: string }>;
-  return axiosError.response?.data?.error || fallbackMessage;
+  const axiosError = error as AxiosError<{ error?: string; message?: string }>;
+  return axiosError.response?.data?.error || axiosError.response?.data?.message || fallbackMessage;
 };
 
 const emptyListingPaymentForm: ListingPaymentFormState = {
@@ -242,6 +251,8 @@ export default function SuperAdminSettingsPage() {
   const [driveForm, setDriveForm] = useState({ enabled: false, clientId: '', clientSecret: '', refreshToken: '', mediaRootFolderId: '', backupRootFolderId: '' });
   const [driveSaving, setDriveSaving] = useState(false);
   const [driveTesting, setDriveTesting] = useState(false);
+  const [backupTesting, setBackupTesting] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<DatabaseBackupStatus | null>(null);
   const [showDriveClientId, setShowDriveClientId] = useState(false);
   const [showDriveClientSecret, setShowDriveClientSecret] = useState(false);
   const [showDriveRefreshToken, setShowDriveRefreshToken] = useState(false);
@@ -431,7 +442,7 @@ export default function SuperAdminSettingsPage() {
         refreshToken: response.data.googleDrive?.refreshToken || current.refreshToken,
       }));
     } catch (error) {
-      toast.error((error as AxiosError<{ error?: string }>)?.response?.data?.error || 'Unable to save Google Drive settings.');
+      toast.error(getApiErrorMessage(error, 'Unable to save Google Drive settings.'));
     } finally { setDriveSaving(false); }
   };
 
@@ -441,9 +452,32 @@ export default function SuperAdminSettingsPage() {
       const response = await api.post<{ folderName?: string }>('/superadmin/google-drive/test-connection');
       toast.success(`Google Drive connection is working${response.data.folderName ? ` (${response.data.folderName})` : ''}.`);
     } catch (error) {
-      toast.error((error as AxiosError<{ error?: string }>)?.response?.data?.error || 'Google Drive connection test failed.');
+      toast.error(getApiErrorMessage(error, 'Google Drive connection test failed.'));
     } finally {
       setDriveTesting(false);
+    }
+  };
+
+  const loadBackupStatus = useCallback(async () => {
+    try {
+      const response = await api.get<DatabaseBackupStatus>('/superadmin/google-drive/backup-status');
+      setBackupStatus(response.data);
+    } catch {
+      // The status is informative; connection and backup actions remain available.
+    }
+  }, []);
+
+  const handleBackupTest = async () => {
+    setBackupTesting(true);
+    try {
+      const response = await api.post<{ fileName?: string; sizeBytes?: number }>('/superadmin/google-drive/test-backup');
+      toast.success(`Database backup uploaded${response.data.fileName ? ` (${response.data.fileName})` : ''}.`);
+      await loadBackupStatus();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Database backup failed.'));
+      await loadBackupStatus();
+    } finally {
+      setBackupTesting(false);
     }
   };
 
@@ -454,7 +488,7 @@ export default function SuperAdminSettingsPage() {
       setShowDriveClientSecret(true);
       setShowDriveRefreshToken(true);
     } catch (error) {
-      toast.error((error as AxiosError<{ error?: string }>)?.response?.data?.error || 'Unable to reveal Drive secrets.');
+      toast.error(getApiErrorMessage(error, 'Unable to reveal Drive secrets.'));
     }
   };
 
@@ -467,6 +501,20 @@ export default function SuperAdminSettingsPage() {
       window.clearTimeout(timer);
     };
   }, [loadSettings]);
+
+  useEffect(() => {
+    if (activeTab !== 'googleDrive') {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadBackupStatus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [activeTab, loadBackupStatus]);
 
   const handleGoogleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1110,7 +1158,7 @@ export default function SuperAdminSettingsPage() {
                           type="text"
                           value={mobileOtpForm.senderId}
                           onChange={(event) => updateMobileOtpForm({ senderId: event.target.value })}
-                          placeholder="e.g. JCBEXC"
+                          placeholder="e.g. DMEXC"
                           maxLength={6}
                           disabled={!mobileOtpForm.enabled}
                           className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107] disabled:bg-gray-50 disabled:text-gray-400"
@@ -1310,12 +1358,56 @@ export default function SuperAdminSettingsPage() {
                     <button type="button" onClick={() => void handleDriveTest()} disabled={driveTesting || driveSaving} className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-900 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-60">
                       {driveTesting ? 'Testing connection...' : 'Test connection'}
                     </button>
-                    <button type="submit" disabled={driveSaving || driveTesting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#FFC107] px-5 py-2.5 text-sm font-bold text-black transition hover:bg-[#E5AD06] disabled:cursor-not-allowed disabled:opacity-60">
+                    <button type="button" onClick={() => void handleBackupTest()} disabled={backupTesting || driveSaving || driveTesting} className="rounded-lg border border-blue-300 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-900 transition hover:border-blue-500 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60">
+                      {backupTesting ? 'Uploading backup...' : 'Run backup now'}
+                    </button>
+                    <button type="submit" disabled={driveSaving || driveTesting || backupTesting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#FFC107] px-5 py-2.5 text-sm font-bold text-black transition hover:bg-[#E5AD06] disabled:cursor-not-allowed disabled:opacity-60">
                       <Save className="h-4 w-4" />
                       {driveSaving ? 'Saving...' : 'Save Drive Settings'}
                     </button>
                   </div>
                 </form>
+              </section>
+
+              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Database backup</p>
+                    <h3 className="mt-1 text-xl font-bold text-gray-900">Automatic backup status</h3>
+                    <p className="mt-1 text-sm text-gray-600">Backups run daily at 3:00 AM Asia/Kolkata and are uploaded to the private backup folder.</p>
+                  </div>
+                  <HardDrive className="h-7 w-7 text-blue-700" />
+                </div>
+                <div className="mt-5 grid gap-3 text-sm md:grid-cols-4">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="font-semibold text-gray-600">Scheduler</p>
+                    <p className={`mt-1 font-bold ${backupStatus?.running ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {backupStatus?.running ? 'Backup running' : 'Scheduled'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="font-semibold text-gray-600">Next scheduled run</p>
+                    <p className="mt-1 font-bold text-gray-900">
+                      {backupStatus?.nextScheduledAt ? new Date(backupStatus.nextScheduledAt).toLocaleString() : 'Loading...'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="font-semibold text-gray-600">Last successful backup</p>
+                    <p className="mt-1 font-bold text-gray-900">
+                      {backupStatus?.lastSuccessAt ? new Date(backupStatus.lastSuccessAt).toLocaleString() : 'Not run yet'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="font-semibold text-gray-600">Last file</p>
+                    <p className="mt-1 break-all font-bold text-gray-900">{backupStatus?.lastFileName || 'Not run yet'}</p>
+                  </div>
+                </div>
+                {backupStatus?.lastError ? (
+                  <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    Last backup error: {backupStatus.lastError}
+                  </p>
+                ) : null}
+                <p className="mt-4 text-xs leading-relaxed text-gray-500">Use “Run backup now” after saving the Drive settings to verify PostgreSQL access, pg_dump availability, private-folder permissions, and the complete upload path.</p>
               </section>
 
               <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 shadow-sm">

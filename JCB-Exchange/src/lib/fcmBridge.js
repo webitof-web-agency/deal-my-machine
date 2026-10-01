@@ -9,15 +9,15 @@ export function buildFcmSyncScript({ apiBaseUrl, fcmToken }) {
   return `
     (function () {
       try {
-        var config = window.__jcbExchangeFcmConfig || {};
+        var config = window.__dealmymachineFcmConfig || {};
         config.apiBaseUrl = ${safeApiBaseUrl};
         config.fcmToken = ${safeFcmToken};
-        window.__jcbExchangeFcmConfig = config;
+        window.__dealmymachineFcmConfig = config;
 
-        if (!window.__jcbExchangeFcmRegister) {
-          window.__jcbExchangeFcmRegister = async function () {
+        if (!window.__dealmymachineFcmRegister) {
+          window.__dealmymachineFcmRegister = async function () {
             try {
-              var currentConfig = window.__jcbExchangeFcmConfig || {};
+              var currentConfig = window.__dealmymachineFcmConfig || {};
               var apiBaseUrl = currentConfig.apiBaseUrl || "";
               var fcmToken = currentConfig.fcmToken || "";
               if (!apiBaseUrl || !fcmToken) {
@@ -26,12 +26,12 @@ export function buildFcmSyncScript({ apiBaseUrl, fcmToken }) {
 
               var authToken = window.localStorage ? (window.localStorage.getItem("frontend_portal_token") || "") : "";
               if (!authToken) {
-                window.__jcbExchangeFcmLastSynced = null;
-                window.__jcbExchangeFcmLastSyncedUserToken = null;
+                window.__dealmymachineFcmLastSynced = null;
+                window.__dealmymachineFcmLastSyncedUserToken = null;
                 return;
               }
 
-              if (window.__jcbExchangeFcmLastSynced === fcmToken && window.__jcbExchangeFcmLastSyncedUserToken === authToken) {
+              if (window.__dealmymachineFcmLastSynced === fcmToken && window.__dealmymachineFcmLastSyncedUserToken === authToken) {
                 return;
               }
 
@@ -44,25 +44,29 @@ export function buildFcmSyncScript({ apiBaseUrl, fcmToken }) {
                 body: JSON.stringify({ token: fcmToken })
               });
 
-              window.__jcbExchangeFcmLastSynced = fcmToken;
-              window.__jcbExchangeFcmLastSyncedUserToken = authToken;
+              window.__dealmymachineFcmLastSynced = fcmToken;
+              window.__dealmymachineFcmLastSyncedUserToken = authToken;
             } catch (error) {
               console.warn("FCM token sync failed", error);
             }
           };
         }
 
-        if (!window.__jcbExchangeFcmListenerInstalled) {
-          window.__jcbExchangeFcmListenerInstalled = true;
-          window.addEventListener("jcbexchange-auth-change", function () {
-            window.__jcbExchangeFcmRegister();
+        if (!window.__dealmymachineFcmListenerInstalled) {
+          window.__dealmymachineFcmListenerInstalled = true;
+          window.addEventListener("dealmymachine-auth-change", function () {
+            window.__dealmymachineFcmRegister();
           });
           window.addEventListener("serviceportal-auth-change", function () {
-            window.__jcbExchangeFcmRegister();
+            window.__dealmymachineFcmRegister();
+          });
+          // Keep listening for the legacy event while older web builds are still deployed.
+          window.addEventListener("jcbexchange-auth-change", function () {
+            window.__dealmymachineFcmRegister();
           });
         }
 
-        window.__jcbExchangeFcmRegister();
+        window.__dealmymachineFcmRegister();
       } catch (error) {
         console.warn("FCM bridge injection failed", error);
       }

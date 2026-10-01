@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-jcb-yellow: #FFC107;
-  --color-jcb-dark: #1A1A1A;
-  --color-jcb-cream: #FDFBF7;
+  --color-brand-yellow: #FFC107;
+  --color-brand-dark: #1A1A1A;
+  --color-brand-cream: #FDFBF7;
   --color-background: #ffffff;
   --color-foreground: #171717;
   --font-sans: "Inter", var(--font-geist-sans);

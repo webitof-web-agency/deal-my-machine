@@ -11,6 +11,7 @@ import IdleSessionManager from "@/components/shared/IdleSessionManager";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { LOCALE_COOKIE_NAME, normalizeLocale } from "@/lib/i18n/config";
+import { LEGACY_LOCALE_COOKIE_NAME } from "@/lib/storageKeys";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -22,6 +23,7 @@ import {
   DEFAULT_PWA_THEME_COLOR,
   getSiteBranding,
 } from '@/lib/siteBranding';
+import { STATIC_FRONTEND_LOGO } from '@/lib/staticBranding';
 
 export const viewport: Viewport = {
   themeColor: DEFAULT_PWA_THEME_COLOR,
@@ -103,8 +105,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
-  const branding = await getSiteBranding();
+  const locale = normalizeLocale(
+    cookieStore.get(LOCALE_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_LOCALE_COOKIE_NAME)?.value,
+  );
   const siteSchema = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -113,7 +116,7 @@ export default async function RootLayout({
         '@id': `${SITE_URL}/#organization`,
         name: SITE_NAME,
         url: `${SITE_URL}/`,
-        logo: branding.logoUrl,
+        logo: STATIC_FRONTEND_LOGO,
         description: SITE_DESCRIPTION,
       },
       {
@@ -137,22 +140,8 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-gray-50 text-gray-900 antialiased">
-        {(branding.darkLogoUrl || branding.logoUrl) && (
-          <link rel="preload" as="image" href={branding.darkLogoUrl || branding.logoUrl || undefined} />
-        )}
         <link rel="preload" as="image" href="/branding/loadinglogo.png" fetchPriority="high" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.__JCB_SITE_LOGO__=${JSON.stringify({
-              logoUrl: branding.logoUrl,
-              darkLogoUrl: branding.darkLogoUrl,
-            }).replace(/</g, '\\u003c')};`,
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }} />
         <LocaleSync />
         <Navbar />
         <main className="flex-grow flex flex-col">

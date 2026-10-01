@@ -14,6 +14,7 @@ import {
 } from './mobileOtp';
 import { normalizePartnerRegistrationEnabled } from './publicAccessSettings';
 import { APP_NAME } from '../config/appConfig';
+import { createSettingsSnapshotCache } from './settingsSnapshotCache';
 
 type GoogleAuthSettings = {
   enabled: boolean;
@@ -315,6 +316,7 @@ const siteFooterLogoPublicUrlPrefix = '/uploads/public/site-footer-logo/';
 const siteFaviconPublicUrlPrefix = '/uploads/public/site-favicon/';
 const siteManifestIconPublicUrlPrefix = '/uploads/public/site-manifest-icon/';
 const supportedFooterSocialPlatforms = new Set(['FACEBOOK', 'INSTAGRAM', 'TWITTER']);
+const APP_SETTINGS_CACHE_TTL_MS = 30_000;
 
 const defaultSettings: AppSettings = {
   googleAuth: {
@@ -439,6 +441,10 @@ const defaultSettings: AppSettings = {
     updatedByUserId: null,
   },
 };
+
+const appSettingsCache = createSettingsSnapshotCache<AppSettings>({
+  ttlMs: APP_SETTINGS_CACHE_TTL_MS,
+});
 
 const parseTimestamp = (value?: string | null) => {
   if (!value) {
@@ -1017,9 +1023,10 @@ const persistSettings = async (settings: AppSettings) => {
     persistDatabaseSettings(settings),
     writeSettingsFileSnapshot(settings),
   ]);
+  appSettingsCache.invalidate();
 };
 
-export const getAppSettings = async (): Promise<AppSettings> => {
+const readAppSettingsUncached = async (): Promise<AppSettings> => {
   await ensureSettingsFile();
 
   try {
@@ -1031,24 +1038,14 @@ export const getAppSettings = async (): Promise<AppSettings> => {
     if (databaseIsMeaningful && fileIsMeaningful) {
       const databaseFreshness = getSettingsFreshnessScore(databaseSettings);
       const fileFreshness = getSettingsFreshnessScore(fileSettings);
-      const preferredSettings = fileFreshness > databaseFreshness ? fileSettings : (databaseSettings as AppSettings);
-
-      if (preferredSettings === fileSettings) {
-        await persistDatabaseSettings(fileSettings);
-      } else {
-        await writeSettingsFileSnapshot(databaseSettings as AppSettings);
-      }
-
-      return preferredSettings;
+      return fileFreshness > databaseFreshness ? fileSettings : (databaseSettings as AppSettings);
     }
 
     if (databaseIsMeaningful) {
-      await writeSettingsFileSnapshot(databaseSettings as AppSettings);
       return databaseSettings as AppSettings;
     }
 
     if (fileIsMeaningful) {
-      await persistDatabaseSettings(fileSettings);
       return fileSettings;
     }
 
@@ -1057,6 +1054,13 @@ export const getAppSettings = async (): Promise<AppSettings> => {
     return defaultSettings;
   }
 };
+
+export const invalidateAppSettingsCache = () => {
+  appSettingsCache.invalidate();
+};
+
+export const getAppSettings = async (): Promise<AppSettings> =>
+  appSettingsCache.get(readAppSettingsUncached);
 
 export const updateGoogleAuthSettings = async ({
   enabled,

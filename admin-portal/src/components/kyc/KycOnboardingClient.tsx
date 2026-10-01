@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import api from '@/lib/api';
@@ -10,6 +10,7 @@ import { generateAdminPartnerEditPath } from '@/lib/routePaths';
 import { FileUploadField } from '@/components/upload/FileUploadField';
 import { formatPartnerTypeLabel } from '@/lib/partnerType';
 import { useAuthStore } from '@/store/authStore';
+import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 
 const toTitleCase = (str: string) => {
   if (!str) return str;
@@ -287,10 +288,90 @@ export default function KycOnboardingClient({ partnerId }: { partnerId?: string 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
+  const [states, setStates] = useState<Option[]>([]);
+  const [cities, setCities] = useState<Option[]>([]);
+  const [selectedStateId, setSelectedStateId] = useState('');
+  const [selectedCityId, setSelectedCityId] = useState('');
 
   const currentStatus = currentUser?.kycStatus || 'NOT_STARTED';
   const isApproved = currentUser?.accountStatus === 'ACTIVE' && currentUser?.onboardingStatus === 'APPROVED' && currentUser?.kycStatus === 'APPROVED';
   const canEdit = isAdminMode ? true : !isApproved && currentStatus !== 'UNDER_REVIEW' && currentStatus !== 'SUBMITTED';
+
+  const loadCities = useCallback(async (stateId: string, cityName?: string) => {
+    if (!stateId) {
+      setCities([]);
+      setSelectedCityId('');
+      return;
+    }
+
+    try {
+      const response = await api.get<Option[]>(`/locations/cities/${stateId}`);
+      const nextCities = response.data || [];
+      setCities(nextCities);
+
+      const matchedCity = cityName
+        ? nextCities.find((option) => option.name.trim().toLowerCase() === cityName.trim().toLowerCase())
+        : null;
+      setSelectedCityId(matchedCity ? String(matchedCity.id) : '');
+    } catch (locationError) {
+      console.error('Failed to load KYC cities', locationError);
+      setCities([]);
+      setSelectedCityId('');
+    }
+  }, []);
+
+  const loadLocationOptions = useCallback(async (stateName: string, cityName: string) => {
+    try {
+      const countriesResponse = await api.get<Option[]>('/locations/countries');
+      const india = (countriesResponse.data || []).find((option) => option.name.trim().toLowerCase() === 'india');
+
+      if (!india) {
+        setStates([]);
+        setCities([]);
+        setSelectedStateId('');
+        setSelectedCityId('');
+        return;
+      }
+
+      const statesResponse = await api.get<Option[]>(`/locations/states/${india.id}`);
+      const nextStates = statesResponse.data || [];
+      setStates(nextStates);
+
+      const matchedState = nextStates.find(
+        (option) => option.name.trim().toLowerCase() === stateName.trim().toLowerCase(),
+      );
+
+      if (!matchedState) {
+        setSelectedStateId('');
+        setCities([]);
+        setSelectedCityId('');
+        return;
+      }
+
+      const matchedStateId = String(matchedState.id);
+      setSelectedStateId(matchedStateId);
+      await loadCities(matchedStateId, cityName);
+    } catch (locationError) {
+      console.error('Failed to load KYC location options', locationError);
+      setStates([]);
+      setCities([]);
+      setSelectedStateId('');
+      setSelectedCityId('');
+    }
+  }, [loadCities]);
+
+  const handleStateChange = async (option: Option) => {
+    const nextStateId = String(option.id);
+    setProfile((current) => ({ ...current, state: toTitleCase(option.name), city: '' }));
+    setSelectedStateId(nextStateId);
+    setSelectedCityId('');
+    await loadCities(nextStateId);
+  };
+
+  const handleCityChange = (option: Option) => {
+    setProfile((current) => ({ ...current, city: toTitleCase(option.name) }));
+    setSelectedCityId(String(option.id));
+  };
 
   useEffect(() => {
     if (!isAdminMode || !resolvedPartnerId || !currentUser || !pathname.endsWith('/edit')) {
@@ -349,6 +430,7 @@ export default function KycOnboardingClient({ partnerId }: { partnerId?: string 
         }
 
         setProfile(data.profile);
+        await loadLocationOptions(data.profile.state || '', data.profile.city || '');
         setRequiredDocuments(data.requiredDocuments);
         setKycDocuments(data.kycDocuments);
         setAgreements(data.agreements);
@@ -376,7 +458,7 @@ export default function KycOnboardingClient({ partnerId }: { partnerId?: string 
     return () => {
       cancelled = true;
     };
-  }, [isAdminMode, requestedPartnerId, updateUser]);
+  }, [isAdminMode, loadLocationOptions, requestedPartnerId, updateUser]);
 
   const effectiveRequiredDocuments = useMemo(() => {
     const derivedDocuments = getRequiredDocumentsForPartnerType(profile.partnerType);
@@ -772,11 +854,14 @@ export default function KycOnboardingClient({ partnerId }: { partnerId?: string 
               />
             </Field>
             <Field label="State">
-              <input
-                value={profile.state}
-                onChange={(event) => setProfile((current) => ({ ...current, state: toTitleCase(event.target.value) }))}
+              <SearchableSelect
+                options={states}
+                value={selectedStateId || profile.state}
+                displayValue={profile.state}
+                onChange={(option) => { void handleStateChange(option); }}
+                placeholder="Select state"
                 disabled={!canEdit}
-                className={inputClassName}
+                className="bg-[#F5F8FA]"
               />
             </Field>
             <Field label="District">
@@ -788,11 +873,14 @@ export default function KycOnboardingClient({ partnerId }: { partnerId?: string 
               />
             </Field>
             <Field label="City">
-              <input
-                value={profile.city}
-                onChange={(event) => setProfile((current) => ({ ...current, city: toTitleCase(event.target.value) }))}
+              <SearchableSelect
+                options={selectedStateId ? cities : []}
+                value={selectedCityId || profile.city}
+                displayValue={profile.city}
+                onChange={handleCityChange}
+                placeholder={selectedStateId ? 'Select city' : 'Select state first'}
                 disabled={!canEdit}
-                className={inputClassName}
+                className="bg-[#F5F8FA]"
               />
             </Field>
             <Field label="PIN code">

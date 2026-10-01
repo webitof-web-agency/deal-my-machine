@@ -16,6 +16,7 @@ import {
 import { WebView } from 'react-native-webview';
 import messaging from '@react-native-firebase/messaging';
 import {
+  APP_TITLE,
   getApiBaseUrl,
   getBusinessEmail,
   getSupportEmail,
@@ -371,7 +372,7 @@ function HybridWebView({ onWebLoaded }: Props) {
       {loading && (
         <View style={styles.topLoadingBar}>
           <ActivityIndicator size="small" color="#FFB800" style={styles.topLoadingIndicator} />
-          <Text style={styles.topLoadingText}>Loading JCB Exchange...</Text>
+          <Text style={styles.topLoadingText}>Loading {APP_TITLE}...</Text>
         </View>
       )}
     </View>

@@ -10,6 +10,7 @@ import {
   isPublicMarketplaceListingVisible,
 } from '../utils/publicListingVisibility';
 import { hashDedupeKey, recordAnalyticsEvent } from '../services/analytics.service';
+import { getFeaturedListingMediaQuery } from './publicListingQuery';
 
 const prismaAny = prisma as any;
 
@@ -652,13 +653,25 @@ export const getApprovedDealers = async (req: Request, res: Response, next: Next
               mobile: true,
               name: true,
               whatsappNumber: true,
+              listings: {
+                where: {
+                  status: { in: getPublicListingStatuses() },
+                },
+                select: {
+                  category: { select: { name: true } },
+                },
+              },
             },
           },
           partnerType: true,
+          categories: {
+            select: { name: true },
+          },
           workingHours: true,
           yearsInBusiness: true,
           businessDescription: true,
           contactPreference: true,
+          serviceAreas: true,
           websiteUrl: true,
           createdAt: true,
         },
@@ -668,17 +681,31 @@ export const getApprovedDealers = async (req: Request, res: Response, next: Next
       }),
     ]);
 
-    const data = dealers.map((dealer: any) => ({
-      ...dealer,
-      publicContact: resolvePublicLeadContact({
-        useSellerContact: settings.publicLeadRouting.useSellerContact,
-        adminCallNumber: defaultSuperAdminContact.adminCallNumber,
-        adminWhatsappNumber: defaultSuperAdminContact.adminWhatsappNumber,
-        sellerMobile: dealer.user?.mobile,
-        sellerAlternateMobile: dealer.alternateMobile,
-        sellerWhatsappNumber: dealer.user?.whatsappNumber,
-      }),
-    }));
+    const data = dealers.map((dealer: any) => {
+      const { user, categories, serviceAreas, ...dealerData } = dealer;
+      const listingCategories = (user?.listings || []).map((listing: any) => listing.category?.name).filter(Boolean);
+      const categoryNames = Array.from(new Set([
+        ...(categories || []).map((category: any) => category.name).filter(Boolean),
+        ...listingCategories,
+      ])).sort((left, right) => String(left).localeCompare(String(right)));
+
+      return {
+        ...dealerData,
+        user: user
+          ? { mobile: user.mobile, name: user.name }
+          : null,
+        categories: categoryNames,
+        serviceAreas: serviceAreas || null,
+        publicContact: resolvePublicLeadContact({
+          useSellerContact: settings.publicLeadRouting.useSellerContact,
+          adminCallNumber: defaultSuperAdminContact.adminCallNumber,
+          adminWhatsappNumber: defaultSuperAdminContact.adminWhatsappNumber,
+          sellerMobile: user?.mobile,
+          sellerAlternateMobile: dealer.alternateMobile,
+          sellerWhatsappNumber: user?.whatsappNumber,
+        }),
+      };
+    });
 
     res.status(200).json({ success: true, data });
   } catch (error) {
@@ -934,10 +961,9 @@ export const getPublicListings = async (req: Request, res: Response, next: NextF
     const listings = await prismaAny.listing.findMany({
       where: whereCondition,
       include: {
-        media: {
-          orderBy: {
-            createdAt: 'asc',
-          },
+        media: getFeaturedListingMediaQuery(),
+        _count: {
+          select: { media: true },
         },
         category: {
           select: { id: true, name: true },
@@ -1014,7 +1040,7 @@ export const getPublicListings = async (req: Request, res: Response, next: NextF
           listing.media.find((media: any) => media.type === 'IMAGE' && media.isFeatured)?.url ||
           listing.media.find((media: any) => media.type === 'IMAGE')?.url ||
           null,
-        mediaCount: listing.media.length,
+        mediaCount: listing._count?.media ?? listing.media.length,
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
       })),
@@ -1037,11 +1063,7 @@ export const getRecentListings = async (req: Request, res: Response, next: NextF
         },
       },
       include: {
-        media: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        media: getFeaturedListingMediaQuery(),
         category: {
           select: { name: true },
         },
@@ -1121,11 +1143,7 @@ export const getPublicCategories = async (req: Request, res: Response, next: Nex
         createdAt: 'desc',
       },
       include: {
-        media: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        media: getFeaturedListingMediaQuery(),
         category: {
           include: {
             icon: {

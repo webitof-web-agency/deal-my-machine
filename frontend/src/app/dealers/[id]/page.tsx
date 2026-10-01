@@ -4,7 +4,7 @@ import { extractIdFromSlug, generateDealerSlugPath } from '@/lib/seoUtils';
 import { resolvePublicDealerId } from '@/lib/publicRouteResolvers';
 import DealerDetailPageClient from './DealerDetailPageClient';
 import { getAbsoluteDealerAssetUrl, getDealerDetail, getDealerListings } from './data';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 type DealerDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -41,7 +41,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${title} | ${SITE_NAME}`,
       description,
-      url: `https://jcbexchange.com${generateDealerSlugPath(dealer)}`,
+      url: `${SITE_URL}${generateDealerSlugPath(dealer)}`,
       type: 'website',
       ...(dealer.businessLogoUrl
         ? {
@@ -81,7 +81,7 @@ export default async function DealerDetailPage({ params }: DealerDetailPageProps
     redirect(canonicalPath);
   }
 
-  const canonicalUrl = `https://jcbexchange.com${generateDealerSlugPath(dealer)}`;
+  const canonicalUrl = `${SITE_URL}${generateDealerSlugPath(dealer)}`;
   const logoUrl = getAbsoluteDealerAssetUrl(dealer?.businessLogoUrl);
   const localBusinessSchema = {
     '@context': 'https://schema.org',

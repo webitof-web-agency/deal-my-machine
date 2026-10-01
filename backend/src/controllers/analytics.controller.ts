@@ -3,6 +3,8 @@ import prisma from '../lib/prisma';
 import { calculateConversionRate, calculateDemandPerStock, calculateDemandScore, calculatePercentageChange, getPreviousPeriod } from '../services/analyticsMetrics';
 import { ANALYTICS_EVENT_TYPES, recordAnalyticsEvent } from '../services/analytics.service';
 import { buildCsv } from '../services/csvExport';
+import { APP_NAME } from '../config/appConfig';
+import { formatAnalyticsExportFilename } from '../config/brandText.js';
 
 const prismaAny = prisma as any;
 const analyticsOptionsCache = new Map<string, { expiresAt: number; payload: unknown }>();
@@ -1165,7 +1167,7 @@ export const exportAnalyticsListings = async (req: Request, res: Response, next:
     const exportDate = new Date().toISOString().slice(0, 10);
     res.status(200).set({
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="jcb-analytics-listings-${exportDate}.csv"`,
+      'Content-Disposition': `attachment; filename="${formatAnalyticsExportFilename(APP_NAME, exportDate)}"`,
       'Content-Length': String(Buffer.byteLength(csv, 'utf8')),
       'Cache-Control': 'no-store, private',
       'X-Content-Type-Options': 'nosniff',

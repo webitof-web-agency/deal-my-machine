@@ -1,11 +1,10 @@
+export { LOCALE_COOKIE_NAME, LOCALE_STORAGE_KEY } from '@/lib/storageKeys';
+
 export const DEFAULT_LOCALE = 'en' as const;
 
 export const SUPPORTED_LOCALES = ['en', 'hi', 'mr', 'gu', 'te'] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
-
-export const LOCALE_COOKIE_NAME = 'jcb_locale';
-export const LOCALE_STORAGE_KEY = 'jcb_locale';
 
 export const LOCALE_LABELS: Record<AppLocale, { englishName: string; nativeName: string }> = {
   en: { englishName: 'English', nativeName: 'English' },

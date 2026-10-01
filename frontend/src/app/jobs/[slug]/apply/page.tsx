@@ -2,13 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useRef, use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Briefcase,
   User,
-  Mail,
-  Phone,
-  MapPin,
   FileText,
   Upload,
   CheckCircle2,
@@ -18,7 +14,6 @@ import {
   Search,
   Building2,
   Sparkles,
-  ShieldCheck,
   Send,
   Link2,
 } from 'lucide-react';
@@ -189,7 +184,6 @@ function CustomSelect({
 
 export default function JobApplyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const router = useRouter();
   const { t } = useTranslation();
 
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -255,7 +249,7 @@ export default function JobApplyPage({ params }: { params: Promise<{ slug: strin
       }
     };
     fetchJob();
-  }, [slug]);
+  }, [slug, t]);
 
   // Fetch DB States on demand
   const fetchDbStates = async () => {
@@ -550,7 +544,7 @@ export default function JobApplyPage({ params }: { params: Promise<{ slug: strin
 
       {/* Form Container */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10 w-full flex-grow">
-        <div className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-10 shadow-sm space-y-8">
+        <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-8 md:p-10 shadow-sm space-y-6 sm:space-y-8">
           {/* Header */}
           <div className="border-b border-gray-100 pb-6 space-y-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 text-xs font-bold uppercase tracking-wider">

@@ -357,7 +357,7 @@ export const InvoicePDFTemplate = ({
               <Image src={logoUrl} style={styles.logo} />
             ) : (
               <View style={styles.fallbackLogo}>
-                <Text style={styles.fallbackLogoText}>JCB</Text>
+                <Text style={styles.fallbackLogoText}>{SITE_NAME}</Text>
               </View>
             )}
             <Text style={styles.companyTitle}>{invoiceSettings?.companyName || SITE_NAME}</Text>

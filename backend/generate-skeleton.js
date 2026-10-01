@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = 'g:/Webitof company/jcbexchange/server/src';
+const srcDir = path.join(__dirname, 'src');
 
 const files = {
   'routes/index.ts': `import { Router } from 'express';\nimport masterRoutes from './master.routes';\nimport authRoutes from './auth.routes';\nimport listingRoutes from './listing.routes';\nimport leadRoutes from './lead.routes';\n\nconst router = Router();\n\nrouter.use('/master', masterRoutes);\nrouter.use('/auth', authRoutes);\nrouter.use('/listings', listingRoutes);\nrouter.use('/leads', leadRoutes);\n\nexport default router;`,

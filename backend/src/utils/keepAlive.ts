@@ -1,5 +1,6 @@
 import https from 'https';
 import http from 'http';
+import { RENDER_EXTERNAL_URL } from '../config/appConfig';
 
 export function startKeepAlive(port: string | number) {
   // Render's free tier spins down after 15 mins of inactivity.
@@ -7,9 +8,7 @@ export function startKeepAlive(port: string | number) {
   const PING_INTERVAL = 14 * 60 * 1000;
 
   setInterval(() => {
-    // If you have your live Render URL, you should add it to your Render Environment Variables
-    // as RENDER_EXTERNAL_URL (e.g., https://jcb-exchange-xxx.onrender.com)
-    const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
+    const baseUrl = RENDER_EXTERNAL_URL || `http://localhost:${port}`;
     const url = `${baseUrl}/health`;
     
     const client = url.startsWith('https') ? https : http;

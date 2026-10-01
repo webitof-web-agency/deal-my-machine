@@ -51,6 +51,7 @@ export default function AuthModal() {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOtpSending, setIsOtpSending] = useState(false);
   const [isOtpVerifying, setIsOtpVerifying] = useState(false);
@@ -78,8 +79,8 @@ export default function AuthModal() {
     });
   }, [showToast]);
 
-  const completeAuth = useCallback((token: string, user: AuthResponseUser, shouldNotify = true) => {
-    setAuth(token, user);
+  const completeAuth = useCallback((token: string, user: AuthResponseUser, shouldNotify = true, persistSession = true) => {
+    setAuth(token, user, persistSession);
     setAuthModalOpen(false);
     if (shouldNotify) {
       showLoginSuccessToast(user.name, user.email);
@@ -281,7 +282,7 @@ export default function AuthModal() {
         otp,
       });
       const { token, user } = response.data as { token: string; user: AuthResponseUser };
-      completeAuth(token, user, true);
+        completeAuth(token, user, true, rememberMe);
     } catch (err: unknown) {
       const errorMessage =
         err && typeof err === 'object' && 'response' in err
@@ -308,7 +309,7 @@ export default function AuthModal() {
             <button
               onClick={() => setAuthModalOpen(false)}
               aria-label="Close login"
-              className="absolute right-3 top-2 flex h-8 w-8 items-center justify-center rounded-full text-[#7d8792] transition-colors hover:bg-[#f3f4f6] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-jcb-yellow"
+              className="absolute right-3 top-2 flex h-8 w-8 items-center justify-center rounded-full text-[#7d8792] transition-colors hover:bg-[#f3f4f6] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-brand-yellow"
             >
               <X size={17} strokeWidth={1.8} />
             </button>
@@ -437,7 +438,7 @@ export default function AuthModal() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="absolute right-2.5 top-2.5 rounded p-0.5 text-[#98a2b3] hover:text-[#344054] focus:outline-none focus:ring-2 focus:ring-jcb-yellow/40"
+                      className="absolute right-2.5 top-2.5 rounded p-0.5 text-[#98a2b3] hover:text-[#344054] focus:outline-none focus:ring-2 focus:ring-brand-yellow/40"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -452,10 +453,14 @@ export default function AuthModal() {
               {isLogin && loginMethod === 'password' ? (
                 <div className="flex items-center justify-between pb-0.5 text-[10px]">
                   <label className="flex items-center gap-1.5 text-[#667085]">
-                    <input type="checkbox" defaultChecked className="h-3 w-3 accent-[#fdbb05]" />
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                      className="h-3 w-3 accent-[#fdbb05]"
+                    />
                     Remember me
                   </label>
-                  <span className="font-semibold text-[#f29f05]">Forgot Password?</span>
                 </div>
               ) : null}
               <button

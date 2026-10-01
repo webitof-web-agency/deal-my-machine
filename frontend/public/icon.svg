@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">JCB Exchange Icon</title>
-  <desc id="desc">Brand icon for JCB Exchange heavy machinery marketplace.</desc>
+  <title id="title">DealMyMachine Icon</title>
+  <desc id="desc">Brand icon for the DealMyMachine heavy machinery marketplace.</desc>
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#161616" />
@@ -19,6 +19,6 @@
     font-weight="900"
     text-anchor="middle"
   >
-    J
+    D
   </text>
 </svg>

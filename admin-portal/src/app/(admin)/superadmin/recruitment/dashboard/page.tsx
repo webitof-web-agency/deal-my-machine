@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import api from '@/lib/api';
 import BrandLoader from '@/components/ui/BrandLoader';
@@ -24,19 +25,6 @@ import {
   ArrowUpRight,
   AlertCircle,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
-  PieChart,
-  Pie,
-} from 'recharts';
-
 interface DashboardData {
   stats: {
     activeJobs: number;
@@ -71,7 +59,10 @@ interface DashboardData {
   }>;
 }
 
-const COLORS = ['#F59E0B', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#6366F1'];
+const RecruitmentAnalyticsCharts = dynamic(() => import('@/components/dashboard/RecruitmentAnalyticsCharts'), {
+  ssr: false,
+  loading: () => <div className="flex h-full items-center justify-center text-xs text-gray-400">Loading chart...</div>,
+});
 
 export default function RecruitmentDashboardPage() {
   const pathname = usePathname();
@@ -238,19 +229,11 @@ export default function RecruitmentDashboardPage() {
                 </div>
 
                 <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.charts.pipelineFunnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                      <XAxis dataKey="stage" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#F59E0B" radius={[6, 6, 0, 0]}>
-                        {data.charts.pipelineFunnel.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <RecruitmentAnalyticsCharts
+                    variant="pipeline"
+                    pipelineFunnel={data.charts.pipelineFunnel}
+                    applicationsByDepartment={data.charts.applicationsByDepartment}
+                  />
                 </div>
               </div>
 
@@ -262,24 +245,11 @@ export default function RecruitmentDashboardPage() {
 
                 <div className="h-64 w-full">
                   {data.charts.applicationsByDepartment.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={data.charts.applicationsByDepartment}
-                          dataKey="count"
-                          nameKey="departmentName"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
-                        >
-                          {data.charts.applicationsByDepartment.map((_, idx) => (
-                            <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <RecruitmentAnalyticsCharts
+                      variant="department"
+                      pipelineFunnel={data.charts.pipelineFunnel}
+                      applicationsByDepartment={data.charts.applicationsByDepartment}
+                    />
                   ) : (
                     <div className="flex items-center justify-center h-full text-xs text-gray-400">
                       {t('recruitment.noDeptData', 'No department data available')}

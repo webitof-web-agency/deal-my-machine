@@ -24,7 +24,7 @@
     "soldVehicles":  {
                          "badge":  "सत्यापित बिक्री और आर्काइव सौदे",
                          "title":  "बिकी हुई गाड़ियाँ और मशीनें",
-                         "subtitle":  "JCB Exchange के माध्यम से पूरे भारत में सफलतापूर्वक बेची गई सत्यापित भारी मशीनों की जानकारी देखें।",
+                         "subtitle":  "{siteName} के माध्यम से पूरे भारत में सफलतापूर्वक बेची गई सत्यापित भारी मशीनों की जानकारी देखें।",
                          "searchPlaceholder":  "टाइटल, मॉडल, शहर खोजें...",
                          "allCategories":  "सभी श्रेणियां ({count})",
                          "allBrands":  "सभी ब्रांड्स ({count})",
@@ -52,7 +52,7 @@
                    "sellMachine":  "मेरी मशीन बेचें",
                    "description":  "JCBs, excavators और भारी निर्माण मशीनों को खरीदने, बेचने और एक्सचेंज करने के लिए भारत का भरोसेमंद प्लेटफ़ॉर्म।",
                    "craftedWith":  "प्यार से बनाया गया",
-                   "copyright":  "© 2026-2027 JCB Exchange. सर्वाधिकार सुरक्षित।",
+                   "copyright":  "© 2026-2027 {siteName}. सर्वाधिकार सुरक्षित।",
                    "usefulLinks":  "उपयोगी लिंक्स",
                    "quickLinks":  "क्विक लिंक्स",
                    "by":  "द्वारा",
@@ -149,7 +149,7 @@
                           "businessHours":  "बिजनेस Hours",
                           "contactPreference":  "कॉन्टैक्ट Preference",
                           "website":  "Website",
-                          "whatsappIntro":  "नमस्ते, मैंने आपका प्रोफाइल JCBExchange पर देखा। मुझे आपकी मशीनों में रुचि है।"
+                          "whatsappIntro":  "नमस्ते, मैंने आपका प्रोफाइल {siteName} पर देखा। मुझे आपकी मशीनों में रुचि है।"
                       },
     "machineDetails":  {
                            "errorTag":  "लिस्टिंग लोड नहीं हो सकी",
@@ -506,7 +506,7 @@
       "termsAndConditions": "नियम एवं शर्तें"
     },
     "careers": {
-      "badge": "JCB Exchange में करियर",
+      "badge": "{siteName} में करियर",
       "homeHeading": "भारत के अग्रणी हेवी इक्विपमेंट नेटवर्क से जुड़ें",
       "viewAllPositions": "सभी खुले पद देखें",
       "applyNow": "अभी आवेदन करें",

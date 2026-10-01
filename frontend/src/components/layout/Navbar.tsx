@@ -14,6 +14,7 @@ import { getPortalMenuLabel, getPortalTarget, getPublicRoleLabel, PORTAL_ROLES }
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { formatDateTime } from '@/lib/i18n/formatters';
+import { SITE_FALLBACK_EMAIL } from '@/lib/site';
 
 type ProfileResponse = {
   user: {
@@ -60,7 +61,6 @@ export default function Navbar() {
     notifications,
     unreadCount,
     initialize,
-    fetchRecentListings,
     fetchNotifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
@@ -180,14 +180,7 @@ export default function Navbar() {
 
   useEffect(() => {
     initialize();
-    void fetchRecentListings();
-
-    const interval = setInterval(() => {
-      void fetchRecentListings();
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [fetchRecentListings, initialize]);
+  }, [initialize]);
 
   useEffect(() => {
     if (!hasHydrated || !isAuthenticated || user?.role !== 'CUSTOMER') {
@@ -483,7 +476,7 @@ export default function Navbar() {
                     <div className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] transition-all duration-200 ease-out">
                       <div className="border-b border-gray-100 bg-gray-50/80 px-5 py-4">
                         <p className="truncate text-sm font-bold text-gray-900">{displayName}</p>
-                        <p className="mt-0.5 truncate text-xs text-gray-500">{user?.email || 'customer@jcbexchange.com'}</p>
+                        <p className="mt-0.5 truncate text-xs text-gray-500">{user?.email || SITE_FALLBACK_EMAIL}</p>
                       </div>
                       <div className="p-1.5">
                         {user?.role && PORTAL_ROLES.includes(user.role) ? (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Briefcase,
@@ -11,14 +11,14 @@ import {
   Filter,
   Users,
   Calendar,
-  IndianRupee,
+  Check,
+  ChevronDown,
   ChevronRight,
-  Sparkles,
   ArrowRight,
+  type LucideIcon,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
-import { SITE_NAME } from '@/lib/site';
 
 interface JobDepartment {
   id: string;
@@ -53,6 +53,82 @@ interface JobItem {
   };
 }
 
+interface PublicJobsResponse {
+  success?: boolean;
+  jobs?: JobItem[];
+  departments?: JobDepartment[];
+}
+
+type JobDropdownOption = {
+  value: string;
+  label: string;
+};
+
+type JobDropdownProps = {
+  value: string;
+  placeholder: string;
+  options: JobDropdownOption[];
+  onChange: (value: string) => void;
+  icon: LucideIcon;
+};
+
+const JobDropdown = ({ value, placeholder, options, onChange, icon: Icon }: JobDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectedOption = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={dropdownRef} className="relative min-w-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen((previous) => !previous)}
+        aria-expanded={isOpen}
+        className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-left text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#FFC107] focus:ring-2 focus:ring-[#FFC107]/20"
+      >
+        <Icon className="h-4 w-4 shrink-0 text-slate-500" />
+        <span className={`min-w-0 flex-1 truncate ${selectedOption ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{selectedOption?.label || placeholder}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen ? (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white p-1.5 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.25)]">
+          <div className="max-h-64 space-y-0.5 overflow-y-auto">
+            <button type="button" onClick={() => { onChange(''); setIsOpen(false); }} className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-xs transition-colors ${!value ? 'bg-amber-50/80 font-bold text-gray-950' : 'font-medium text-gray-700 hover:bg-gray-100'}`}>
+              <span className="text-[13px]">{placeholder}</span>
+              {!value ? <Check className="h-4 w-4 shrink-0 text-[#E5A700] stroke-[2.5]" /> : null}
+            </button>
+            {options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <button key={option.value} type="button" onClick={() => { onChange(option.value); setIsOpen(false); }} className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-xs transition-colors ${isSelected ? 'bg-amber-50/80 font-bold text-gray-950' : 'font-medium text-gray-700 hover:bg-gray-100'}`}>
+                  <span className="text-[13px]">{option.label}</span>
+                  {isSelected ? <Check className="h-4 w-4 shrink-0 text-[#E5A700] stroke-[2.5]" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export default function JobsPage() {
   const { t } = useTranslation();
   const [jobs, setJobs] = useState<JobItem[]>([]);
@@ -68,8 +144,7 @@ export default function JobsPage() {
   const [selectedWorkMode, setSelectedWorkMode] = useState('');
   const [selectedExperience, setSelectedExperience] = useState('');
   const [sortBy, setSortBy] = useState('latest');
-
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -85,31 +160,39 @@ export default function JobsPage() {
       if (selectedWorkMode) params.workMode = selectedWorkMode;
       if (selectedExperience) params.experienceLevel = selectedExperience;
 
-      const res = await api.get('/recruitment/public/jobs', { params });
+      const res = await api.get<PublicJobsResponse>('/recruitment/public/jobs', { params });
       if (res.data?.success) {
         setJobs(res.data.jobs || []);
         if (res.data.departments) {
           setDepartments(res.data.departments);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load jobs:', err);
       setError(t('careers.unableToLoad', 'Unable to load job postings right now. Please try again.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, selectedDepartment, selectedEmploymentType, selectedExperience, selectedLocation, selectedWorkMode, sortBy, t]);
 
+  // Search is submitted explicitly; filters re-fetch using the latest search term.
+  // The callback is intentionally excluded so typing does not trigger a request.
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    fetchJobs();
-  }, [selectedDepartment, selectedEmploymentType, selectedWorkMode, selectedExperience, sortBy]);
+    const timeoutId = window.setTimeout(() => {
+      void fetchJobs();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedDepartment, selectedEmploymentType, selectedExperience, selectedWorkMode, sortBy]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchJobs();
   };
 
-  const formatSalary = (min: number | null, max: number | null, currency = 'INR') => {
+  const formatSalary = (min: number | null, max: number | null) => {
     if (!min && !max) return t('careers.bestInIndustry', 'Best in Industry');
     const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
     if (min && max) return `₹${formatter.format(min)} - ₹${formatter.format(max)} / yr`;
@@ -140,22 +223,9 @@ export default function JobsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Hero Header Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-amber-950 text-white py-16 px-4 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-amber-950 text-white py-10 sm:py-12 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/20 via-transparent to-transparent opacity-60"></div>
-        <div className="relative max-w-7xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-medium backdrop-blur-sm">
-            <Sparkles size={14} className="animate-pulse" />
-            <span>{t('careers.badge', `Careers at ${SITE_NAME}`)}</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            {t('careers.heroTitle', 'Shape the Future of Heavy Equipment Mobility')}
-          </h1>
-
-          <p className="max-w-2xl mx-auto text-sm sm:text-lg text-gray-300 font-light leading-relaxed">
-            {t('careers.heroSubtitle', "Join India's premier B2B commercial & heavy equipment marketplace. Explore opportunities across sales, engineering, operations, finance, and marketing.")}
-          </p>
-
+        <div className="relative max-w-7xl mx-auto text-center">
           {/* Search Box inside Hero */}
           <form onSubmit={handleSearchSubmit} className="max-w-3xl mx-auto pt-4">
             <div className="flex flex-col sm:flex-row items-center gap-2 bg-white/10 p-2 rounded-2xl border border-white/20 backdrop-blur-md shadow-2xl">
@@ -197,23 +267,27 @@ export default function JobsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
         {/* Filters and Sorting Toolbar */}
         <div className="bg-white rounded-2xl border border-gray-200/80 p-5 mb-8 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <Filter size={16} className="text-amber-600" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+              <Filter size={16} className="text-amber-600 shrink-0" />
               <span>{t('careers.filterTitle', 'Filter Job Openings')}</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 font-medium hidden sm:inline">{t('careers.sortBy', 'Sort by:')}</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-gray-50 border border-gray-200 text-xs sm:text-sm text-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="latest">{t('careers.sortLatest', 'Latest First')}</option>
-                <option value="oldest">{t('careers.sortOldest', 'Oldest First')}</option>
-                <option value="closingSoon">{t('careers.sortClosingSoon', 'Closing Soon')}</option>
-              </select>
+            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+              <span className="text-xs text-gray-500 font-medium shrink-0">{t('careers.sortBy', 'Sort by:')}</span>
+              <div className="w-44">
+                <JobDropdown
+                  value={sortBy}
+                  placeholder={t('careers.sortBy', 'Sort by:')}
+                  icon={Calendar}
+                  options={[
+                    { value: 'latest', label: t('careers.sortLatest', 'Latest First') },
+                    { value: 'oldest', label: t('careers.sortOldest', 'Oldest First') },
+                    { value: 'closingSoon', label: t('careers.sortClosingSoon', 'Closing Soon') },
+                  ]}
+                  onChange={setSortBy}
+                />
+              </div>
             </div>
           </div>
 
@@ -221,66 +295,64 @@ export default function JobsPage() {
             {/* Department Filter */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">{t('careers.department', 'Department')}</label>
-              <select
+              <JobDropdown
                 value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">{t('careers.allDepartments', 'All Departments')}</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
+                placeholder={t('careers.allDepartments', 'All Departments')}
+                icon={Building2}
+                options={departments.map((dept) => ({ value: dept.id, label: dept.name }))}
+                onChange={setSelectedDepartment}
+              />
             </div>
 
             {/* Employment Type Filter */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">{t('careers.employmentType', 'Employment Type')}</label>
-              <select
+              <JobDropdown
                 value={selectedEmploymentType}
-                onChange={(e) => setSelectedEmploymentType(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">{t('careers.allTypes', 'All Types')}</option>
-                <option value="FULL_TIME">{t('careers.fullTime', 'Full Time')}</option>
-                <option value="PART_TIME">{t('careers.partTime', 'Part Time')}</option>
-                <option value="CONTRACT">{t('careers.contract', 'Contract')}</option>
-                <option value="INTERNSHIP">{t('careers.internship', 'Internship')}</option>
-                <option value="FREELANCE">{t('careers.freelance', 'Freelance')}</option>
-              </select>
+                placeholder={t('careers.allTypes', 'All Types')}
+                icon={Briefcase}
+                options={[
+                  { value: 'FULL_TIME', label: t('careers.fullTime', 'Full Time') },
+                  { value: 'PART_TIME', label: t('careers.partTime', 'Part Time') },
+                  { value: 'CONTRACT', label: t('careers.contract', 'Contract') },
+                  { value: 'INTERNSHIP', label: t('careers.internship', 'Internship') },
+                  { value: 'FREELANCE', label: t('careers.freelance', 'Freelance') },
+                ]}
+                onChange={setSelectedEmploymentType}
+              />
             </div>
 
             {/* Work Mode Filter */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">{t('careers.workMode', 'Work Mode')}</label>
-              <select
+              <JobDropdown
                 value={selectedWorkMode}
-                onChange={(e) => setSelectedWorkMode(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">{t('careers.allModes', 'All Modes')}</option>
-                <option value="ON_SITE">{t('careers.onSite', 'On-site')}</option>
-                <option value="REMOTE">{t('careers.remote', 'Remote')}</option>
-                <option value="HYBRID">{t('careers.hybrid', 'Hybrid')}</option>
-              </select>
+                placeholder={t('careers.allModes', 'All Modes')}
+                icon={Building2}
+                options={[
+                  { value: 'ON_SITE', label: t('careers.onSite', 'On-site') },
+                  { value: 'REMOTE', label: t('careers.remote', 'Remote') },
+                  { value: 'HYBRID', label: t('careers.hybrid', 'Hybrid') },
+                ]}
+                onChange={setSelectedWorkMode}
+              />
             </div>
 
             {/* Experience Level Filter */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">{t('careers.experienceLevel', 'Experience Level')}</label>
-              <select
+              <JobDropdown
                 value={selectedExperience}
-                onChange={(e) => setSelectedExperience(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">{t('careers.anyExperience', 'Any Experience')}</option>
-                <option value="FRESHER">{t('careers.fresher', 'Fresher (0-1 yrs)')}</option>
-                <option value="JUNIOR">{t('careers.junior', 'Junior (1-3 yrs)')}</option>
-                <option value="MID_LEVEL">{t('careers.midLevel', 'Mid Level (3-6 yrs)')}</option>
-                <option value="SENIOR">{t('careers.senior', 'Senior (5+ yrs)')}</option>
-              </select>
+                placeholder={t('careers.anyExperience', 'Any Experience')}
+                icon={Users}
+                options={[
+                  { value: 'FRESHER', label: t('careers.fresher', 'Fresher (0-1 yrs)') },
+                  { value: 'JUNIOR', label: t('careers.junior', 'Junior (1-3 yrs)') },
+                  { value: 'MID_LEVEL', label: t('careers.midLevel', 'Mid Level (3-6 yrs)') },
+                  { value: 'SENIOR', label: t('careers.senior', 'Senior (5+ yrs)') },
+                ]}
+                onChange={setSelectedExperience}
+              />
             </div>
           </div>
         </div>
@@ -362,46 +434,48 @@ export default function JobsPage() {
 
         {/* Jobs Grid */}
         {!loading && !error && jobs.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
             {jobs.map((job) => (
-              <div
+              <article
                 key={job.id}
-                className="group bg-white rounded-2xl border border-gray-200/80 p-6 hover:border-amber-400 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#FFC107] hover:shadow-[0_16px_36px_-18px_rgba(15,23,42,0.45)] sm:p-6"
               >
-                <div className="space-y-4">
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FFC107] via-amber-400 to-[#F59E0B] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                <div className="space-y-5">
                   {/* Top Badge Row */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">
                       <Building2 size={12} />
                       {job.department?.name || 'Department'}
                     </span>
 
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                       {formatWorkMode(job.workMode)}
                     </span>
                   </div>
 
                   {/* Title & Location */}
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-1">
+                    <h3 className="line-clamp-2 text-xl font-extrabold leading-snug text-slate-950 transition-colors group-hover:text-[#C88700]">
                       <Link href={`/jobs/${job.slug}`}>
                         {job.title}
                       </Link>
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 mt-2">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={13} className="text-gray-400" />
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                        <MapPin size={13} className="text-slate-400" />
                         {job.locationCity}, {job.locationState}
                       </span>
 
-                      <span className="flex items-center gap-1">
-                        <Clock size={13} className="text-gray-400" />
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                        <Clock size={13} className="text-slate-400" />
                         {formatEmploymentType(job.employmentType)}
                       </span>
 
-                      <span className="flex items-center gap-1">
-                        <Briefcase size={13} className="text-gray-400" />
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                        <Briefcase size={13} className="text-slate-400" />
                         {job.minExperience} - {job.maxExperience ? `${job.maxExperience} ${t('careers.yrsLabel', 'yrs')}` : t('careers.yrsPlusLabel', 'yrs+')}
                       </span>
                     </div>
@@ -409,26 +483,26 @@ export default function JobsPage() {
 
                   {/* Summary */}
                   {job.summary && (
-                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed font-normal">
+                    <p className="line-clamp-2 text-sm leading-relaxed text-slate-600">
                       {job.summary}
                     </p>
                   )}
 
                   {/* Metadata Bar */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 text-xs">
-                    <div>
-                      <span className="text-gray-400 block text-[10px] uppercase font-semibold">{t('careers.salaryRange', 'Salary Range')}</span>
-                      <span className="font-semibold text-gray-900">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs">
+                    <div className="rounded-xl bg-amber-50/70 p-3">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-amber-700">{t('careers.salaryRange', 'Salary Range')}</span>
+                      <span className="font-extrabold leading-relaxed text-slate-950">
                         {job.salaryVisibility
-                          ? formatSalary(job.minSalary, job.maxSalary, job.currency)
+                          ? formatSalary(job.minSalary, job.maxSalary)
                           : t('careers.notDisclosed', 'Not Disclosed')}
                       </span>
                     </div>
 
-                    <div>
-                      <span className="text-gray-400 block text-[10px] uppercase font-semibold">{t('careers.vacancies', 'Vacancies')}</span>
-                      <span className="font-semibold text-gray-900 flex items-center gap-1">
-                        <Users size={12} className="text-amber-600" />
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">{t('careers.vacancies', 'Vacancies')}</span>
+                      <span className="flex items-center gap-1.5 font-extrabold text-slate-950">
+                        <Users size={13} className="text-amber-600" />
                         {job.vacancies} {job.vacancies === 1 ? t('careers.vacancyAvailable', 'Opening') : t('careers.vacanciesAvailable', 'Openings')}
                       </span>
                     </div>
@@ -436,21 +510,21 @@ export default function JobsPage() {
                 </div>
 
                 {/* Footer Action */}
-                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
                     <Calendar size={12} />
                     {job.postedAt ? `${t('careers.postedAt', 'Posted')} ${new Date(job.postedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}` : t('careers.recentlyPosted', 'Recently posted')}
                   </span>
 
                   <Link
                     href={`/jobs/${job.slug}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gray-900 group-hover:bg-amber-500 text-white group-hover:text-gray-950 font-bold text-xs transition-all shadow-sm"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all group-hover:bg-[#FFC107] group-hover:text-slate-950"
                   >
                     <span>{t('careers.viewDetails', 'View Details')}</span>
                     <ChevronRight size={14} />
                   </Link>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}

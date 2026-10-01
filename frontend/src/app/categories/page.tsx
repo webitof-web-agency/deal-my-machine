@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import CategoriesPageClient from './CategoriesPageClient';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Machine Categories',
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: `Machine Categories | ${SITE_NAME}`,
     description: `Browse heavy equipment categories and discover machines listed across India on ${SITE_NAME}.`,
-    url: 'https://jcbexchange.com/categories',
+    url: `${SITE_URL}/categories`,
     type: 'website',
   },
   twitter: {
@@ -27,9 +27,9 @@ export default function CategoriesPage() {
     '@type': 'CollectionPage',
     name: `Machine Categories | ${SITE_NAME}`,
     description: `Browse heavy equipment categories and discover machines listed across India on ${SITE_NAME}.`,
-    url: 'https://jcbexchange.com/categories',
+    url: `${SITE_URL}/categories`,
     isPartOf: {
-      '@id': 'https://jcbexchange.com/#website',
+      '@id': `${SITE_URL}/#website`,
     },
     about: {
       '@type': 'Thing',

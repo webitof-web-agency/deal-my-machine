@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getIdleTimeoutMs, getInitialActivityAt, getWarningAtMs, isIdleExpired } from '@/lib/idleSession.mjs';
-
-const LAST_ACTIVITY_KEY = 'jcbexchange_idle_last_activity';
-const LOGOUT_KEY = 'jcbexchange_idle_logout';
+import {
+  IDLE_LAST_ACTIVITY_KEY,
+  IDLE_LOGOUT_KEY,
+  LEGACY_IDLE_LAST_ACTIVITY_KEY,
+  LEGACY_IDLE_LOGOUT_KEY,
+} from '@/lib/storageKeys';
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'] as const;
 
 const readTimestamp = (key: string) => {
@@ -22,7 +25,8 @@ export const useIdleLogout = ({ enabled, onLogout }: { enabled: boolean; onLogou
   const continueSession = useCallback(() => {
     const now = Date.now();
     try {
-      window.localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+      window.localStorage.setItem(IDLE_LAST_ACTIVITY_KEY, String(now));
+      window.localStorage.setItem(LEGACY_IDLE_LAST_ACTIVITY_KEY, String(now));
     } catch {
       // The in-memory timer still protects the current tab if storage is unavailable.
     }
@@ -42,14 +46,16 @@ export const useIdleLogout = ({ enabled, onLogout }: { enabled: boolean; onLogou
     let lastPersistedActivityAt = lastActivityAt;
 
     try {
-      window.localStorage.setItem(LAST_ACTIVITY_KEY, String(lastActivityAt));
+      window.localStorage.setItem(IDLE_LAST_ACTIVITY_KEY, String(lastActivityAt));
+      window.localStorage.setItem(LEGACY_IDLE_LAST_ACTIVITY_KEY, String(lastActivityAt));
     } catch {
       // Continue with the current tab's wall-clock timer.
     }
 
     const logoutCurrentSession = () => {
       try {
-        window.localStorage.setItem(LOGOUT_KEY, String(Date.now()));
+        window.localStorage.setItem(IDLE_LOGOUT_KEY, String(Date.now()));
+        window.localStorage.setItem(LEGACY_IDLE_LOGOUT_KEY, String(Date.now()));
       } catch {
         // Cross-tab sync is best effort when storage is blocked.
       }
@@ -68,7 +74,8 @@ export const useIdleLogout = ({ enabled, onLogout }: { enabled: boolean; onLogou
       if (now - lastPersistedActivityAt >= 1000) {
         lastPersistedActivityAt = now;
         try {
-          window.localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+        window.localStorage.setItem(IDLE_LAST_ACTIVITY_KEY, String(now));
+        window.localStorage.setItem(LEGACY_IDLE_LAST_ACTIVITY_KEY, String(now));
         } catch {
           // The current tab remains protected by lastActivityAt.
         }
@@ -76,12 +83,12 @@ export const useIdleLogout = ({ enabled, onLogout }: { enabled: boolean; onLogou
     };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === LOGOUT_KEY) {
+      if (event.key === IDLE_LOGOUT_KEY || event.key === LEGACY_IDLE_LOGOUT_KEY) {
         onLogout();
         return;
       }
 
-      if (event.key === LAST_ACTIVITY_KEY) {
+      if (event.key === IDLE_LAST_ACTIVITY_KEY || event.key === LEGACY_IDLE_LAST_ACTIVITY_KEY) {
         const sharedActivityAt = Number(event.newValue);
         if (Number.isFinite(sharedActivityAt) && sharedActivityAt > lastActivityAt) {
           lastActivityAt = sharedActivityAt;
@@ -92,7 +99,10 @@ export const useIdleLogout = ({ enabled, onLogout }: { enabled: boolean; onLogou
     };
 
     const checkIdleState = () => {
-      const sharedActivityAt = readTimestamp(LAST_ACTIVITY_KEY);
+      const sharedActivityAt = Math.max(
+        readTimestamp(IDLE_LAST_ACTIVITY_KEY) ?? 0,
+        readTimestamp(LEGACY_IDLE_LAST_ACTIVITY_KEY) ?? 0,
+      ) || null;
       if (sharedActivityAt && sharedActivityAt > lastActivityAt) {
         lastActivityAt = sharedActivityAt;
       }

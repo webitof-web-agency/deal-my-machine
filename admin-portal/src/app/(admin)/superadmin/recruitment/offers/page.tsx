@@ -947,7 +947,7 @@ function getMockOffers(): OfferItem[] {
       createdAt: '2026-08-28T12:00:00Z',
       application: {
         id: 'app-102',
-        applicationRef: 'JCB-JOB-2026-000102',
+        applicationRef: 'DMM-JOB-2026-000102',
         candidate: {
           fullName: 'Priya Patel',
           email: 'priya.patel@example.com',

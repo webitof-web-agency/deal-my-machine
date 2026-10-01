@@ -16,6 +16,9 @@ import {
   X,
   Truck,
   ArrowUpDown,
+  Filter,
+  CalendarRange,
+  Gauge,
 } from 'lucide-react';
 import DualRangeSlider from '@/components/ui/DualRangeSlider';
 import { generateMachineSlugPath } from '@/lib/seoUtils';
@@ -404,9 +407,41 @@ function MachinesPageContent({
   }, [isMobileFiltersOpen]);
 
   const renderFiltersContent = () => (
-    <div className="space-y-4">
-      <FilterAccordion title={t('machines.price')} defaultOpen>
-        <div className="mt-6 mb-2 px-2">
+    <div className="space-y-1">
+      {categories.length > 0 && (
+        <div className="border-b border-slate-100 pb-3">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategories([]);
+              setPage(1);
+            }}
+            className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-xs font-bold transition ${selectedCategories.length === 0 ? 'bg-[#FFF3C4] text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            <span className="flex items-center gap-2"><Truck className="h-4 w-4" />{t('categories.allCategories')}</span>
+            <span>{machines.length}</span>
+          </button>
+          <div className="mt-2 max-h-64 space-y-1 overflow-y-auto pr-1">
+            {categories.map((category) => (
+              <button
+                type="button"
+                key={category.id}
+                onClick={() => {
+                  setSelectedCategories((current) => current.includes(category.id) ? current.filter((id) => id !== category.id) : [...current, category.id]);
+                  setPage(1);
+                }}
+                className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[11px] transition ${selectedCategories.includes(category.id) ? 'bg-amber-50 font-bold text-amber-700' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <span className="truncate">{category.name}</span>
+                <span className="ml-2 text-slate-400">{category.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {maxAvailablePrice > 0 && <FilterAccordion title={t('machines.price')} defaultOpen>
+        <div className="mb-2 mt-5 px-2">
           <DualRangeSlider
             key={maxAvailablePrice}
             min={0}
@@ -419,50 +454,33 @@ function MachinesPageContent({
             formatValue={formatPrice}
           />
         </div>
-      </FilterAccordion>
+      </FilterAccordion>}
 
-      <FilterAccordion title={t('machines.brand')} defaultOpen>
-        <div className="space-y-3 mt-3">
+      {brands.length > 0 && <FilterAccordion title={t('machines.brand')} defaultOpen>
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
           {brands.map((brand) => (
             <label key={brand.name} className="flex items-center gap-3 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={selectedBrands.includes(brand.name)}
                 onChange={() => toggleFilter(selectedBrands, setSelectedBrands, brand.name)}
-                className="w-4 h-4 rounded border border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                className="h-3.5 w-3.5 accent-[#FFC107]"
               />
-              <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors flex-1">{brand.name}</span>
-              <span className="text-sm text-gray-400">({brand.count})</span>
+              <span className="flex-1 text-[11px] text-slate-600 transition-colors group-hover:text-slate-900">{brand.name}</span>
+              <span className="text-[11px] text-slate-400">{brand.count}</span>
             </label>
           ))}
         </div>
-      </FilterAccordion>
+      </FilterAccordion>}
 
-      <FilterAccordion title={t('machines.equipmentType')} defaultOpen={Boolean(initialCategoryId)}>
-        <div className="space-y-3 mt-3">
-          {categories.map((cat) => (
-            <label key={cat.id} className="flex items-center gap-3 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={selectedCategories.includes(cat.id)}
-                onChange={() => toggleFilter(selectedCategories, setSelectedCategories, cat.id)}
-                className="w-4 h-4 rounded border border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors flex-1">{cat.name}</span>
-              <span className="text-sm text-gray-400">({cat.count})</span>
-            </label>
-          ))}
-        </div>
-      </FilterAccordion>
-
-      <FilterAccordion title={t('machines.location')}>
-        <div className="mt-3 space-y-3">
+      {locations.length > 0 && <FilterAccordion title={t('machines.location')}>
+        <div className="mt-3 space-y-2">
           <input
             type="text"
             placeholder={t('machines.locationPlaceholder')}
             value={locationQuery}
             onChange={(e) => setLocationQuery(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-jcb-yellow focus:ring-1 focus:ring-jcb-yellow"
+            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow"
           />
           {visibleLocations.map((loc) => (
             <label key={loc.name} className="flex items-center gap-3 cursor-pointer group">
@@ -470,41 +488,44 @@ function MachinesPageContent({
                 type="checkbox"
                 checked={selectedLocations.includes(loc.name)}
                 onChange={() => toggleFilter(selectedLocations, setSelectedLocations, loc.name)}
-                className="w-4 h-4 rounded border border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                className="h-3.5 w-3.5 accent-[#FFC107]"
               />
-              <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors flex-1 line-clamp-1">{loc.name}</span>
-              <span className="text-sm text-gray-400">({loc.count})</span>
+              <span className="line-clamp-1 flex-1 text-[11px] text-slate-600 transition-colors group-hover:text-slate-900">{loc.name}</span>
+              <span className="text-[11px] text-slate-400">{loc.count}</span>
             </label>
           ))}
-          {visibleLocations.length === 0 && <p className="text-sm text-gray-500">{t('machines.noMatchingLocations')}</p>}
         </div>
-      </FilterAccordion>
+      </FilterAccordion>}
 
-      <FilterAccordion title={t('machines.condition')}>
-        <div className="space-y-3 mt-3">
+      {conditions.length > 0 && <FilterAccordion title={t('machines.condition')}>
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
           {conditions.map((condition) => (
             <label key={condition.name} className="flex items-center gap-3 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={selectedConditions.includes(condition.name)}
                 onChange={() => toggleFilter(selectedConditions, setSelectedConditions, condition.name)}
-                className="w-4 h-4 rounded border border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                className="h-3.5 w-3.5 accent-[#FFC107]"
               />
-              <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors flex-1">{condition.name}</span>
-              <span className="text-sm text-gray-400">({condition.count})</span>
+              <span className="flex-1 text-[11px] text-slate-600 transition-colors group-hover:text-slate-900">{condition.name}</span>
+              <span className="text-[11px] text-slate-400">{condition.count}</span>
             </label>
           ))}
         </div>
-      </FilterAccordion>
+      </FilterAccordion>}
+
+      <button type="button" onClick={clearAllFilters} className="mt-3 flex w-full items-center justify-center rounded-md bg-slate-100 py-2 text-[11px] font-bold text-slate-700 transition hover:bg-amber-100">
+        {t('machines.clearAll')}
+      </button>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] pt-4 pb-16">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-200 pb-4 mb-6 gap-4">
+    <div className="min-h-screen bg-[#FAFAF9] pb-16 pt-5 text-[#071B3A]">
+      <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
+        <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-1 capitalize">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">
               {selectedCategories.length === 1
                 ? t('machines.browseCategory', {
                     category: categories.find((c) => c.id === selectedCategories[0])?.name || t('home.equipmentFallback'),
@@ -512,7 +533,7 @@ function MachinesPageContent({
                 : t('machines.browseEquipment')}
             </h1>
           </div>
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3 w-full lg:w-auto">
+          <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
             {/* Search Input, Sort Select Pill (mobile), Filter Icon (mobile) */}
             <div className="flex items-center gap-2 w-full lg:w-auto">
               <div className="relative flex-[1.5] min-w-[100px]">
@@ -524,7 +545,7 @@ function MachinesPageContent({
                     setSearchQuery(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full h-10 rounded-full border border-gray-300 bg-white pl-9 pr-3 text-xs font-semibold text-gray-700 shadow-sm outline-none transition focus:border-jcb-yellow focus:ring-1 focus:ring-jcb-yellow"
+                  className="h-10 w-full rounded-full border border-slate-200 bg-white pl-9 pr-3 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow"
                 />
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
               </div>
@@ -560,7 +581,7 @@ function MachinesPageContent({
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col gap-5 lg:flex-row">
 
           <div className={`fixed inset-0 z-50 lg:hidden flex transition-opacity duration-300 ${isMobileFiltersOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
             <div 
@@ -605,7 +626,7 @@ function MachinesPageContent({
                 </button>
                 <button 
                   onClick={() => setIsMobileFiltersOpen(false)}
-                  className="flex-1 py-2.5 bg-jcb-yellow hover:bg-yellow-500 text-black rounded-xl text-xs font-extrabold shadow-sm transition animate-none"
+                  className="flex-1 py-2.5 bg-brand-yellow hover:bg-yellow-500 text-black rounded-xl text-xs font-extrabold shadow-sm transition animate-none"
                 >
                   {t('machines.applyFilters')}
                 </button>
@@ -613,17 +634,13 @@ function MachinesPageContent({
             </div>
           </div>
 
-          <aside className="hidden lg:block w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white p-5 shadow-sm rounded-xl border border-gray-200 sticky top-4">
-              <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-3">
-                <h2 className="text-base font-bold text-gray-900">{t('machines.filters')}</h2>
-                {(selectedBrands.length > 0 || (!initialCategoryId && selectedCategories.length > 0) || (initialCategoryId && selectedCategories.length > 1) || selectedLocations.length > 0 || parsedMinPrice > 0 || parsedMaxPrice < maxAvailablePrice || selectedConditions.length > 0) && (
-                  <button onClick={clearAllFilters} className="text-xs text-gray-500 hover:text-jcb-yellow underline transition-colors">
-                    {t('machines.clearAll')}
-                  </button>
-                )}
+          <aside className="hidden h-fit w-full flex-shrink-0 lg:sticky lg:top-4 lg:block lg:w-[222px]">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 className="text-sm font-extrabold text-slate-900">{t('machines.filters')}</h2>
+                <Filter className="h-4 w-4 text-slate-500" />
               </div>
-              {renderFiltersContent()}
+              <div className="pt-1">{renderFiltersContent()}</div>
             </div>
           </aside>
 
@@ -648,13 +665,13 @@ function MachinesPageContent({
                 <p className="mt-2 text-sm text-gray-500 max-w-sm">
                   {t('machines.adjustFilters')}
                 </p>
-                <button onClick={clearAllFilters} className="mt-6 bg-jcb-yellow text-black font-bold px-6 py-2.5 rounded-xl shadow-sm hover:bg-yellow-500 transition-colors">
+                <button onClick={clearAllFilters} className="mt-6 bg-brand-yellow text-black font-bold px-6 py-2.5 rounded-xl shadow-sm hover:bg-yellow-500 transition-colors">
                   {t('machines.clearFilters')}
                 </button>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {paginatedMachines.map((machine) => {
                     const imageUrl = getMediaUrl(machine.featuredImage);
                     const locationLabel = formatListingLocation(machine, {
@@ -663,9 +680,9 @@ function MachinesPageContent({
                     });
 
                     return (
-                      <Link key={machine.id} href={generateMachineSlugPath(machine)} className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-gray-200">
-                        <div className="relative h-48 bg-gray-50 overflow-hidden">
-                          <div className="absolute top-3 right-3 z-10">{getAvailabilityBadge(machine.status, availabilityLabels)}</div>
+                      <Link key={machine.id} href={generateMachineSlugPath(machine)} className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-slate-300">
+                        <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+                          <div className="absolute top-3 left-3 z-10">{getAvailabilityBadge(machine.status, availabilityLabels)}</div>
                           {imageUrl ? (
                             <Image
                               src={imageUrl}
@@ -682,13 +699,45 @@ function MachinesPageContent({
                           )}
                         </div>
 
-                        <div className="p-5 flex flex-col flex-1">
-                          <h3 className="text-sm font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-yellow-600 transition-colors">{machine.title}</h3>
-                          <p className="mt-2 text-base font-extrabold text-[#b48900]">{formatPrice(machine.price)}</p>
+                        <div className="flex flex-1 flex-col p-4 sm:p-5">
+                          {/* Title */}
+                          <h3 className="line-clamp-2 text-[16px] font-bold text-slate-900 leading-tight group-hover:text-amber-600 transition-colors">
+                            {machine.title}
+                          </h3>
 
-                          <div className="mt-auto pt-4 flex items-center gap-1.5 text-xs text-gray-500 border-t border-gray-50">
-                            <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                          {/* Location */}
+                          <div className="mt-1.5 mb-3 flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                            <MapPin size={14} className="shrink-0 text-slate-400" />
                             <span className="truncate">{locationLabel}</span>
+                          </div>
+
+                          {/* Specs Box */}
+                          <div className="mb-4 grid grid-cols-2 bg-slate-50 border border-slate-200 rounded-[6px]">
+                            <div className="py-2 px-3 border-r border-slate-200 flex flex-col justify-center">
+                              <div className="mb-0.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                <CalendarRange size={11} className="text-amber-500" />
+                                <span>Year</span>
+                              </div>
+                              <div className="text-[14px] font-extrabold text-slate-900">{machine.manufacturingYear || 'N/A'}</div>
+                            </div>
+                            <div className="py-2 px-3 flex flex-col justify-center">
+                              <div className="mb-0.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                <Gauge size={11} className="text-amber-500" />
+                                <span>Hours</span>
+                              </div>
+                              <div className="text-[14px] font-extrabold text-slate-900">{machine.operatingHours ? `${machine.operatingHours.toLocaleString('en-US')} hrs` : 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Footer Details */}
+                          <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3">
+                            <div>
+                              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Price</div>
+                              <div className="text-base font-extrabold text-slate-900">{formatPrice(machine.price)}</div>
+                            </div>
+                            <span className="rounded-xl bg-slate-100 group-hover:bg-[#FFC107] text-slate-900 group-hover:text-black px-3.5 py-1.5 text-xs font-extrabold transition-all shadow-2xs">
+                              View Details
+                            </span>
                           </div>
                         </div>
                       </Link>
@@ -711,7 +760,7 @@ function MachinesPageContent({
                           <button
                             key={pageNum}
                             onClick={() => setPage(pageNum)}
-                            className={`w-8 h-8 flex items-center justify-center text-sm transition-colors ${isCurrent ? 'bg-jcb-yellow text-black font-bold' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`w-8 h-8 flex items-center justify-center text-sm transition-colors ${isCurrent ? 'bg-brand-yellow text-black font-bold' : 'text-gray-600 hover:bg-gray-100'}`}
                           >
                             {pageNum}
                           </button>
@@ -778,7 +827,7 @@ function SortDropdown({
       <div className="relative lg:hidden flex-1 min-w-[120px] max-w-[160px]" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex w-full h-10 items-center justify-between rounded-full border border-gray-300 bg-white pl-8 pr-3 text-xs font-semibold text-gray-700 shadow-sm outline-none transition focus:border-jcb-yellow focus:ring-1 focus:ring-jcb-yellow"
+          className="flex w-full h-10 items-center justify-between rounded-full border border-gray-300 bg-white pl-8 pr-3 text-xs font-semibold text-gray-700 shadow-sm outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow"
         >
           <ArrowUpDown className="absolute left-3 h-3.5 w-3.5 text-gray-500" />
           <span className="truncate">{selectedOption.label}</span>
@@ -810,7 +859,7 @@ function SortDropdown({
     <div className="relative w-full sm:w-auto" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm outline-none transition focus:border-jcb-yellow focus:ring-1 focus:ring-jcb-yellow hover:bg-gray-50 gap-2 min-w-[160px]"
+          className="flex w-full items-center justify-between rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow hover:bg-gray-50 gap-2 min-w-[160px]"
       >
         <span>{selectedOption.label}</span>
         <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

@@ -24,6 +24,7 @@ import {
 } from '../utils/appSettings';
 import { PushNotificationService } from '../services/pushNotification.service';
 import { testDriveConnection } from '../services/googleDrive.service';
+import { getDatabaseBackupStatus, runDatabaseBackup } from '../services/databaseBackup.service';
 import { getCustomerPrimeAccessState, normalizePrimeValidityUnit } from '../utils/customerPrime';
 import {
   approveCustomerPrimeSubscription,
@@ -123,6 +124,29 @@ export const testGoogleDriveConnection = async (_req: Request, res: Response, ne
   try {
     const result = await testDriveConnection();
     res.json({ message: 'Google Drive connection successful.', ...result });
+  } catch (error) {
+    const driveError = new Error(error instanceof Error ? error.message : 'Google Drive connection test failed.') as Error & { statusCode?: number; code?: string };
+    driveError.statusCode = 502;
+    driveError.code = 'GOOGLE_DRIVE_CONNECTION_FAILED';
+    next(driveError);
+  }
+};
+
+export const testDatabaseBackup = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await runDatabaseBackup();
+    res.json({ message: 'Database backup uploaded successfully.', ...result });
+  } catch (error) {
+    const backupError = new Error(error instanceof Error ? error.message : 'Database backup failed.') as Error & { statusCode?: number; code?: string };
+    backupError.statusCode = 502;
+    backupError.code = 'DATABASE_BACKUP_FAILED';
+    next(backupError);
+  }
+};
+
+export const getDatabaseBackupStatusContent = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(getDatabaseBackupStatus());
   } catch (error) {
     next(error);
   }

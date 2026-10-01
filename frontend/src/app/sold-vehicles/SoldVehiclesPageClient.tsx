@@ -90,9 +90,10 @@ interface CustomSelectProps {
   options: CustomSelectOption[];
   icon?: React.ReactNode;
   className?: string;
+  alignRight?: boolean;
 }
 
-function CustomSelect({ value, onChange, options, icon, className = '' }: CustomSelectProps) {
+function CustomSelect({ value, onChange, options, icon, className = '', alignRight = false }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -113,7 +114,7 @@ function CustomSelect({ value, onChange, options, icon, className = '' }: Custom
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-11 sm:h-10 flex items-center justify-between gap-2 rounded-full border border-slate-300 bg-white px-4 text-xs font-bold text-slate-800 outline-none transition hover:border-amber-400 hover:bg-amber-50/10 shadow-xs cursor-pointer"
+        className="w-full h-11 sm:h-10 flex items-center justify-between gap-2 rounded-full border border-slate-300 bg-white px-3.5 sm:px-4 text-xs font-bold text-slate-800 outline-none transition hover:border-amber-400 hover:bg-amber-50/10 shadow-xs cursor-pointer"
       >
         <div className="flex items-center gap-2 min-w-0">
           {icon && <span className="shrink-0">{icon}</span>}
@@ -123,7 +124,7 @@ function CustomSelect({ value, onChange, options, icon, className = '' }: Custom
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 w-full min-w-[200px] max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl">
+        <div className={`absolute ${alignRight ? 'right-0' : 'left-0'} top-full z-50 mt-1.5 w-full min-w-[180px] sm:min-w-[200px] max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl`}>
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
@@ -520,6 +521,7 @@ export default function SoldVehiclesPageClient({ initialLogoUrl }: { initialLogo
                 }}
                 options={brandOptions}
                 icon={<Tag size={14} className="text-amber-500" />}
+                alignRight
               />
             </div>
           </div>
@@ -590,7 +592,7 @@ export default function SoldVehiclesPageClient({ initialLogoUrl }: { initialLogo
         ) : (
           /* Grid of Sold Machine Cards */
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {paginatedListings.map((item) => {
                 const locationLabel = formatListingLocation(item, {
                   includeAddress: true,

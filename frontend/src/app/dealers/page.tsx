@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import DealersPageClient from './DealersPageClient';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Verified Dealers & Showrooms',
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: `Verified Dealers & Showrooms | ${SITE_NAME}`,
     description: `Explore trusted heavy machinery dealers and authorized partners across India on ${SITE_NAME}.`,
-    url: 'https://jcbexchange.com/dealers',
+    url: `${SITE_URL}/dealers`,
     type: 'website',
   },
   twitter: {
@@ -27,9 +27,9 @@ export default function DealersPage() {
     '@type': 'CollectionPage',
     name: `Verified Dealers & Showrooms | ${SITE_NAME}`,
     description: `Find verified heavy equipment dealers, showrooms, and marketplace partners across India on ${SITE_NAME}.`,
-    url: 'https://jcbexchange.com/dealers',
+    url: `${SITE_URL}/dealers`,
     isPartOf: {
-      '@id': 'https://jcbexchange.com/#website',
+      '@id': `${SITE_URL}/#website`,
     },
     about: {
       '@type': 'Thing',

@@ -24,7 +24,7 @@
   "soldVehicles": {
     "badge": "ARCHIVED DEALS & VERIFIED SALES",
     "title": "Sold Vehicles & Machinery",
-    "subtitle": "Explore verified heavy machinery and equipment successfully sold through JCB Exchange across India.",
+    "subtitle": "Explore verified heavy machinery and equipment successfully sold through {siteName} across India.",
     "searchPlaceholder": "Search title, model, city...",
     "allCategories": "All Categories ({count})",
     "allBrands": "All Brands ({count})",
@@ -54,7 +54,7 @@
     "quickLinks": "Quick Links",
     "usefulLinks": "Useful Links",
     "contact": "Contact",
-    "copyright": "© 2026-2027 JCB Exchange. All rights reserved.",
+    "copyright": "© 2026-2027 {siteName}. All rights reserved.",
     "craftedWith": "Crafted with",
     "by": "by"
   },
@@ -156,7 +156,7 @@
     "businessHours": "Business Hours",
     "contactPreference": "Contact Preference",
     "website": "Website",
-    "whatsappIntro": "Hi, I found your profile on JCBExchange. I am interested in your machines."
+    "whatsappIntro": "Hi, I found your profile on {siteName}. I am interested in your machines."
   },
   "machineDetails": {
     "errorTag": "Unable to load listing",
@@ -209,11 +209,18 @@
     "equipmentTypeLabel": "Equipment Type",
     "operatingHoursLabel": "Operating Hours",
     "registrationLocation": "Registration & Location",
+    "registrationYearLabel": "Registration Year",
+    "registrationNumberLabel": "Registration Number",
+    "chassisSerialLabel": "Chassis / Serial Number",
+    "previousOwnersLabel": "Previous Owners",
     "fuelTypeLabel": "Fuel Type",
     "transmissionLabel": "Transmission",
     "districtLabel": "District",
+    "areaLabel": "Area",
+    "pinCodeLabel": "PIN Code",
     "addressLabel": "Address",
-    "nearbyLandmarkLabel": "Nearby Landmark"
+    "nearbyLandmarkLabel": "Nearby Landmark",
+    "insuranceExpiryLabel": "Insurance Expiry"
   },
   "primeModal": {
     "loadFailed": "Unable to load Prime payment details.",
@@ -509,7 +516,7 @@
     "verifyOtpFailed": "Unable to verify OTP right now."
   },
   "careers": {
-    "badge": "Careers at JCB Exchange",
+    "badge": "Careers at {siteName}",
     "homeHeading": "Join India's Leading Heavy Equipment Network",
     "viewAllPositions": "View All Open Positions",
     "applyNow": "Apply Now",

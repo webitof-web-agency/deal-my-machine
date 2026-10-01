@@ -204,6 +204,7 @@ export const deleteDriveFile = async (fileId: string) => {
 export const testDriveConnection = async () => {
   const client = await getDriveClient();
   if (!client || !client.settings.enabled) throw new Error('Google Drive is not enabled or credentials are incomplete.');
+  await client.drive.about.get({ fields: 'user(emailAddress,displayName)' });
   const rootId = client.settings.mediaRootFolderId;
   if (!rootId) throw new Error('Public media root folder is not configured.');
   const folder = await validateWritableFolder(client.drive, rootId, 'public media root folder');

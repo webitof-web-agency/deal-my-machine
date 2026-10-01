@@ -4,7 +4,7 @@ import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, ArrowRight, Package, Building2, Users, Heart, LayoutGrid, IndianRupee, MessageSquare, Check } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Package, Building2, Users, LayoutGrid, IndianRupee, MessageSquare, Check } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import api, { API_ORIGIN } from '@/lib/api';
 import { generateMachineSlugPath } from '@/lib/seoUtils';
@@ -369,7 +369,7 @@ export default function Home() {
                       {accentWord ? (
                         <>
                           {' '}
-                          <span className="text-jcb-yellow">{accentWord}</span>
+                          <span className="text-brand-yellow">{accentWord}</span>
                         </>
                       ) : null}
                     </React.Fragment>
@@ -380,7 +380,7 @@ export default function Home() {
               <h1 className="max-w-[700px] text-[30px] font-extrabold leading-[1.08] tracking-normal text-white drop-shadow-lg sm:text-5xl md:text-6xl">
                 Heavy Machines
                 <br />
-                <span className="text-jcb-yellow">Bigger</span> Opportunities
+                <span className="text-brand-yellow">Bigger</span> Opportunities
               </h1>
             )}
           </div>
@@ -390,7 +390,7 @@ export default function Home() {
             <div className="relative flex w-full flex-col gap-2 rounded-md border border-white/30 bg-white/95 p-2 shadow-2xl backdrop-blur-sm sm:flex-row">
 
             {/* Input 1 */}
-            <div className="flex min-h-[48px] flex-1 items-center rounded-[4px] border border-gray-200 bg-white px-3 transition-colors hover:border-gray-300 focus-within:border-jcb-yellow">
+            <div className="flex min-h-[48px] flex-1 items-center rounded-[4px] border border-gray-200 bg-white px-3 transition-colors hover:border-gray-300 focus-within:border-brand-yellow">
               <Search className="mr-2.5 h-4 w-4 shrink-0 text-gray-500 sm:h-5 sm:w-5" />
               <div className="flex flex-col w-full">
                 <input 
@@ -406,7 +406,7 @@ export default function Home() {
 
             {/* Input 3 */}
             <div className="relative z-40 sm:w-[180px]">
-              <div className="flex min-h-[48px] items-center rounded-[4px] border border-gray-200 bg-white px-3 transition-colors hover:border-gray-300 focus-within:border-jcb-yellow">
+              <div className="flex min-h-[48px] items-center rounded-[4px] border border-gray-200 bg-white px-3 transition-colors hover:border-gray-300 focus-within:border-brand-yellow">
                 <MapPin className="mr-2.5 h-4 w-4 shrink-0 text-gray-500 sm:h-5 sm:w-5" />
                 <div className="flex flex-col w-full">
                   <input 
@@ -450,7 +450,7 @@ export default function Home() {
             {/* Submit Button */}
             <button 
               onClick={handleHeroSearch}
-              className="flex min-h-[48px] cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[4px] bg-jcb-yellow px-6 text-sm font-extrabold text-black shadow-sm transition-colors hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+              className="flex min-h-[48px] cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[4px] bg-brand-yellow px-6 text-sm font-extrabold text-black shadow-sm transition-colors hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
             >
               <Search className="h-4 w-4" strokeWidth={2.8} />
               {t('home.searchButton')}
@@ -461,7 +461,7 @@ export default function Home() {
 
           <div className="mt-4 w-full max-w-[640px]">
           {homeStats?.brands?.length ? (
-            <div className="mb-8 flex flex-wrap items-center gap-2">
+            <div className="mb-8 hidden sm:flex flex-wrap items-center gap-2">
               <span className="mr-1 text-[11px] font-bold text-white/90">
                 Popular:
               </span>
@@ -469,7 +469,7 @@ export default function Home() {
                 <Link
                   key={brand.id}
                   href={`/machines?q=${encodeURIComponent(brand.name)}`}
-                  className="rounded-full border border-white/45 bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-sm transition-colors hover:border-jcb-yellow hover:bg-jcb-yellow hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jcb-yellow"
+                  className="rounded-full border border-white/45 bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-sm transition-colors hover:border-brand-yellow hover:bg-brand-yellow hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-yellow"
                 >
                   {brand.name}
                 </Link>
@@ -479,21 +479,21 @@ export default function Home() {
 
           <div className="grid max-w-[560px] grid-cols-3 divide-x divide-white/25 text-white">
             <div className="flex items-center gap-2 pr-3 text-left sm:gap-3">
-              <Package className="hidden h-7 w-7 shrink-0 text-jcb-yellow sm:block" />
+              <Package className="hidden h-7 w-7 shrink-0 text-brand-yellow sm:block" />
               <div>
                 <p className="text-lg font-extrabold leading-none sm:text-2xl">{formatHeroCount(homeStats?.counts.machines)}</p>
                 <p className="mt-1 text-[9px] font-semibold leading-tight text-white/85 sm:text-[11px]">Machines Listed</p>
               </div>
             </div>
             <div className="flex items-center gap-2 px-3 text-left sm:gap-3">
-              <Users className="hidden h-7 w-7 shrink-0 text-jcb-yellow sm:block" />
+              <Users className="hidden h-7 w-7 shrink-0 text-brand-yellow sm:block" />
               <div>
                 <p className="text-lg font-extrabold leading-none sm:text-2xl">{formatHeroCount(homeStats?.counts.customers)}</p>
                 <p className="mt-1 text-[9px] font-semibold leading-tight text-white/85 sm:text-[11px]">Happy Customers</p>
               </div>
             </div>
             <div className="flex items-center gap-2 pl-3 text-left sm:gap-3">
-              <Building2 className="hidden h-7 w-7 shrink-0 text-jcb-yellow sm:block" />
+              <Building2 className="hidden h-7 w-7 shrink-0 text-brand-yellow sm:block" />
               <div>
                 <p className="text-lg font-extrabold leading-none sm:text-2xl">{formatHeroCount(homeStats?.counts.dealers)}</p>
                 <p className="mt-1 text-[9px] font-semibold leading-tight text-white/85 sm:text-[11px]">Trusted Dealers</p>
@@ -534,7 +534,7 @@ export default function Home() {
                   <Link
                     key={category.id}
                     href={`/machines?category=${category.id}`}
-                    className="bg-white border border-gray-200/90 rounded-xl p-3 sm:p-3.5 flex flex-col items-center justify-between text-center hover:border-amber-400 hover:shadow-lg transition-all duration-300 group cursor-pointer h-44 sm:h-48 shadow-2xs"
+                    className="bg-white border border-gray-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col items-center justify-between text-center hover:border-amber-400 hover:shadow-md transition-all duration-300 group cursor-pointer h-40 sm:h-48 shadow-2xs"
                   >
                     <div className="relative w-full h-28 sm:h-32 flex items-center justify-center overflow-hidden rounded-xl bg-gray-50/90 p-2 mb-2">
                       {category.featuredImage ? (
@@ -640,18 +640,7 @@ export default function Home() {
                         {getListingStatusLabel(listing.status, listingStatusLabels)}
                       </div>
 
-                      {/* Top-right Wishlist Heart Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/90 hover:bg-white text-gray-700 hover:text-red-500 flex items-center justify-center shadow-sm backdrop-blur-xs transition-colors"
-                        aria-label="Add to wishlist"
-                      >
-                        <Heart size={16} strokeWidth={2.2} />
-                      </button>
+
                     </div>
 
                     {/* Content Area */}
@@ -690,7 +679,7 @@ export default function Home() {
       </section>
 
       {/* HOW IT WORKS SECTION (Placed right below Featured Machines) */}
-      <section className="bg-white border-t border-gray-100 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 w-full">
+      <section className="hidden sm:block bg-white border-t border-gray-100 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 w-full">
         <div className="max-w-7xl mx-auto">
           {/* Header Row */}
           <div className="mb-8 sm:mb-10 flex flex-row items-center justify-between">
@@ -830,8 +819,8 @@ export default function Home() {
                 });
 
                 return (
-                  <Link key={listing.id} href={generateMachineSlugPath(listing)} className="group flex min-h-[112px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xs transition-all hover:border-amber-300 hover:shadow-md">
-                    <div className="relative h-auto min-h-[112px] w-[38%] shrink-0 overflow-hidden bg-gray-100">
+                  <Link key={listing.id} href={generateMachineSlugPath(listing)} className="group flex flex-col sm:flex-row min-h-[112px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs transition-all hover:border-amber-400 hover:shadow-md">
+                    <div className="relative h-36 sm:h-auto sm:min-h-[112px] w-full sm:w-[38%] shrink-0 overflow-hidden bg-gray-100">
                       {imageUrl ? (
                         <Image src={imageUrl} alt={listing.title} fill unoptimized sizes="(max-width: 768px) 38vw, 180px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                       ) : (

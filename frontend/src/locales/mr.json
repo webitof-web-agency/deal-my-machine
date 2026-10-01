@@ -26,7 +26,7 @@
                    "sellMachine":  "माझी मशीन विक्री करा",
                    "description":  "JCBs, excavators आणि heavy construction machinery खरेदी, विक्री आणि exchange करण्यासाठी तुमचे विश्वासू प्लॅटफॉर्म.",
                    "craftedWith":  "प्रेमाने तयार केले",
-                   "copyright":  "© 2026-2027 JCB Exchange. सर्व हक्क सुरक्षित.",
+                   "copyright":  "© 2026-2027 {siteName}. सर्व हक्क सुरक्षित.",
                    "usefulLinks":  "उपयुक्त लिंक्स",
                    "quickLinks":  "झटपट लिंक्स",
                    "by":  "द्वारे",
@@ -123,7 +123,7 @@
                           "businessHours":  "व्यवसाय वेळा",
                           "contactPreference":  "संपर्क प्राधान्य",
                           "website":  "वेबसाइट",
-                          "whatsappIntro":  "नमस्कार, तुमची प्रोफाइल JCBExchange वर पाहिली. मला तुमच्या मशिन्समध्ये रस आहे."
+                          "whatsappIntro":  "नमस्कार, तुमची प्रोफाइल {siteName} वर पाहिली. मला तुमच्या मशिन्समध्ये रस आहे."
                       },
     "machineDetails":  {
                            "errorTag":  "लिस्टिंग लोड करता आली नाही",
@@ -466,7 +466,7 @@
       "termsAndConditions": "अटी आणि शर्ती"
     },
     "careers": {
-      "badge": "JCB Exchange मधील करिअर",
+      "badge": "{siteName} मधील करिअर",
       "homeHeading": "भारतातील आघाडीच्या हेव्ही इक्विपमेंट नेटवर्कशी जोडले जा",
       "viewAllPositions": "सर्व खुल्या जागा पहा",
       "applyNow": "आत्ताच अर्ज करा",

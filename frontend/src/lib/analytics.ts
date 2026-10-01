@@ -1,16 +1,25 @@
 import { API_BASE_URL } from './api';
-
-const ANONYMOUS_ID_KEY = 'jcb_analytics_anonymous_id';
-const SESSION_ID_KEY = 'jcb_analytics_session_id';
+import {
+  ANALYTICS_ANONYMOUS_ID_KEY,
+  ANALYTICS_SESSION_ID_KEY,
+  LEGACY_ANALYTICS_ANONYMOUS_ID_KEY,
+  LEGACY_ANALYTICS_SESSION_ID_KEY,
+} from './storageKeys';
 
 export type PublicAnalyticsIdentity = {
   anonymousId: string;
   sessionId: string;
 };
 
-const getOrCreateId = (storage: Storage, key: string) => {
+const getOrCreateId = (storage: Storage, key: string, legacyKey: string) => {
   const existing = storage.getItem(key);
   if (existing) return existing;
+
+  const legacyExisting = storage.getItem(legacyKey);
+  if (legacyExisting) {
+    storage.setItem(key, legacyExisting);
+    return legacyExisting;
+  }
 
   const value = typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -37,8 +46,8 @@ export const getPublicAnalyticsIdentity = (): PublicAnalyticsIdentity | null => 
 
   try {
     return {
-      anonymousId: getOrCreateId(window.localStorage, ANONYMOUS_ID_KEY),
-      sessionId: getOrCreateId(window.sessionStorage, SESSION_ID_KEY),
+      anonymousId: getOrCreateId(window.localStorage, ANALYTICS_ANONYMOUS_ID_KEY, LEGACY_ANALYTICS_ANONYMOUS_ID_KEY),
+      sessionId: getOrCreateId(window.sessionStorage, ANALYTICS_SESSION_ID_KEY, LEGACY_ANALYTICS_SESSION_ID_KEY),
     };
   } catch {
     return null;
