@@ -12,3 +12,7 @@ test('replaces legacy portal branding while preserving JCB machinery references'
 test('supports the legacy no-space platform spelling', () => {
   assert.equal(replaceLegacyPlatformBrand('JCBExchange portal', 'DealMyMachine'), 'DealMyMachine portal');
 });
+
+test('uses DealMyMachine when no replacement brand is provided', () => {
+  assert.equal(replaceLegacyPlatformBrand('Welcome to JCB Exchange.'), 'Welcome to DealMyMachine.');
+});

@@ -783,6 +783,7 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
         amount?: number;
         validityValue?: number;
         validityUnit?: 'DAYS' | 'MONTHS' | 'days' | 'months';
+        requireForSellListing?: boolean;
       };
       listingPayment?: Partial<ListingPaymentSettings>;
       companyInvoice?: {
@@ -853,10 +854,12 @@ export const updatePlatformSettings = async (req: Request, res: Response, next: 
         ...(customerPrime.validityUnit !== undefined
           ? { validityUnit: normalizePrimeValidityUnit(customerPrime.validityUnit) }
           : {}),
+        ...(customerPrime.requireForSellListing !== undefined
+          ? { requireForSellListing: customerPrime.requireForSellListing === true }
+          : {}),
         applyToCustomerRoleOnly: true,
         requireForCall: true,
         requireForWhatsapp: true,
-        requireForSellListing: true,
       };
     }
 
@@ -1279,7 +1282,10 @@ export const getFooterContent = async (req: Request, res: Response, next: NextFu
 
     res.json({
       socialLinks: settings.footer.socialLinks,
-      contact: settings.footer.contact,
+      contact: {
+        ...settings.footer.contact,
+        googleMapsUrl: settings.footer.contact.googleMapsUrl || null,
+      },
       legalPages: settings.footer.legalPages,
     });
   } catch (error) {
@@ -1377,7 +1383,10 @@ export const updateFooterContent = async (req: Request, res: Response, next: Nex
     res.json({
       message: 'Footer settings updated successfully.',
       socialLinks: settings.footer.socialLinks,
-      contact: settings.footer.contact,
+      contact: {
+        ...settings.footer.contact,
+        googleMapsUrl: settings.footer.contact.googleMapsUrl || null,
+      },
       legalPages: settings.footer.legalPages,
     });
   } catch (error) {

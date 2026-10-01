@@ -1,7 +1,7 @@
 /** Public brand identity, configured per deployment where appropriate. */
 export const SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME?.trim() || 'DealMyMachine';
 export const SITE_DESCRIPTION =
-  "India's trusted marketplace for heavy machinery. Buy, sell excavators and more.";
+  "India's marketplace for new and used heavy machinery, construction equipment, trusted dealers, and verified listings.";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://dealmymachine.com';
 export const SITE_SUPPORT_EMAIL =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || 'hello@dealmymachine.com';

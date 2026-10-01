@@ -8,6 +8,7 @@ import { LOCALE_COOKIE_NAME, normalizeLocale } from "@/lib/i18n/config";
 import { LEGACY_LOCALE_COOKIE_NAME } from '@/lib/storageKeys';
 import { DEFAULT_PWA_THEME_COLOR } from '@/lib/staticBranding';
 import { APP_NAME, PORTAL_NAME } from '@/lib/appConfig';
+import { getAdminFaviconUrl, getSiteBranding } from '@/lib/siteBranding';
 
 const getIconType = (url: string) => {
   const lowerUrl = url.toLowerCase();
@@ -20,7 +21,8 @@ const getIconType = (url: string) => {
 
 export async function generateMetadata(): Promise<Metadata> {
   await cookies();
-  const faviconUrl = '/icon.svg';
+  const branding = await getSiteBranding();
+  const faviconUrl = getAdminFaviconUrl(branding.faviconUrl);
   const iconType = getIconType(faviconUrl);
 
   return {

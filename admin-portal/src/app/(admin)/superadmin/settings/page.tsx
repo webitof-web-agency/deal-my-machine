@@ -120,6 +120,7 @@ type SettingsResponse = {
     amount: number | null;
     validityValue: number | null;
     validityUnit: 'DAYS' | 'MONTHS';
+    requireForSellListing: boolean;
     recentPayments: PrimePaymentRecord[];
   };
   listingPayment: ListingPaymentFormState;
@@ -138,6 +139,7 @@ type CustomerPrimeFormState = {
   amount: string;
   validityValue: string;
   validityUnit: 'DAYS' | 'MONTHS';
+  requireForSellListing: boolean;
 };
 
 type ListingPaymentFormState = {
@@ -267,6 +269,7 @@ export default function SuperAdminSettingsPage() {
     amount: '',
     validityValue: '',
     validityUnit: 'DAYS',
+    requireForSellListing: true,
   });
   const [listingPaymentForm, setListingPaymentForm] = useState<ListingPaymentFormState>(emptyListingPaymentForm);
   
@@ -388,6 +391,7 @@ export default function SuperAdminSettingsPage() {
         amount: response.data.customerPrime.amount ? String(response.data.customerPrime.amount) : '',
         validityValue: response.data.customerPrime.validityValue ? String(response.data.customerPrime.validityValue) : '',
         validityUnit: response.data.customerPrime.validityUnit || 'DAYS',
+        requireForSellListing: response.data.customerPrime.requireForSellListing !== false,
       });
       setListingPaymentForm({
         rtgs: {
@@ -686,6 +690,7 @@ export default function SuperAdminSettingsPage() {
           amount: customerPrimeForm.amount ? Number(customerPrimeForm.amount) : undefined,
           validityValue: customerPrimeForm.validityValue ? Number(customerPrimeForm.validityValue) : undefined,
           validityUnit: customerPrimeForm.validityUnit,
+          requireForSellListing: customerPrimeForm.requireForSellListing,
         },
       });
 
@@ -695,6 +700,7 @@ export default function SuperAdminSettingsPage() {
         amount: response.data.customerPrime.amount ? String(response.data.customerPrime.amount) : '',
         validityValue: response.data.customerPrime.validityValue ? String(response.data.customerPrime.validityValue) : '',
         validityUnit: response.data.customerPrime.validityUnit || 'DAYS',
+        requireForSellListing: response.data.customerPrime.requireForSellListing !== false,
       });
       toast.success(response.data.message);
     } catch (error: unknown) {
@@ -1221,6 +1227,7 @@ export default function SuperAdminSettingsPage() {
                     </div>
                     <HardDrive className="hidden h-10 w-10 text-yellow-300 sm:block" />
                   </div>
+
                 </div>
               </section>
 
@@ -1572,7 +1579,7 @@ export default function SuperAdminSettingsPage() {
                       <div>
                         <h4 className="text-sm font-semibold text-gray-900">Enable Prime payment gate for customers</h4>
                         <p className="mt-1 text-sm text-gray-500">
-                          When enabled, customer Call, WhatsApp, and Sell Vehicle actions automatically require Prime access.
+                          When enabled, customer Call and WhatsApp actions require Prime access. Sell Vehicle is controlled separately below.
                         </p>
                       </div>
 
@@ -1660,7 +1667,7 @@ export default function SuperAdminSettingsPage() {
                   </div>
 
                   <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                    Prime payment is always customer-only and always includes Call, WhatsApp, and Sell Vehicle access together.
+                    Prime payment remains customer-only. Call and WhatsApp gating stay enabled; Sell Vehicle access can be controlled separately above.
                   </div>
 
                   <div className="flex justify-end border-t border-gray-100 pt-2">
@@ -1855,7 +1862,7 @@ export default function SuperAdminSettingsPage() {
                       <div>
                         <h4 className="text-sm font-semibold text-gray-900">Enable Prime payment gate for customers</h4>
                         <p className="mt-1 text-sm text-gray-500">
-                          When enabled, customer Call, WhatsApp, and Sell Vehicle actions automatically require Prime access.
+                          When enabled, customer Call and WhatsApp actions require Prime access. Sell Vehicle is controlled separately below.
                         </p>
                       </div>
 
@@ -1942,8 +1949,44 @@ export default function SuperAdminSettingsPage() {
                     </label>
                   </div>
 
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900">Require Prime payment for Sell Vehicle</h4>
+                        <p className="mt-1 text-sm text-gray-500">
+                          When disabled, customers can open and submit the Sell Vehicle form directly without seeing the Prime QR payment.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={customerPrimeForm.requireForSellListing}
+                        aria-label="Toggle Prime payment for Sell Vehicle"
+                        onClick={() => updateCustomerPrimeForm({ requireForSellListing: !customerPrimeForm.requireForSellListing })}
+                        className={`flex min-w-[168px] items-center justify-between rounded-full border px-2 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                          customerPrimeForm.requireForSellListing
+                            ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                            : 'border-gray-300 bg-white text-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                            customerPrimeForm.requireForSellListing ? 'bg-emerald-500' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform ${
+                              customerPrimeForm.requireForSellListing ? 'translate-x-7' : 'translate-x-1'
+                            }`}
+                          />
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                    Prime payment is always customer-only and always includes Call, WhatsApp, and Sell Vehicle access together.
+                    Prime payment remains customer-only. Call and WhatsApp gating stay enabled; Sell Vehicle access can be controlled separately above.
                   </div>
 
                   <div className="flex justify-end border-t border-gray-100 pt-2">

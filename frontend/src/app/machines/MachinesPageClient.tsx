@@ -25,8 +25,9 @@ import { generateMachineSlugPath } from '@/lib/seoUtils';
 import { useTranslation } from '@/hooks/useTranslation';
 import { formatListingLocation } from '@/lib/listingLocation';
 import { trackPublicAnalyticsEvent } from '@/lib/analytics';
+import { buildMachineLocationPath, parseSeoLocationLabel } from '@/lib/seoLocations';
 
-interface MachineListing {
+export interface MachineListing {
   id: string;
   title: string;
   price: number;
@@ -82,6 +83,11 @@ const getMediaUrl = (url: string | null) => {
 const getUniqueValues = (items: MachineListing[], selector: (item: MachineListing) => string) =>
   Array.from(new Set(items.map(selector).filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
+const getInitialMaxPrice = (machines?: MachineListing[]) => {
+  if (!machines || machines.length === 0) return 10000000;
+  return Math.max(...machines.map((machine) => machine.price), 10000000);
+};
+
 const getAvailabilityBadge = (
   status: string,
   labels: { sold: string; reserved: string; available: string }
@@ -96,12 +102,26 @@ const getAvailabilityBadge = (
   return <span className="bg-green-600 text-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded shadow-sm">{labels.available}</span>;
 };
 
-export default function MachinesPageClient() {
+export type MachinesPageClientProps = {
+  initialCategoryId?: string;
+  initialQuery?: string;
+  initialLocation?: string;
+  initialHeading?: string;
+  initialMachines?: MachineListing[];
+};
+
+export default function MachinesPageClient({
+  initialCategoryId = '',
+  initialQuery = '',
+  initialLocation = '',
+  initialHeading,
+  initialMachines,
+}: MachinesPageClientProps = {}) {
   const searchParams = useSearchParams();
-  const urlCategoryId = searchParams.get('category') || '';
-  const urlQuery = searchParams.get('q') || '';
-  const urlLocation = searchParams.get('location') || '';
-  const routeStateKey = `${urlCategoryId}::${urlQuery}::${urlLocation}`;
+  const urlCategoryId = initialCategoryId || searchParams.get('category') || '';
+  const urlQuery = initialQuery || searchParams.get('q') || '';
+  const urlLocation = initialLocation || searchParams.get('location') || '';
+  const routeStateKey = `${urlCategoryId}::${urlQuery}::${urlLocation}::${initialHeading || ''}`;
 
   return (
     <MachinesPageContent
@@ -109,6 +129,8 @@ export default function MachinesPageClient() {
       initialCategoryId={urlCategoryId}
       initialQuery={urlQuery}
       initialLocation={urlLocation}
+      initialHeading={initialHeading}
+      initialMachines={initialMachines}
     />
   );
 }
@@ -117,14 +139,18 @@ function MachinesPageContent({
   initialCategoryId,
   initialQuery,
   initialLocation,
+  initialHeading,
+  initialMachines,
 }: {
   initialCategoryId: string;
   initialQuery: string;
   initialLocation: string;
+  initialHeading?: string;
+  initialMachines?: MachineListing[];
 }) {
   const { t } = useTranslation();
-  const [machines, setMachines] = useState<MachineListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [machines, setMachines] = useState<MachineListing[]>(() => initialMachines || []);
+  const [loading, setLoading] = useState(() => !initialMachines);
   const hasAppliedInitialLocation = useRef(false);
 
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -141,7 +167,7 @@ function MachinesPageContent({
   }, [machines]);
 
   const [parsedMinPrice, setParsedMinPrice] = useState<number>(0);
-  const [parsedMaxPrice, setParsedMaxPrice] = useState<number>(10000000);
+  const [parsedMaxPrice, setParsedMaxPrice] = useState<number>(() => getInitialMaxPrice(initialMachines));
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [sortBy, setSortBy] = useState('relevance');
   const [page, setPage] = useState(1);
@@ -161,6 +187,8 @@ function MachinesPageContent({
   );
 
   useEffect(() => {
+    if (initialMachines) return;
+
     const fetchMachines = async () => {
       try {
         const response = await api.get('/master/public-listings');
@@ -181,7 +209,7 @@ function MachinesPageContent({
     };
 
     fetchMachines();
-  }, []);
+  }, [initialMachines]);
 
   const brands = useMemo(() => {
     const all = getUniqueValues(machines, (item) => item.brand?.name || '');
@@ -483,16 +511,24 @@ function MachinesPageContent({
             className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow"
           />
           {visibleLocations.map((loc) => (
-            <label key={loc.name} className="flex items-center gap-3 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={selectedLocations.includes(loc.name)}
-                onChange={() => toggleFilter(selectedLocations, setSelectedLocations, loc.name)}
-                className="h-3.5 w-3.5 accent-[#FFC107]"
-              />
-              <span className="line-clamp-1 flex-1 text-[11px] text-slate-600 transition-colors group-hover:text-slate-900">{loc.name}</span>
-              <span className="text-[11px] text-slate-400">{loc.count}</span>
-            </label>
+            <div key={loc.name} className="space-y-0.5">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedLocations.includes(loc.name)}
+                  onChange={() => toggleFilter(selectedLocations, setSelectedLocations, loc.name)}
+                  className="h-3.5 w-3.5 accent-[#FFC107]"
+                />
+                <span className="line-clamp-1 flex-1 text-[11px] text-slate-600 transition-colors group-hover:text-slate-900">{loc.name}</span>
+                <span className="text-[11px] text-slate-400">{loc.count}</span>
+              </label>
+              <Link
+                href={buildMachineLocationPath(parseSeoLocationLabel(loc.name))}
+                className="ml-7 text-[10px] font-semibold text-amber-700 hover:text-amber-900 hover:underline"
+              >
+                Browse machines in this location
+              </Link>
+            </div>
           ))}
         </div>
       </FilterAccordion>}
@@ -526,11 +562,11 @@ function MachinesPageContent({
         <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900">
-              {selectedCategories.length === 1
+              {initialHeading || (selectedCategories.length === 1
                 ? t('machines.browseCategory', {
                     category: categories.find((c) => c.id === selectedCategories[0])?.name || t('home.equipmentFallback'),
                   })
-                : t('machines.browseEquipment')}
+                : t('machines.browseEquipment'))}
             </h1>
           </div>
           <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">

@@ -921,6 +921,7 @@ export const getSiteLogo = async (req: Request, res: Response, next: NextFunctio
 export const getFooterSettings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const settings = await getAppSettings();
+    const superAdminContact = await getDefaultSuperAdminContact();
 
     res.status(200).json({
       success: true,
@@ -928,6 +929,7 @@ export const getFooterSettings = async (req: Request, res: Response, next: NextF
         socialLinks: settings.footer.socialLinks,
         contact: settings.footer.contact,
         legalPages: settings.footer.legalPages,
+        adminWhatsappNumber: superAdminContact.adminWhatsappNumber || null,
       },
     });
   } catch (error) {
@@ -1052,15 +1054,9 @@ export const getPublicListings = async (req: Request, res: Response, next: NextF
 
 export const getRecentListings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const freshListingCutoff = new Date();
-    freshListingCutoff.setDate(freshListingCutoff.getDate() - 7);
-
     const listings = await prismaAny.listing.findMany({
       where: {
         ...buildPublicMarketplaceFeedWhere({}),
-        createdAt: {
-          gte: freshListingCutoff,
-        },
       },
       include: {
         media: getFeaturedListingMediaQuery(),

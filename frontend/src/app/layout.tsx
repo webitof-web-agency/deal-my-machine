@@ -8,6 +8,7 @@ import ToastViewport from "@/components/shared/ToastViewport";
 import LocaleSync from "@/components/shared/LocaleSync";
 import PushNotificationManager from "@/components/shared/PushNotificationManager";
 import IdleSessionManager from "@/components/shared/IdleSessionManager";
+import FloatingWhatsAppButton from "@/components/shared/FloatingWhatsAppButton";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { LOCALE_COOKIE_NAME, normalizeLocale } from "@/lib/i18n/config";
@@ -152,6 +153,7 @@ export default async function RootLayout({
         <ToastViewport />
         <PushNotificationManager />
         <IdleSessionManager />
+        <FloatingWhatsAppButton />
         <ToastContainer position="top-center" style={{ zIndex: 999999 }} />
       </body>
     </html>

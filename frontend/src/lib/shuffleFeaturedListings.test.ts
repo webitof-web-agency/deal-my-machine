@@ -10,7 +10,8 @@ test('shuffles listings without mutating the API response', () => {
     { id: 'four' },
   ];
 
-  const shuffled = shuffleFeaturedListings(listings, () => 0.75);
+  const randomValues = [0.6, 0.9, 0.9];
+  const shuffled = shuffleFeaturedListings(listings, () => randomValues.shift() || 0);
 
   assert.deepEqual(listings.map((listing) => listing.id), ['one', 'two', 'three', 'four']);
   assert.deepEqual(shuffled.map((listing) => listing.id), ['one', 'two', 'four', 'three']);

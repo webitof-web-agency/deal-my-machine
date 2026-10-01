@@ -23,6 +23,7 @@ type FooterContact = {
   emailAddress?: string | null;
   emailLabel?: string | null;
   address?: string | null;
+  googleMapsUrl?: string | null;
 };
 
 type FooterLegalPages = {
@@ -291,6 +292,7 @@ export default function FooterContentSettings() {
     emailAddress: '',
     emailLabel: '',
     address: '',
+    googleMapsUrl: '',
   });
   const [legalPages, setLegalPages] = useState<FooterLegalPages>({
     privacyPolicy: '',
@@ -336,6 +338,7 @@ export default function FooterContentSettings() {
           emailAddress: response.data.contact?.emailAddress || '',
           emailLabel: response.data.contact?.emailLabel || '',
           address: response.data.contact?.address || '',
+          googleMapsUrl: response.data.contact?.googleMapsUrl || '',
         });
         setLegalPages({
           privacyPolicy: sanitizeLegalHtml(response.data.legalPages?.privacyPolicy || DEFAULT_PRIVACY_POLICY),
@@ -565,6 +568,7 @@ export default function FooterContentSettings() {
         emailAddress: response.data.contact?.emailAddress || '',
         emailLabel: response.data.contact?.emailLabel || '',
         address: response.data.contact?.address || '',
+        googleMapsUrl: response.data.contact?.googleMapsUrl || '',
       });
       setLegalPages({
         privacyPolicy: sanitizeLegalHtml(response.data.legalPages?.privacyPolicy || DEFAULT_PRIVACY_POLICY),
@@ -789,6 +793,21 @@ export default function FooterContentSettings() {
                   className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
                 />
               </div>
+            </label>
+
+            <label className="mt-5 block">
+              <span className="mb-1.5 block text-sm font-semibold text-gray-700">Google Maps URL <span className="font-normal text-gray-400">(optional)</span></span>
+              <div className="relative">
+                <LinkIcon className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="url"
+                  value={contact.googleMapsUrl || ''}
+                  onChange={(event) => setContact((current) => ({ ...current, googleMapsUrl: event.target.value }))}
+                  placeholder="https://maps.google.com/?q=..."
+                  className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-gray-500">Paste the full Google Maps link for your office — visitors can click the map icon on the Contact Us page to open the location directly.</p>
             </label>
           </div>
         )}

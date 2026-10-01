@@ -230,15 +230,28 @@ export default function Footer() {
     };
   }, []);
 
-  const handleOpenSellVehicle = () => {
+  const handleOpenSellVehicle = async () => {
     if (!isAuthenticated) {
       setAuthModalOpen(true);
       return;
     }
 
     if (user?.role === 'CUSTOMER' && !user?.isPrimeCustomer) {
-      setIsPrimePaymentOpen(true);
-      return;
+      try {
+        const response = await api.get<{ access?: { gatingEnabled?: boolean; hasActiveSubscription?: boolean } }>(
+          '/auth/customer-prime/access',
+          { params: { feature: 'SELL_LISTING' } },
+        );
+        const access = response.data.access;
+        if (access?.gatingEnabled && !access.hasActiveSubscription) {
+          setIsPrimePaymentOpen(true);
+          return;
+        }
+      } catch {
+        // Keep the existing safe default if the access check is temporarily unavailable.
+        setIsPrimePaymentOpen(true);
+        return;
+      }
     }
 
     setIsSellModalOpen(true);

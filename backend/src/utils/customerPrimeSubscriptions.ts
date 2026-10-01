@@ -8,6 +8,7 @@ import {
   buildUpiPaymentUri,
   calculatePrimeExpiryAt,
   getCustomerPrimeAccessState,
+  isCustomerPrimeFeatureGateEnabled,
   normalizeCustomerPrimeSettings,
   type CustomerPrimeSettingsSnapshot,
 } from './customerPrime';
@@ -116,18 +117,21 @@ export const syncExpiredCustomerPrimeSubscriptions = async (userId?: string) => 
 export const getCustomerPrimeAccessPayload = async ({
   userId,
   role,
+  feature,
 }: {
   userId?: string | null | undefined;
   role?: string | null | undefined;
+  feature?: 'CALL' | 'WHATSAPP' | 'SELL_LISTING' | 'BUY_NOW';
 }) => {
   const settings = normalizeCustomerPrimeSettings((await getAppSettings()).customerPrime);
   const appliesToRole = role === 'CUSTOMER';
+  const gatingEnabled = isCustomerPrimeFeatureGateEnabled({ settings, role, feature });
 
   if (!userId) {
     return {
       settings,
       appliesToRole,
-      gatingEnabled: settings.enabled && appliesToRole,
+      gatingEnabled,
       qrPaymentUri: null,
       activeSubscription: null,
       pendingSubscription: null,
@@ -164,9 +168,9 @@ export const getCustomerPrimeAccessPayload = async ({
   return {
     settings,
     appliesToRole,
-    gatingEnabled: settings.enabled && appliesToRole,
+    gatingEnabled,
     qrPaymentUri:
-      settings.enabled && appliesToRole && settings.upiId && settings.amount
+      gatingEnabled && settings.upiId && settings.amount
         ? buildUpiPaymentUri({
             upiId: settings.upiId,
             amount: settings.amount,
@@ -191,7 +195,7 @@ export const assertCustomerPrimeEligibility = async ({
   role?: string | null | undefined;
   feature: 'CALL' | 'WHATSAPP' | 'SELL_LISTING';
 }) => {
-  const accessPayload = await getCustomerPrimeAccessPayload({ userId, role });
+  const accessPayload = await getCustomerPrimeAccessPayload({ userId, role, feature });
   const requiresPrime = accessPayload.gatingEnabled;
 
   return {

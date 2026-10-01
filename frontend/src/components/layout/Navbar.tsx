@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Bell, ChevronDown, LogOut, Package, User, Menu, X, Home, Truck, CheckCircle2, Store, Briefcase } from 'lucide-react';
 import SellVehicleModal from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
-import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
+
 import SiteBrand from '@/components/layout/SiteBrand';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -236,15 +236,28 @@ export default function Navbar() {
     }
   };
 
-  const handleOpenSellVehicle = () => {
+  const handleOpenSellVehicle = async () => {
     if (!isAuthenticated) {
       setAuthModalOpen(true);
       return;
     }
 
     if (user?.role === 'CUSTOMER' && !user?.isPrimeCustomer) {
-      setIsPrimePaymentOpen(true);
-      return;
+      try {
+        const response = await api.get<{ access?: { gatingEnabled?: boolean; hasActiveSubscription?: boolean } }>(
+          '/auth/customer-prime/access',
+          { params: { feature: 'SELL_LISTING' } },
+        );
+        const access = response.data.access;
+        if (access?.gatingEnabled && !access.hasActiveSubscription) {
+          setIsPrimePaymentOpen(true);
+          return;
+        }
+      } catch {
+        // Keep the existing safe default if the access check is temporarily unavailable.
+        setIsPrimePaymentOpen(true);
+        return;
+      }
     }
 
     setIsSellModalOpen(true);
@@ -325,10 +338,7 @@ export default function Navbar() {
 
             {/* Right: Actions (Language Switcher, Notifications, Auth/Profile) */}
             <div className="flex items-center gap-3 shrink-0">
-              {/* Language Switcher */}
-              <div className="hidden lg:block">
-                <LanguageSwitcher tone="light" />
-              </div>
+
 
               {/* Notification Bell */}
               <div className="relative" ref={dropdownRef}>
@@ -672,10 +682,7 @@ export default function Navbar() {
 
         {/* Drawer Footer */}
         <div className="border-t border-gray-100 p-4 space-y-3 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">{t('common.language')}</span>
-            <LanguageSwitcher tone="light" direction="up" />
-          </div>
+
           {isAuthenticated && (
             <button
               onClick={() => {

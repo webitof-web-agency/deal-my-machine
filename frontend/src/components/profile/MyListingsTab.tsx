@@ -126,11 +126,23 @@ export default function MyListingsTab() {
     fetchListings();
   }, [fetchListings]);
 
-  const handleOpenNewListing = () => {
+  const handleOpenNewListing = async () => {
     setListingToEdit(null);
     if (user?.role === 'CUSTOMER') {
-      setIsPrimePaymentOpen(true);
-      return;
+      try {
+        const response = await api.get<{ access?: { gatingEnabled?: boolean; hasActiveSubscription?: boolean } }>(
+          '/auth/customer-prime/access',
+          { params: { feature: 'SELL_LISTING' } },
+        );
+        const access = response.data.access;
+        if (access?.gatingEnabled && !access.hasActiveSubscription) {
+          setIsPrimePaymentOpen(true);
+          return;
+        }
+      } catch {
+        setIsPrimePaymentOpen(true);
+        return;
+      }
     }
 
     setIsModalOpen(true);

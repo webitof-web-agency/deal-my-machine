@@ -584,7 +584,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-6 flex flex-row items-center justify-between">
             <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Featured <span className="text-[#D97706]">Machines</span>
+              Available <span className="text-[#D97706]">Machines</span>
             </h2>
             <Link
               href="/machines"
@@ -684,7 +684,7 @@ export default function Home() {
           {/* Header Row */}
           <div className="mb-8 sm:mb-10 flex flex-row items-center justify-between">
             <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              How It Works
+              How We Works
             </h2>
           </div>
 

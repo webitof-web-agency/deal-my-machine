@@ -1340,9 +1340,14 @@ export const getCustomerPrimeAccess = async (req: Request, res: Response, next: 
       return res.status(401).json({ error: 'Authentication required.' });
     }
 
+    const requestedFeature = String(req.query.feature || '').toUpperCase();
+    const feature = ['CALL', 'WHATSAPP', 'SELL_LISTING', 'BUY_NOW'].includes(requestedFeature)
+      ? requestedFeature as 'CALL' | 'WHATSAPP' | 'SELL_LISTING' | 'BUY_NOW'
+      : null;
     const accessPayload = await getCustomerPrimeAccessPayload({
       userId: req.user.id,
       role: req.user.role,
+      ...(feature ? { feature } : {}),
     });
 
     return res.json({

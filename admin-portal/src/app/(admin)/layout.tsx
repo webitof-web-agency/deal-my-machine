@@ -8,7 +8,7 @@ import AccountAccessInactive from '@/components/auth/AccountAccessInactive';
 import AccountAccessRevoked from '@/components/auth/AccountAccessRevoked';
 import PortalBrand from '@/components/layout/PortalBrand';
 import BrandLoader from '@/components/ui/BrandLoader';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+
 import { useTranslation } from '@/hooks/useTranslation';
 import { isInactiveAccessError, isRevokedAccessError } from '@/lib/sessionAccess';
 import { useAuthStore } from '@/store/authStore';
@@ -755,7 +755,7 @@ export default function AdminLayout({
             {customHeader || <h1 className="font-bold text-[17px] sm:text-xl text-gray-900 truncate">{pageTitle}</h1>}
           </div>
           <div className="ml-2 flex items-center gap-3 shrink-0">
-            <LanguageSwitcher />
+
 
             {/* Profile Dropdown Container */}
             <div className="relative shrink-0">

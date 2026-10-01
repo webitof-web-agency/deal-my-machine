@@ -93,6 +93,7 @@ export type FooterSettings = {
     emailAddress: string | null;
     emailLabel: string | null;
     address: string | null;
+    googleMapsUrl: string | null;
     updatedAt: string | null;
     updatedByUserId: string | null;
   };
@@ -418,6 +419,7 @@ const defaultSettings: AppSettings = {
       emailAddress: null,
       emailLabel: null,
       address: null,
+      googleMapsUrl: null,
       updatedAt: null,
       updatedByUserId: null,
     },
@@ -541,6 +543,7 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
       emailAddress: normalizeEmailAddress(parsed?.footer?.contact?.emailAddress) || null,
       emailLabel: parsed?.footer?.contact?.emailLabel?.trim() || null,
       address: normalizeMultilineText(parsed?.footer?.contact?.address) || null,
+      googleMapsUrl: parsed?.footer?.contact?.googleMapsUrl?.trim() || null,
       updatedAt: parsed?.footer?.contact?.updatedAt || null,
       updatedByUserId: parsed?.footer?.contact?.updatedByUserId || null,
     },
@@ -1441,6 +1444,7 @@ export const updateFooterSettings = async ({
         emailAddress: normalizeEmailAddress(contact?.emailAddress) || null,
         emailLabel: contact?.emailLabel?.trim() || null,
         address: normalizeMultilineText(contact?.address) || null,
+        googleMapsUrl: contact?.googleMapsUrl?.trim() || null,
         updatedAt: nextTimestamp,
         updatedByUserId: updatedByUserId || null,
       },

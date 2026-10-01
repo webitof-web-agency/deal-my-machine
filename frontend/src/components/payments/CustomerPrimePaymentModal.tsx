@@ -132,7 +132,9 @@ export default function CustomerPrimePaymentModal({
       setMessage(null);
 
       try {
-        const response = await api.get<AccessResponse>('/auth/customer-prime/access');
+        const response = await api.get<AccessResponse>('/auth/customer-prime/access', {
+          params: { feature },
+        });
         if (isMounted) {
           setAccess(response.data.access);
           setReceiptUrl(response.data.access.pendingSubscription?.receiptUrl || null);
@@ -153,7 +155,7 @@ export default function CustomerPrimePaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, user?.id, t]);
+  }, [feature, isOpen, user?.id, t]);
 
   useEffect(() => {
     if (!isOpen || !user) {

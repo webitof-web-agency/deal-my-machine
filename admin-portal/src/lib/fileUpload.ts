@@ -512,22 +512,32 @@ export const prepareSiteFaviconImageForUpload = async (file: File) => {
   await validateSiteFaviconImageFile(file);
 
   const image = await loadImage(file);
+  // Browser favicons are square by definition. Always encode the uploaded
+  // artwork into a square canvas so a non-square source cannot be rendered
+  // with an unexpected aspect ratio by the browser.
+  const faviconCanvasDimension = SITE_FAVICON_MAX_DIMENSION;
+  const faviconArtworkDimension = 480;
   const dimensions = fitImageWithinCustomBounds(
     image.width,
     image.height,
-    SITE_FAVICON_MAX_DIMENSION,
-    SITE_FAVICON_MAX_DIMENSION
+    faviconArtworkDimension,
+    faviconArtworkDimension
   );
   const canvas = document.createElement('canvas');
-  canvas.width = dimensions.width;
-  canvas.height = dimensions.height;
+  canvas.width = faviconCanvasDimension;
+  canvas.height = faviconCanvasDimension;
 
   const context = canvas.getContext('2d');
   if (!context) {
     throw new Error('Unable to initialize favicon compression.');
   }
 
-  context.drawImage(image, 0, 0, dimensions.width, dimensions.height);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  const offsetX = Math.round((faviconCanvasDimension - dimensions.width) / 2);
+  const offsetY = Math.round((faviconCanvasDimension - dimensions.height) / 2);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, offsetX, offsetY, dimensions.width, dimensions.height);
 
   const toPngBlob = () =>
     new Promise<Blob>((resolve, reject) => {
@@ -548,11 +558,19 @@ export const prepareSiteFaviconImageForUpload = async (file: File) => {
   let blob = await toPngBlob();
   if (blob.size > SITE_FAVICON_TARGET_MAX_IMAGE_SIZE) {
     const shrinkRatio = Math.sqrt(SITE_FAVICON_TARGET_MAX_IMAGE_SIZE / blob.size);
-    const nextWidth = Math.max(64, Math.round(canvas.width * shrinkRatio));
-    const nextHeight = Math.max(64, Math.round(canvas.height * shrinkRatio));
-    canvas.width = nextWidth;
-    canvas.height = nextHeight;
-    context.drawImage(image, 0, 0, nextWidth, nextHeight);
+    const nextDimension = Math.max(64, Math.round(faviconCanvasDimension * shrinkRatio));
+    canvas.width = nextDimension;
+    canvas.height = nextDimension;
+    context.clearRect(0, 0, nextDimension, nextDimension);
+    const nextDimensions = fitImageWithinCustomBounds(
+      image.width,
+      image.height,
+      Math.max(1, nextDimension - 8),
+      Math.max(1, nextDimension - 8)
+    );
+    const nextOffsetX = Math.round((nextDimension - nextDimensions.width) / 2);
+    const nextOffsetY = Math.round((nextDimension - nextDimensions.height) / 2);
+    context.drawImage(image, nextOffsetX, nextOffsetY, nextDimensions.width, nextDimensions.height);
     blob = await toPngBlob();
   }
 

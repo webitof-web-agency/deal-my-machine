@@ -9,6 +9,8 @@ export type PrimeSubscriptionStatus =
 
 export type PrimeCustomerCategory = 'STANDARD_CUSTOMER' | 'PRIME_CUSTOMER';
 
+export type CustomerPrimeFeature = 'CALL' | 'WHATSAPP' | 'SELL_LISTING' | 'BUY_NOW';
+
 export type CustomerPrimeSettings = {
   enabled: boolean;
   upiId: string | null;
@@ -89,10 +91,41 @@ export const normalizeCustomerPrimeSettings = (
   applyToCustomerRoleOnly: true,
   requireForCall: true,
   requireForWhatsapp: true,
-  requireForSellListing: true,
+  requireForSellListing: settings?.requireForSellListing !== false,
   updatedAt: settings?.updatedAt || null,
   updatedByUserId: settings?.updatedByUserId || null,
 });
+
+export const isCustomerPrimeFeatureGateEnabled = ({
+  settings,
+  role,
+  feature,
+}: {
+  settings: Pick<
+    CustomerPrimeSettings,
+    'enabled' | 'requireForCall' | 'requireForWhatsapp' | 'requireForSellListing'
+  >;
+  role?: string | null | undefined;
+  feature?: CustomerPrimeFeature | undefined;
+}) => {
+  if (role !== 'CUSTOMER' || settings.enabled !== true) {
+    return false;
+  }
+
+  if (feature === 'CALL') {
+    return settings.requireForCall;
+  }
+
+  if (feature === 'WHATSAPP') {
+    return settings.requireForWhatsapp;
+  }
+
+  if (feature === 'SELL_LISTING') {
+    return settings.requireForSellListing;
+  }
+
+  return true;
+};
 
 export const buildPrimeSettingsSnapshot = (
   settings: Partial<CustomerPrimeSettings> | CustomerPrimeSettings,
