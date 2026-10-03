@@ -33,6 +33,7 @@ import {
   listCustomerPrimeSubscriptionsForUser,
 } from '../utils/customerPrimeSubscriptions';
 import { APP_NAME, JWT_SECRET } from '../config/appConfig';
+import { buildAuthTokenPayload } from '../utils/authToken';
 import { normalizeBillingLocation } from '../utils/billingLocation';
 
 const prismaAny = prisma as any;
@@ -379,19 +380,7 @@ export const buildAuthUserPayload = async (user: any) => {
   return baseUser;
 };
 
-const signAuthToken = (user: any) =>
-  jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      rawRole: user.rawRole ?? user.role,
-      status: user.status,
-      authVersion: user.authVersion ?? 0,
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+const signAuthToken = (user: any) => jwt.sign(buildAuthTokenPayload(user), JWT_SECRET, { expiresIn: '7d' });
 
 const hasCredentialChanged = (currentUser: { email?: string | null; mobile?: string | null }, next: { email?: string | null; mobile?: string | null }) =>
   (next.email !== undefined && next.email !== currentUser.email) ||
@@ -993,7 +982,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       });
 
     const authUser = await buildAuthUserPayload(newUser);
-    const token = signAuthToken(authUser);
+    const token = signAuthToken(newUser);
 
     res.json({
       message: hasSuperAdmin
@@ -1033,7 +1022,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     const authUser = await buildAuthUserPayload(currentUser as any);
-    const token = signAuthToken(authUser);
+    const token = signAuthToken(currentUser);
 
     res.json({
       message: 'Login successful',
@@ -1207,7 +1196,7 @@ export const verifyLoginOtp = async (req: Request, res: Response, next: NextFunc
     }
 
     const authUser = await buildAuthUserPayload(currentUser as any);
-    const token = signAuthToken(authUser);
+    const token = signAuthToken(currentUser);
 
     res.json({
       message: 'OTP verified successfully.',
@@ -1296,7 +1285,7 @@ export const googleLogin = async (req: Request, res: Response, next: NextFunctio
     }
 
     const authUser = await buildAuthUserPayload(currentUser as any);
-    const token = signAuthToken(authUser);
+    const token = signAuthToken(currentUser);
 
     res.json({
       message: 'Google login successful',
