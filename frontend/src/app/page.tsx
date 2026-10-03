@@ -684,7 +684,7 @@ export default function Home() {
           {/* Header Row */}
           <div className="mb-8 sm:mb-10 flex flex-row items-center justify-between">
             <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              How We Works
+              How We Work
             </h2>
           </div>
 
