@@ -9,6 +9,7 @@ import SellVehicleModal from '@/components/sell/SellVehicleModal';
 import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymentModal';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
+import { getDialHref, normalizeExternalUrl } from '@/lib/contactLinkUtils.mjs';
 import {
   ChevronRight,
   Globe,
@@ -32,6 +33,7 @@ type FooterContact = {
   emailAddress?: string | null;
   emailLabel?: string | null;
   address?: string | null;
+  googleMapsUrl?: string | null;
 };
 
 type ResolvedFooterContact = {
@@ -40,6 +42,7 @@ type ResolvedFooterContact = {
   emailAddress: string;
   emailLabel: string;
   address: string;
+  googleMapsUrl: string;
 };
 
 type FooterSettingsResponse = {
@@ -62,6 +65,7 @@ const emptyContact: ResolvedFooterContact = {
   emailAddress: '',
   emailLabel: '',
   address: '',
+  googleMapsUrl: '',
 };
 
 const platformLabelMap: Record<string, string> = {
@@ -72,26 +76,6 @@ const platformLabelMap: Record<string, string> = {
   YOUTUBE: 'YouTube',
   WHATSAPP: 'WhatsApp',
   CUSTOM: 'Website',
-};
-
-const normalizeExternalUrl = (value?: string | null) => {
-  const trimmedValue = value?.trim();
-  if (!trimmedValue) {
-    return null;
-  }
-
-  const candidateValue = /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
-
-  try {
-    const parsedUrl = new URL(candidateValue);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      return null;
-    }
-
-    return parsedUrl.toString();
-  } catch {
-    return null;
-  }
 };
 
 const SocialIcon = ({ platform }: { platform: string }) => {
@@ -189,6 +173,7 @@ export default function Footer() {
           emailAddress: (response.data.data?.contact?.emailAddress || '').trim(),
           emailLabel: (response.data.data?.contact?.emailLabel || '').trim(),
           address: (response.data.data?.contact?.address || '').trim(),
+          googleMapsUrl: normalizeExternalUrl(response.data.data?.contact?.googleMapsUrl) || '',
         });
       } catch {
         if (!cancelled) {
@@ -256,6 +241,8 @@ export default function Footer() {
 
     setIsSellModalOpen(true);
   };
+
+  const phoneHref = contact.phoneNumber ? getDialHref(contact.phoneNumber) : '';
 
   return (
     <>
@@ -401,57 +388,68 @@ export default function Footer() {
               <div className="flex flex-col space-y-5 w-full">
                 {/* Phone */}
                 {Boolean(contact.phoneNumber) && (
-                  <div className="flex items-start group cursor-default">
+                  <a
+                    href={phoneHref || undefined}
+                    aria-label={`Call ${contact.phoneNumber}`}
+                    className="flex items-start group"
+                  >
                     <div className="flex-shrink-0 w-9 h-9 rounded-full border border-[#333333] flex items-center justify-center mr-4 group-hover:border-[#F0C85C] group-hover:bg-[#F0C85C]/10 transition-colors">
                       <Phone size={14} className="text-[#F0C85C]" />
                     </div>
                     <div className="flex flex-col justify-center min-h-[36px]">
-                      <p className="text-[13px] text-white font-medium leading-none">
+                      <span className="text-[13px] text-white font-medium leading-none group-hover:text-[#F0C85C] transition-colors">
                         {contact.phoneNumber}
-                      </p>
+                      </span>
                       {Boolean(contact.phoneLabel) && (
                         <p className="text-[11px] text-[#8C8C8C] mt-1.5 leading-none">
                           {contact.phoneLabel}
                         </p>
                       )}
                     </div>
-                  </div>
+                  </a>
                 )}
 
                 {/* Email */}
                 {Boolean(contact.emailAddress) && (
-                  <div className="flex items-start group cursor-default">
+                  <a
+                    href={`mailto:${contact.emailAddress}`}
+                    aria-label={`Email ${contact.emailAddress}`}
+                    className="flex items-start group"
+                  >
                     <div className="flex-shrink-0 w-9 h-9 rounded-full border border-[#333333] flex items-center justify-center mr-4 group-hover:border-[#F0C85C] group-hover:bg-[#F0C85C]/10 transition-colors">
                       <Mail size={14} className="text-[#F0C85C]" />
                     </div>
                     <div className="flex flex-col justify-center min-h-[36px]">
-                      <a 
-                        href={`mailto:${contact.emailAddress}`}
-                        className="text-[13px] text-white font-medium leading-none hover:text-[#F0C85C] transition-colors"
-                      >
+                      <span className="text-[13px] text-white font-medium leading-none group-hover:text-[#F0C85C] transition-colors">
                         {contact.emailAddress}
-                      </a>
+                      </span>
                       {Boolean(contact.emailLabel) && (
                         <p className="text-[11px] text-[#8C8C8C] mt-1.5 leading-none">
                           {contact.emailLabel}
                         </p>
                       )}
                     </div>
-                  </div>
+                  </a>
                 )}
 
                 {/* Address */}
                 {Boolean(contact.address) && (
-                  <div className="flex items-start group cursor-default">
+                  <a
+                    href={contact.googleMapsUrl || undefined}
+                    target={contact.googleMapsUrl ? '_blank' : undefined}
+                    rel={contact.googleMapsUrl ? 'noopener noreferrer' : undefined}
+                    aria-label={contact.googleMapsUrl ? 'View office location on Google Maps' : 'Office address'}
+                    className={`flex items-start group ${contact.googleMapsUrl ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
                     <div className="flex-shrink-0 w-9 h-9 rounded-full border border-[#333333] flex items-center justify-center mr-4 group-hover:border-[#F0C85C] group-hover:bg-[#F0C85C]/10 transition-colors">
                       <MapPin size={14} className="text-[#F0C85C]" />
                     </div>
                     <div className="flex flex-col justify-center min-h-[36px]">
-                      <p className="text-[12px] text-[#8C8C8C] leading-[1.4] pr-2 whitespace-pre-line">
+                      <span className="text-[12px] text-[#8C8C8C] leading-[1.4] pr-2 whitespace-pre-line group-hover:text-white transition-colors">
                         {contact.address}
-                      </p>
+                      </span>
                     </div>
-                  </div>
+                  </a>
                 )}
               </div>
             </div>

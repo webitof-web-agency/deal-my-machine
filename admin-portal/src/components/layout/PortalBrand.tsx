@@ -38,6 +38,7 @@ export default function PortalBrand({
             alt={APP_NAME}
             width={300}
             height={80}
+            unoptimized
             priority={size !== 'footer'}
             loading={size === 'footer' ? 'lazy' : 'eager'}
             className={`w-full h-auto object-contain object-center mx-auto ${maxHeightClass}`}

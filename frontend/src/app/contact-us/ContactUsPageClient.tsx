@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Clock, ExternalLink, Globe, Mail, MapPin, Phone, ShieldCheck, UserRound } from 'lucide-react';
 import api from '@/lib/api';
 import { SITE_NAME } from '@/lib/site';
+import { getDialHref, normalizeExternalUrl } from '@/lib/contactLinkUtils.mjs';
 
 type FooterSocialLink = {
   id: string;
@@ -47,25 +48,6 @@ const emptyContact: ResolvedContact = {
   emailLabel: '',
   address: '',
   googleMapsUrl: '',
-};
-
-const normalizeExternalUrl = (value?: string | null) => {
-  const trimmedValue = value?.trim();
-  if (!trimmedValue) return '';
-
-  const candidateValue = /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
-
-  try {
-    const parsedUrl = new URL(candidateValue);
-    return ['http:', 'https:'].includes(parsedUrl.protocol) ? parsedUrl.toString() : '';
-  } catch {
-    return '';
-  }
-};
-
-const getDialHref = (phoneNumber: string) => {
-  const digits = phoneNumber.replace(/[^\d+]/g, '');
-  return digits ? `tel:${digits}` : '';
 };
 
 const getPlatformLabel = (platform: string) => {

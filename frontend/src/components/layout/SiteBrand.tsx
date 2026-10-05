@@ -27,6 +27,7 @@ export default function SiteBrand({
         <Image
           src={staticLogoUrl}
           alt={SITE_NAME}
+          unoptimized
           width={300}
           height={80}
           sizes={variant === 'footer' ? '(max-width: 768px) 240px, 360px' : '(max-width: 640px) 200px, (max-width: 768px) 240px, 300px'}

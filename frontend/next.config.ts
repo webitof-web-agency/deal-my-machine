@@ -38,6 +38,12 @@ const nextConfig: NextConfig = {
   images: {
     // Local development serves listing images from the backend on a private host.
     dangerouslyAllowLocalIP: shouldAllowLocalIpImages,
+    localPatterns: [
+      {
+        pathname: '/branding/**',
+        search: '',
+      },
+    ],
     remotePatterns: [
       {
         protocol: 'http',
@@ -120,6 +126,16 @@ const nextConfig: NextConfig = {
       ...(apiFullPattern ? [apiFullPattern] : []),
       ...(sitePattern ? [sitePattern] : []),
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/branding/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+        ],
+      },
+    ];
   },
 };
 

@@ -66,9 +66,9 @@ function LoaderLogo({ ring }: { ring: number }) {
       <Image
           src={STATIC_LOADING_LOGO}
           alt={SITE_NAME}
+          unoptimized
           width={Math.ceil(ring * 0.76)}
           height={Math.ceil(ring * 0.46)}
-          priority
           style={{
             position: 'absolute',
             width: 'auto',

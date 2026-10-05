@@ -141,7 +141,6 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-gray-50 text-gray-900 antialiased">
-        <link rel="preload" as="image" href="/branding/loadinglogo.png" fetchPriority="high" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }} />
         <LocaleSync />
         <Navbar />

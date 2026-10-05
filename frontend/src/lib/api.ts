@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { useLanguageStore } from '@/store/languageStore';
 import { normalizeApiBaseUrl } from '@/lib/apiBaseUrl';
+import { shouldResetAuthSession } from '@/lib/authErrorHandling.mjs';
 
 export const API_BASE_URL = normalizeApiBaseUrl(
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api'
@@ -105,7 +106,7 @@ api.interceptors.response.use(
     const requestHeaders = error?.config?.headers;
     const sentAuthHeader = Boolean(requestHeaders?.Authorization || requestHeaders?.authorization);
 
-    if (axios.isAxiosError(error) && error.response?.status === 401 && sentAuthHeader) {
+    if (axios.isAxiosError(error) && shouldResetAuthSession(error) && sentAuthHeader) {
       const authStore = useAuthStore.getState();
       authStore.logout();
 

@@ -921,7 +921,16 @@ export const getSiteLogo = async (req: Request, res: Response, next: NextFunctio
 export const getFooterSettings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const settings = await getAppSettings();
-    const superAdminContact = await getDefaultSuperAdminContact();
+
+    // Only use the explicitly set whatsappNumber from superadmin's profile.
+    // Do NOT fall back to mobile — if no WhatsApp number is set, the
+    // floating button should stay hidden.
+    const superAdminUser = await prisma.user.findFirst({
+      where: { role: 'SUPER_ADMIN' },
+      select: { whatsappNumber: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const adminWhatsappNumber = normalizePhoneNumber(superAdminUser?.whatsappNumber) || null;
 
     res.status(200).json({
       success: true,
@@ -929,7 +938,7 @@ export const getFooterSettings = async (req: Request, res: Response, next: NextF
         socialLinks: settings.footer.socialLinks,
         contact: settings.footer.contact,
         legalPages: settings.footer.legalPages,
-        adminWhatsappNumber: superAdminContact.adminWhatsappNumber || null,
+        adminWhatsappNumber,
       },
     });
   } catch (error) {

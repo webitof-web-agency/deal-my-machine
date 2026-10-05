@@ -63,7 +63,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <link rel="preload" as="image" href="/branding/loadinglogo.png" fetchPriority="high" />
         <LocaleSync />
         <ToastProvider>
           {children}

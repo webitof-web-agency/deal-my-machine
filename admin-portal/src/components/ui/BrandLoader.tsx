@@ -74,7 +74,7 @@ function LoaderLogo({ ring }: { ring: number }) {
         alt={APP_NAME}
         width={Math.ceil(ring * 0.76)}
         height={Math.ceil(ring * 0.46)}
-        priority
+        unoptimized
         style={{ width: 'auto', height: 'auto', maxWidth: ring * 0.76, maxHeight: ring * 0.46, objectFit: 'contain', display: 'block' }}
       />
     </div>
