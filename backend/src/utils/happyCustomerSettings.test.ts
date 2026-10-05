@@ -6,12 +6,14 @@ test('normalizes happy customer cards for public display', () => {
   const items = normalizeHappyCustomerItems([
     { id: ' second ', name: '  Customer Two ', imageUrl: ' /uploads/two.png ', displayOrder: 2 },
     { id: 'first', name: 'Customer One', imageUrl: '/uploads/one.png', displayOrder: 1 },
-    { id: 'invalid', name: '', imageUrl: '/uploads/invalid.png', displayOrder: 0 },
+    { id: 'missing-name', name: '', imageUrl: '/uploads/with-no-name.png', displayOrder: 0 },
+    { id: 'missing-image', name: 'Missing image', imageUrl: '', displayOrder: 3 },
   ]);
 
   assert.deepEqual(items.map(({ id, name, imageUrl, displayOrder }) => ({ id, name, imageUrl, displayOrder })), [
-    { id: 'first', name: 'Customer One', imageUrl: '/uploads/one.png', displayOrder: 0 },
-    { id: 'second', name: 'Customer Two', imageUrl: '/uploads/two.png', displayOrder: 1 },
+    { id: 'missing-name', name: '', imageUrl: '/uploads/with-no-name.png', displayOrder: 0 },
+    { id: 'first', name: 'Customer One', imageUrl: '/uploads/one.png', displayOrder: 1 },
+    { id: 'second', name: 'Customer Two', imageUrl: '/uploads/two.png', displayOrder: 2 },
   ]);
 });
 

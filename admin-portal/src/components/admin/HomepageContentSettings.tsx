@@ -550,10 +550,10 @@ export default function HomepageContentSettings() {
         displayOrder: index,
       }));
 
-      const hasInvalidItem = normalizedItems.some((item) => !item.name || !item.imageUrl);
+      const hasInvalidItem = normalizedItems.some((item) => !item.imageUrl);
       if (hasInvalidItem) {
         setSaving(false);
-        toast.error('Each happy customer card needs a name and image.');
+        toast.error('Each happy customer card needs an image.');
         return;
       }
 
@@ -723,7 +723,7 @@ export default function HomepageContentSettings() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <div>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-gray-700">Customer Name</span>
+            <span className="mb-1.5 block text-sm font-semibold text-gray-700">Customer Name <span className="font-normal text-gray-400">(optional)</span></span>
             <input
               type="text"
               value={item.name}

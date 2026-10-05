@@ -368,7 +368,7 @@ export default function Home() {
     >
       <Image
         src={getMediaUrl(item.imageUrl) || item.imageUrl}
-        alt={`${item.name} happy customer of ${SITE_NAME}`}
+        alt={item.name?.trim() || `Happy customer of ${SITE_NAME}`}
         fill
         unoptimized
         sizes="(max-width: 640px) 240px, 290px"
@@ -381,9 +381,11 @@ export default function Home() {
           });
         }}
       />
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-3 pt-10">
-        <p className="truncate text-sm font-extrabold text-white sm:text-base">{item.name}</p>
-      </div>
+      {item.name?.trim() ? (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-3 pt-10">
+          <p className="truncate text-sm font-extrabold text-white sm:text-base">{item.name}</p>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -748,10 +750,17 @@ export default function Home() {
           </div>
 
           <div className="mx-auto max-w-7xl overflow-hidden">
-            <div className="animate-happy-customer-marquee flex w-max items-center gap-4 py-2 will-change-transform">
-              {happyCustomerMarqueeItems.map((item, index) =>
-                renderHappyCustomerCard(item, `happy-customer-marquee-${item.id}-${index}`)
-              )}
+            <div className="animate-marquee-left flex w-max items-center gap-4 py-2 will-change-transform">
+              <div className="flex shrink-0 items-center gap-4">
+                {happyCustomerMarqueeItems.map((item, index) =>
+                  renderHappyCustomerCard(item, `happy-customer-marquee-${item.id}-${index}`)
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-4" aria-hidden="true">
+                {happyCustomerMarqueeItems.map((item, index) =>
+                  renderHappyCustomerCard(item, `happy-customer-marquee-copy-${item.id}-${index}`)
+                )}
+              </div>
             </div>
           </div>
         </section>

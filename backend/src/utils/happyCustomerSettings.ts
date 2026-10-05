@@ -37,10 +37,10 @@ export const normalizeHappyCustomerItems = (
   const normalizedItems: HappyCustomerItem[] = [];
 
   for (const [index, item] of (items || []).entries()) {
-    const name = item.name?.trim();
+    const name = item.name?.trim() || '';
     const imageUrl = item.imageUrl ? normalizeHappyCustomerImageUrl(item.imageUrl) : undefined;
 
-    if (!name || !imageUrl) continue;
+    if (!imageUrl) continue;
 
     normalizedItems.push({
       id: item.id?.trim() || randomUUID(),

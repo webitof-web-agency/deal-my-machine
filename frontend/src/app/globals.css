@@ -42,11 +42,6 @@ body {
   100% { transform: translateX(0); }
 }
 
-@keyframes happyCustomerMarquee {
-  0% { transform: translate3d(100vw, 0, 0); }
-  100% { transform: translate3d(-100%, 0, 0); }
-}
-
 /* ── Brand Loader Ring Animation ── */
 @keyframes brandSpin {
   0%   { stroke-dashoffset: 0; transform: rotate(0deg); }
@@ -72,14 +67,6 @@ body {
 
 .animate-marquee-right {
   animation: marqueeRight 28s linear infinite;
-  display: flex;
-  width: max-content;
-  backface-visibility: hidden;
-  transform: translate3d(0, 0, 0);
-}
-
-.animate-happy-customer-marquee {
-  animation: happyCustomerMarquee 28s linear infinite;
   display: flex;
   width: max-content;
   backface-visibility: hidden;

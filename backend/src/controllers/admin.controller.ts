@@ -1254,9 +1254,9 @@ export const updateHappyCustomerContent = async (req: Request, res: Response, ne
   try {
     const items = Array.isArray(req.body?.items) ? (req.body.items as Array<Partial<HappyCustomerItem>>) : [];
 
-    const invalidItem = items.find((item) => !item?.name?.trim() || !item?.imageUrl?.trim());
+    const invalidItem = items.find((item) => !item?.imageUrl?.trim());
     if (invalidItem) {
-      return res.status(400).json({ error: 'Each happy customer card must include a name and image.' });
+      return res.status(400).json({ error: 'Each happy customer card must include an image.' });
     }
 
     const settings = await updateHappyCustomerSettings({
