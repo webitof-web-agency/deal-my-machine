@@ -50,7 +50,7 @@ app.use('/uploads/public', async (req: Request, res: Response, next: NextFunctio
     return next();
   }
 
-  if (!/^\/(?:finance-support|hero-image|inspection-section|site-logo|site-dark-logo|site-footer-logo|site-favicon|site-manifest-icon)\//.test(req.path)) {
+  if (!/^\/(?:finance-support|happy-customers|hero-image|inspection-section|site-logo|site-dark-logo|site-footer-logo|site-favicon|site-manifest-icon)\//.test(req.path)) {
     return next();
   }
 

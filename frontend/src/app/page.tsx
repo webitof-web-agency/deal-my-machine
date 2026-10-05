@@ -12,8 +12,17 @@ import { shuffleFeaturedListings } from '@/lib/shuffleFeaturedListings';
 import { useTranslation } from '@/hooks/useTranslation';
 import CategoryIconRenderer from '@/components/shared/CategoryIconRenderer';
 import { SITE_NAME } from '@/lib/site';
+import { getHeroHeadlineAccentLineIndex, getHeroHeadlineLines } from './heroHeadline.mjs';
+import { buildHappyCustomerMarqueeItems, getDisplayHappyCustomers } from '@/lib/happyCustomers.mjs';
 
 type FinanceSupportItem = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  displayOrder: number;
+};
+
+type HappyCustomerItem = {
   id: string;
   name: string;
   imageUrl: string;
@@ -129,6 +138,8 @@ export default function Home() {
   );
   const [financeSupportItems, setFinanceSupportItems] = React.useState<FinanceSupportItem[]>([]);
   const [failedFinanceSupportIds, setFailedFinanceSupportIds] = React.useState<Set<string>>(() => new Set());
+  const [happyCustomerItems, setHappyCustomerItems] = React.useState<HappyCustomerItem[]>([]);
+  const [failedHappyCustomerIds, setFailedHappyCustomerIds] = React.useState<Set<string>>(() => new Set());
   const [heroImageUrl, setHeroImageUrl] = React.useState<string | null>(null);
   const [heroHeadline, setHeroHeadline] = React.useState('');
   const [inspectionContent, setInspectionContent] = React.useState<InspectionSectionContent | null>(null);
@@ -165,10 +176,10 @@ export default function Home() {
   }, [heroSearchLocation, searchLocations]);
 
   const heroHeadlineLines = React.useMemo(
-    () => heroHeadline.split('\n').map((line) => line.trim()).filter((line) => line.length > 0),
+    () => getHeroHeadlineLines(heroHeadline),
     [heroHeadline]
   );
-  const heroHeadlineAccentLineIndex = Math.max(heroHeadlineLines.length - 1, 0);
+  const heroHeadlineAccentLineIndex = getHeroHeadlineAccentLineIndex(heroHeadlineLines);
   const bottomBannerTitle = inspectionContent?.title?.trim() || "Let's Get to Work";
   const bottomBannerDescription = inspectionContent?.description?.trim()
     || 'Explore thousands of verified heavy equipment listings or connect directly with certified dealers across India.';
@@ -212,8 +223,9 @@ export default function Home() {
 
     const loadData = async () => {
       try {
-        const [financeRes, heroRes, inspectionRes, categoriesRes, filtersRes, homeStatsRes, publicListingsRes] = await Promise.all([
+        const [financeRes, happyCustomersRes, heroRes, inspectionRes, categoriesRes, filtersRes, homeStatsRes, publicListingsRes] = await Promise.all([
           api.get<{ success: boolean; data: FinanceSupportItem[] }>('/master/finance-support').catch(() => null),
+          api.get<{ success: boolean; data: HappyCustomerItem[] }>('/master/happy-customers').catch(() => null),
           api.get<{ success: boolean; data: { imageUrl: string | null; headline?: string | null } }>('/master/hero-image').catch(() => null),
           api.get<{ success: boolean; data: InspectionSectionContent }>('/master/inspection-section').catch(() => null),
           api.get<{ success: boolean; data: PublicCategory[] }>('/master/public-categories').catch(() => null),
@@ -229,6 +241,13 @@ export default function Home() {
           setFailedFinanceSupportIds(new Set());
         } else {
           setFinanceSupportItems([]);
+        }
+
+        if (happyCustomersRes?.data?.success) {
+          setHappyCustomerItems(happyCustomersRes.data.data || []);
+          setFailedHappyCustomerIds(new Set());
+        } else {
+          setHappyCustomerItems([]);
         }
 
         if (heroRes?.data?.success && heroRes.data.data?.imageUrl) {
@@ -275,6 +294,8 @@ export default function Home() {
       } catch {
         if (!cancelled) {
           setFinanceSupportItems([]);
+          setHappyCustomerItems([]);
+          setFailedHappyCustomerIds(new Set());
           setHeroHeadline('');
           setInspectionContent(null);
           setHeroImageUrl(null);
@@ -300,6 +321,15 @@ export default function Home() {
   const financeMarqueeItems = React.useMemo(
     () => Array.from({ length: 4 }).flatMap(() => financeDisplayItems),
     [financeDisplayItems]
+  );
+
+  const happyCustomerDisplayItems = React.useMemo(
+    () => getDisplayHappyCustomers(happyCustomerItems).filter((item) => !failedHappyCustomerIds.has(item.id)),
+    [failedHappyCustomerIds, happyCustomerItems]
+  );
+  const happyCustomerMarqueeItems = React.useMemo(
+    () => buildHappyCustomerMarqueeItems(happyCustomerDisplayItems),
+    [happyCustomerDisplayItems]
   );
 
   const renderFinanceCard = (item: FinanceSupportItem, key: string) => (
@@ -331,6 +361,32 @@ export default function Home() {
     </div>
   );
 
+  const renderHappyCustomerCard = (item: HappyCustomerItem, key: string) => (
+    <div
+      key={key}
+      className="group relative flex h-[180px] w-[240px] shrink-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-xs transition-all duration-300 hover:border-amber-400 hover:shadow-lg sm:h-[210px] sm:w-[290px]"
+    >
+      <Image
+        src={getMediaUrl(item.imageUrl) || item.imageUrl}
+        alt={`${item.name} happy customer of ${SITE_NAME}`}
+        fill
+        unoptimized
+        sizes="(max-width: 640px) 240px, 290px"
+        className="object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={() => {
+          setFailedHappyCustomerIds((current) => {
+            const next = new Set(current);
+            next.add(item.id);
+            return next;
+          });
+        }}
+      />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-3 pt-10">
+        <p className="truncate text-sm font-extrabold text-white sm:text-base">{item.name}</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col min-h-screen">
 
@@ -354,9 +410,13 @@ export default function Home() {
 
         <div className="relative z-10 mx-auto flex h-full w-full max-w-[1200px] flex-col justify-center px-4 pb-8 pt-24 sm:px-6 md:pb-10 md:pt-20">
           <div className="max-w-[720px]">
-            {heroHeadlineLines.length > 0 ? (
-              <h1 className="max-w-[700px] text-[30px] font-extrabold leading-[1.08] tracking-normal text-white drop-shadow-lg sm:text-5xl md:text-6xl">
+            {heroHeadlineLines.some((line) => line.length > 0) ? (
+              <h1 className="max-w-[640px] text-[26px] font-extrabold leading-[1.12] tracking-normal text-white drop-shadow-lg sm:text-4xl md:text-5xl lg:text-[54px]">
                 {heroHeadlineLines.map((line, index) => {
+                  if (!line) {
+                    return <React.Fragment key={`empty-${index}`}><br /></React.Fragment>;
+                  }
+
                   const words = line.split(/\s+/).filter(Boolean);
                   const shouldAccentLastWord = index === heroHeadlineAccentLineIndex && words.length > 1;
                   const baseLine = shouldAccentLastWord ? words.slice(0, -1).join(' ') : line;
@@ -377,7 +437,7 @@ export default function Home() {
                 })}
               </h1>
             ) : (
-              <h1 className="max-w-[700px] text-[30px] font-extrabold leading-[1.08] tracking-normal text-white drop-shadow-lg sm:text-5xl md:text-6xl">
+              <h1 className="max-w-[640px] text-[26px] font-extrabold leading-[1.12] tracking-normal text-white drop-shadow-lg sm:text-4xl md:text-5xl lg:text-[54px]">
                 Heavy Machines
                 <br />
                 <span className="text-brand-yellow">Bigger</span> Opportunities
@@ -677,6 +737,25 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* 4. HAPPY CUSTOMERS */}
+      {happyCustomerDisplayItems.length > 0 ? (
+        <section className="relative w-full overflow-hidden border-t border-gray-200/70 bg-white px-4 py-9 sm:px-6 sm:py-10">
+          <div className="mx-auto mb-6 max-w-7xl">
+            <h2 className="text-left text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl">
+              Happy <span className="text-[#D97706]">Customers</span>
+            </h2>
+          </div>
+
+          <div className="mx-auto max-w-7xl overflow-hidden">
+            <div className="animate-happy-customer-marquee flex w-max items-center gap-4 py-2 will-change-transform">
+              {happyCustomerMarqueeItems.map((item, index) =>
+                renderHappyCustomerCard(item, `happy-customer-marquee-${item.id}-${index}`)
+              )}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* HOW IT WORKS SECTION (Placed right below Featured Machines) */}
       <section className="hidden sm:block bg-white border-t border-gray-100 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 w-full">

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   uploadPublicFinanceSupportImage,
+  uploadPublicHappyCustomerImage,
+  getPublicDriveHappyCustomerImage,
   uploadPublicHeroImage,
   uploadPublicInspectionSectionImage,
   uploadPublicSiteManifestIconImage,
@@ -26,6 +28,7 @@ const secureUpload = getDocumentUploadMiddleware('secure');
 const publicUpload = getDocumentUploadMiddleware('public');
 const publicListingMediaUpload = getDocumentUploadMiddleware('public', 'listing-media');
 const publicFinanceSupportUpload = getDocumentUploadMiddleware('public', 'finance-support');
+const publicHappyCustomerUpload = getDocumentUploadMiddleware('public', 'happy-customers');
 const publicHeroImageUpload = getDocumentUploadMiddleware('public', 'hero-image');
 const publicInspectionSectionUpload = getDocumentUploadMiddleware('public', 'inspection-section');
 const publicSiteLogoUpload = getDocumentUploadMiddleware('public', 'site-logo');
@@ -73,6 +76,14 @@ router.post(
   publicSiteDarkLogoUpload.single('file'),
   uploadPublicSiteDarkLogoImage
 );
+router.post(
+  '/upload/public/happy-customers',
+  requireAuth,
+  requirePortalOperator,
+  publicHappyCustomerUpload.single('file'),
+  uploadPublicHappyCustomerImage
+);
+router.get('/upload/public/happy-customers/drive/:fileId', getPublicDriveHappyCustomerImage);
 router.post(
   '/upload/public/site-footer-logo',
   requireAuth,

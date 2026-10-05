@@ -15,6 +15,9 @@ import {
 import { normalizePartnerRegistrationEnabled } from './publicAccessSettings';
 import { APP_NAME } from '../config/appConfig';
 import { createSettingsSnapshotCache } from './settingsSnapshotCache';
+import { normalizeHappyCustomerItems, type HappyCustomerItem } from './happyCustomerSettings';
+
+export type { HappyCustomerItem } from './happyCustomerSettings';
 
 type GoogleAuthSettings = {
   enabled: boolean;
@@ -231,6 +234,9 @@ type AppSettings = {
   financeSupport: {
     items: FinanceSupportItem[];
   };
+  happyCustomers: {
+    items: HappyCustomerItem[];
+  };
   heroImage: {
     imageUrl: string | null;
     headline: string | null;
@@ -388,6 +394,9 @@ const defaultSettings: AppSettings = {
   financeSupport: {
     items: [],
   },
+  happyCustomers: {
+    items: [],
+  },
   heroImage: {
     imageUrl: null,
     headline: null,
@@ -476,6 +485,7 @@ const getSettingsFreshnessScore = (settings?: AppSettings | null) => {
     parseTimestamp(settings.footer.contact.updatedAt),
     parseTimestamp(settings.footer.legalPages.updatedAt),
     ...settings.financeSupport.items.map((item) => parseTimestamp(item.updatedAt)),
+    ...settings.happyCustomers.items.map((item) => parseTimestamp(item.updatedAt)),
     ...settings.footer.socialLinks.map((item) => parseTimestamp(item.updatedAt)),
   );
 };
@@ -511,6 +521,9 @@ const normalizeAppSettingsSnapshot = (parsed?: Partial<AppSettings> | null): App
   companyInvoice: normalizeCompanyInvoiceSettings(parsed?.companyInvoice),
   financeSupport: {
     items: normalizeFinanceSupportItems(parsed?.financeSupport?.items),
+  },
+  happyCustomers: {
+    items: normalizeHappyCustomerItems(parsed?.happyCustomers?.items),
   },
   heroImage: {
     imageUrl: parsed?.heroImage?.imageUrl?.trim() || null,
@@ -581,6 +594,7 @@ const isMeaningfulSettings = (settings: AppSettings) =>
     settings.customerPrime.amount !== null ||
     settings.customerPrime.validityValue !== null ||
     settings.financeSupport.items.length > 0 ||
+    settings.happyCustomers.items.length > 0 ||
     settings.heroImage.imageUrl ||
     settings.heroImage.headline ||
     settings.inspectionSection.title ||
@@ -761,6 +775,7 @@ const resolveManagedBrandingFilePath = (fileUrl?: string | null) => {
 
   const managedDirectories: Array<[string, string]> = [
     ['/uploads/public/finance-support/', 'finance-support'],
+    ['/uploads/public/happy-customers/', 'happy-customers'],
     ['/uploads/public/hero-image/', 'hero-image'],
     ['/uploads/public/inspection-section/', 'inspection-section'],
     [siteLogoPublicUrlPrefix, 'site-logo'],
@@ -866,6 +881,7 @@ export const backfillPersistedPublicBrandingAssets = async () => {
   const currentSettings = await getAppSettings();
   const configuredUrls = [
     ...currentSettings.financeSupport.items.map((item) => item.imageUrl),
+    ...currentSettings.happyCustomers.items.map((item) => item.imageUrl),
     currentSettings.heroImage.imageUrl,
     currentSettings.inspectionSection.imageUrl,
     currentSettings.siteLogo.imageUrl,
@@ -1281,6 +1297,32 @@ export const updateFinanceSupportSettings = async ({
   const nextSettings: AppSettings = {
     ...currentSettings,
     financeSupport: {
+      items: normalizedItems,
+    },
+  };
+
+  await persistSettings(nextSettings);
+
+  return nextSettings;
+};
+
+export const updateHappyCustomerSettings = async ({
+  items,
+  updatedByUserId,
+}: {
+  items?: Array<Partial<HappyCustomerItem>>;
+  updatedByUserId?: string | null;
+}) => {
+  const currentSettings = await getAppSettings();
+  const normalizedItems = normalizeHappyCustomerItems(items).map((item) => ({
+    ...item,
+    updatedAt: new Date().toISOString(),
+    updatedByUserId: updatedByUserId || null,
+  }));
+
+  const nextSettings: AppSettings = {
+    ...currentSettings,
+    happyCustomers: {
       items: normalizedItems,
     },
   };

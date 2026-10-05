@@ -872,6 +872,19 @@ export const getFinanceSupportItems = async (req: Request, res: Response, next: 
   }
 };
 
+export const getHappyCustomerItems = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAppSettings();
+
+    res.status(200).json({
+      success: true,
+      data: settings.happyCustomers.items,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getHeroImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const settings = await getAppSettings();

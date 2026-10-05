@@ -8,6 +8,7 @@ export type UploadPurpose =
   | 'offer-letter'
   | 'listing-media'
   | 'finance-support'
+  | 'happy-customers'
   | 'hero-image'
   | 'inspection-section'
   | 'site-logo'
@@ -67,6 +68,7 @@ const allowedListingMediaExtensionsByMimeType: Record<string, string[]> = {
 export const MAX_DOCUMENT_UPLOAD_SIZE = 5 * 1024 * 1024;
 export const MAX_LISTING_VIDEO_UPLOAD_SIZE = 15 * 1024 * 1024;
 export const MAX_FINANCE_SUPPORT_IMAGE_UPLOAD_SIZE = 2 * 1024 * 1024;
+export const MAX_HAPPY_CUSTOMER_IMAGE_UPLOAD_SIZE = 2 * 1024 * 1024;
 export const MAX_HERO_IMAGE_UPLOAD_SIZE = 5 * 1024 * 1024;
 export const MAX_INSPECTION_SECTION_IMAGE_UPLOAD_SIZE = 5 * 1024 * 1024;
 export const MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE = 2 * 1024 * 1024;
@@ -156,7 +158,7 @@ export const getDocumentUploadMiddleware = (
           ? isAllowedResumeFile(file.mimetype, file.originalname)
           : purpose === 'listing-media'
             ? isAllowedListingMediaFile(file.mimetype, file.originalname)
-              : purpose === 'finance-support' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-footer-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
+              : purpose === 'finance-support' || purpose === 'happy-customers' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-footer-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
               ? isAllowedFinanceSupportImageFile(file.mimetype, file.originalname)
               : isAllowedDocumentFile(file.mimetype, file.originalname);
 
@@ -167,7 +169,7 @@ export const getDocumentUploadMiddleware = (
               ? 'Only PDF, DOC, and DOCX files are allowed for resumes and documents.'
               : purpose === 'listing-media'
                 ? 'Only JPG, PNG, WEBP, MP4, WEBM, and MOV files are allowed.'
-                : purpose === 'finance-support' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-footer-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
+                : purpose === 'finance-support' || purpose === 'happy-customers' || purpose === 'hero-image' || purpose === 'inspection-section' || purpose === 'site-logo' || purpose === 'site-dark-logo' || purpose === 'site-footer-logo' || purpose === 'site-favicon' || purpose === 'site-manifest-icon'
                   ? 'Only JPG, PNG, and WEBP images are allowed.'
                   : 'Only JPG, PNG, WEBP, and PDF files are allowed.'
           )
@@ -197,6 +199,8 @@ export const getDocumentUploadMiddleware = (
             ? MAX_HERO_IMAGE_UPLOAD_SIZE
           : purpose === 'finance-support'
             ? MAX_FINANCE_SUPPORT_IMAGE_UPLOAD_SIZE
+          : purpose === 'happy-customers'
+            ? MAX_HAPPY_CUSTOMER_IMAGE_UPLOAD_SIZE
             : MAX_DOCUMENT_UPLOAD_SIZE,
       files: 1,
     },

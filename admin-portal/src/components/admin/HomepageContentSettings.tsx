@@ -10,6 +10,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import {
   getAbsoluteFileUrl,
   MAX_FINANCE_SUPPORT_IMAGE_INPUT_SIZE,
+  MAX_HAPPY_CUSTOMER_IMAGE_INPUT_SIZE,
   MAX_HERO_IMAGE_INPUT_SIZE,
   MAX_INSPECTION_SECTION_IMAGE_INPUT_SIZE,
   MAX_SITE_FAVICON_IMAGE_INPUT_SIZE,
@@ -18,6 +19,7 @@ import {
   MAX_SITE_MANIFEST_ICON_IMAGE_INPUT_SIZE,
   MAX_SITE_LOGO_IMAGE_INPUT_SIZE,
   uploadFinanceSupportImageToServer,
+  uploadHappyCustomerImageToServer,
   uploadHeroImageToServer,
   uploadInspectionSectionImageToServer,
   uploadSiteFaviconImageToServer,
@@ -38,8 +40,22 @@ type FinanceSupportItem = {
   previewUrl?: string;
 };
 
+type HappyCustomerItem = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  displayOrder: number;
+  updatedAt?: string | null;
+  updatedByUserId?: string | null;
+  previewUrl?: string;
+};
+
 type FinanceSupportResponse = {
   items: FinanceSupportItem[];
+};
+
+type HappyCustomerResponse = {
+  items: HappyCustomerItem[];
 };
 
 type InspectionSectionResponse = {
@@ -69,10 +85,19 @@ const createEmptyItem = (): FinanceSupportItem => ({
   previewUrl: '',
 });
 
+const createEmptyHappyCustomer = (): HappyCustomerItem => ({
+  id: globalThis.crypto?.randomUUID?.() || `happy-customer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  name: '',
+  imageUrl: '',
+  displayOrder: 0,
+  previewUrl: '',
+});
+
 export default function HomepageContentSettings() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'finance-support' | 'hero-image' | 'inspection-section' | 'site-logo'>('finance-support');
+  const [activeTab, setActiveTab] = useState<'finance-support' | 'happy-customers' | 'hero-image' | 'inspection-section' | 'site-logo'>('finance-support');
   const [items, setItems] = useState<FinanceSupportItem[]>([]);
+  const [happyCustomers, setHappyCustomers] = useState<HappyCustomerItem[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [darkLogoUrl, setDarkLogoUrl] = useState<string | null>(null);
@@ -102,8 +127,9 @@ export default function HomepageContentSettings() {
       setLoading(true);
 
       try {
-        const [financeResult, heroResult, inspectionResult, siteLogoResult] = await Promise.allSettled([
+        const [financeResult, happyCustomerResult, heroResult, inspectionResult, siteLogoResult] = await Promise.allSettled([
           api.get<FinanceSupportResponse>('/superadmin/finance-support'),
+          api.get<HappyCustomerResponse>('/superadmin/happy-customers'),
           api.get<{ imageUrl: string | null; headline?: string | null }>('/superadmin/hero-image'),
           api.get<InspectionSectionResponse>('/superadmin/inspection-section'),
           api.get<SiteLogoResponse>('/superadmin/site-logo'),
@@ -123,6 +149,18 @@ export default function HomepageContentSettings() {
           );
         } else {
           setItems([]);
+        }
+
+        if (happyCustomerResult.status === 'fulfilled') {
+          setHappyCustomers(
+            happyCustomerResult.value.data.items.map((item, index) => ({
+              ...item,
+              displayOrder: index,
+              previewUrl: getAbsoluteFileUrl(item.imageUrl),
+            }))
+          );
+        } else {
+          setHappyCustomers([]);
         }
 
         if (heroResult.status === 'fulfilled') {
@@ -171,10 +209,12 @@ export default function HomepageContentSettings() {
           setManifestIconPreviewUrl(null);
         }
 
-        if (financeResult.status === 'rejected' && heroResult.status === 'rejected' && inspectionResult.status === 'rejected' && siteLogoResult.status === 'rejected') {
+        if (financeResult.status === 'rejected' && happyCustomerResult.status === 'rejected' && heroResult.status === 'rejected' && inspectionResult.status === 'rejected' && siteLogoResult.status === 'rejected') {
           toast.error(t('homepageSettings.loadFailed'));
         } else if (financeResult.status === 'rejected') {
           toast.error(t('homepageSettings.loadFinanceFailed'));
+        } else if (happyCustomerResult.status === 'rejected') {
+          toast.error('Failed to load happy customers.');
         } else if (heroResult.status === 'rejected') {
           toast.error(t('homepageSettings.loadHeroFailed'));
         } else if (inspectionResult.status === 'rejected') {
@@ -237,6 +277,31 @@ export default function HomepageContentSettings() {
     );
   };
 
+  const updateHappyCustomer = (id: string, updater: (item: HappyCustomerItem) => HappyCustomerItem) => {
+    setHappyCustomers((current) =>
+      current.map((item, index) =>
+        item.id === id
+          ? { ...updater(item), displayOrder: index }
+          : { ...item, displayOrder: index }
+      )
+    );
+  };
+
+  const handleAddHappyCustomer = () => {
+    setHappyCustomers((current) => [
+      ...current,
+      { ...createEmptyHappyCustomer(), displayOrder: current.length },
+    ]);
+  };
+
+  const handleRemoveHappyCustomer = (id: string) => {
+    setHappyCustomers((current) =>
+      current
+        .filter((item) => item.id !== id)
+        .map((item, index) => ({ ...item, displayOrder: index }))
+    );
+  };
+
   const handleImageUpload = async (id: string, file: File) => {
     setUploadingId(id);
 
@@ -250,6 +315,24 @@ export default function HomepageContentSettings() {
       }));
     } catch (err) {
       toast.error(getApiErrorMessage(err, t('homepageSettings.uploadImageFailed')));
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleHappyCustomerImageUpload = async (id: string, file: File) => {
+    setUploadingId(id);
+
+    try {
+      const uploaded = await uploadHappyCustomerImageToServer(file);
+
+      updateHappyCustomer(id, (item) => ({
+        ...item,
+        imageUrl: uploaded.fileUrl,
+        previewUrl: uploaded.absoluteUrl,
+      }));
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to upload happy customer image.'));
     } finally {
       setUploadingId(null);
     }
@@ -459,6 +542,46 @@ export default function HomepageContentSettings() {
       return;
     }
 
+    if (activeTab === 'happy-customers') {
+      const normalizedItems = happyCustomers.map((item, index) => ({
+        id: item.id,
+        name: item.name.trim(),
+        imageUrl: item.imageUrl.trim(),
+        displayOrder: index,
+      }));
+
+      const hasInvalidItem = normalizedItems.some((item) => !item.name || !item.imageUrl);
+      if (hasInvalidItem) {
+        setSaving(false);
+        toast.error('Each happy customer card needs a name and image.');
+        return;
+      }
+
+      try {
+        const response = await api.put<{
+          message: string;
+          items: HappyCustomerItem[];
+        }>('/superadmin/happy-customers', {
+          items: normalizedItems,
+        });
+
+        setHappyCustomers(
+          response.data.items.map((item, index) => ({
+            ...item,
+            displayOrder: index,
+            previewUrl: getAbsoluteFileUrl(item.imageUrl),
+          }))
+        );
+        toast.success(response.data.message);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, 'Failed to save happy customers.'));
+      } finally {
+        setSaving(false);
+      }
+
+      return;
+    }
+
     if (activeTab === 'inspection-section') {
       try {
         const response = await api.put<{
@@ -595,6 +718,76 @@ export default function HomepageContentSettings() {
     </div>
   );
 
+  const renderHappyCustomerItem = (item: HappyCustomerItem) => (
+    <div key={item.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-gray-700">Customer Name</span>
+            <input
+              type="text"
+              value={item.name}
+              onChange={(event) =>
+                updateHappyCustomer(item.id, (current) => ({ ...current, name: event.target.value }))
+              }
+              placeholder="e.g. Rajesh Construction"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#FFC107] focus:ring-1 focus:ring-[#FFC107]"
+            />
+          </label>
+        </div>
+
+        <div className="block">
+          <span className="mb-1.5 block text-sm font-semibold text-gray-700">Customer Image</span>
+          <label className="flex min-h-[92px] cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition hover:border-[#FFC107] hover:bg-yellow-50">
+            <div className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50">
+              {item.previewUrl ? (
+                <Image
+                  src={item.previewUrl}
+                  alt={item.name || 'Happy customer'}
+                  width={64}
+                  height={40}
+                  unoptimized
+                  className="max-h-10 max-w-[64px] object-contain"
+                />
+              ) : (
+                <ImagePlus className="h-5 w-5 text-gray-400" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-800">
+                {uploadingId === item.id ? t('homepageSettings.uploading') : 'Upload customer image'}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                JPG, PNG, WEBP only. Max {Math.round(MAX_HAPPY_CUSTOMER_IMAGE_INPUT_SIZE / (1024 * 1024))}MB.
+              </p>
+            </div>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void handleHappyCustomerImageUpload(item.id, file);
+                event.target.value = '';
+              }}
+            />
+          </label>
+        </div>
+
+        <div className="flex items-start gap-2 xl:flex-col">
+          <button
+            type="button"
+            onClick={() => handleRemoveHappyCustomer(item.id)}
+            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+          >
+            <Trash2 className="h-4 w-4" />
+            {t('homepageSettings.delete')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -605,6 +798,8 @@ export default function HomepageContentSettings() {
               <h2 className="text-3xl font-bold tracking-tight text-white">
                 {activeTab === 'finance-support'
                   ? t('homepageSettings.homepageSetting')
+                  : activeTab === 'happy-customers'
+                    ? 'Happy Customers'
                   : activeTab === 'hero-image'
                     ? t('homepageSettings.heroImageSettings')
                     : activeTab === 'site-logo'
@@ -634,6 +829,17 @@ export default function HomepageContentSettings() {
               >
                 <ImagePlus className="h-4 w-4 shrink-0" />
                 <span>{t('homepageSettings.financeSupport')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('happy-customers')}
+                className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs sm:text-sm font-semibold transition shrink-0 whitespace-nowrap ${activeTab === 'happy-customers'
+                  ? 'border-[#FFC107] bg-white text-gray-900 shadow-sm'
+                  : 'border-transparent text-gray-600 hover:border-gray-200 hover:bg-white'
+                  }`}
+              >
+                <ImagePlus className="h-4 w-4 shrink-0" />
+                <span>Happy Customers</span>
               </button>
               <button
                 type="button"
@@ -684,6 +890,16 @@ export default function HomepageContentSettings() {
                     {t('homepageSettings.addBrand')}
                   </button>
                 ) : null}
+                {activeTab === 'happy-customers' ? (
+                  <button
+                    type="button"
+                    onClick={handleAddHappyCustomer}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 transition hover:border-[#FFC107] hover:text-black"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Customer
+                  </button>
+                ) : null}
                 {activeTab !== 'site-logo' ? (
                   <button
                     type="button"
@@ -711,6 +927,18 @@ export default function HomepageContentSettings() {
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <div className="space-y-4">
                     {items.map((item) => renderFinanceSupportItem(item))}
+                  </div>
+                </div>
+              )
+            ) : activeTab === 'happy-customers' ? (
+              happyCustomers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-12 text-center text-sm text-gray-500">
+                  Add customer cards above to show them on the homepage.
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div className="space-y-4">
+                    {happyCustomers.map((item) => renderHappyCustomerItem(item))}
                   </div>
                 </div>
               )

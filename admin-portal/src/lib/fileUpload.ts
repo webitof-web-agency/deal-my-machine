@@ -7,6 +7,7 @@ export const MAX_PDF_INPUT_SIZE = 3 * 1024 * 1024;
 export const MAX_LISTING_VIDEO_INPUT_SIZE = 15 * 1024 * 1024;
 export const MAX_LISTING_VIDEO_DURATION_SECONDS = 60;
 export const MAX_FINANCE_SUPPORT_IMAGE_INPUT_SIZE = 2 * 1024 * 1024;
+export const MAX_HAPPY_CUSTOMER_IMAGE_INPUT_SIZE = 2 * 1024 * 1024;
 export const MAX_HERO_IMAGE_INPUT_SIZE = 5 * 1024 * 1024;
 export const MAX_INSPECTION_SECTION_IMAGE_INPUT_SIZE = 5 * 1024 * 1024;
 export const MAX_SITE_LOGO_IMAGE_INPUT_SIZE = 2 * 1024 * 1024;
@@ -22,6 +23,8 @@ const LISTING_TARGET_MIN_IMAGE_SIZE = 250 * 1024;
 const LISTING_TARGET_MAX_IMAGE_SIZE = 900 * 1024;
 const FINANCE_SUPPORT_TARGET_MIN_IMAGE_SIZE = 180 * 1024;
 const FINANCE_SUPPORT_TARGET_MAX_IMAGE_SIZE = 450 * 1024;
+const HAPPY_CUSTOMER_TARGET_MIN_IMAGE_SIZE = 180 * 1024;
+const HAPPY_CUSTOMER_TARGET_MAX_IMAGE_SIZE = 450 * 1024;
 const HERO_IMAGE_TARGET_MIN_IMAGE_SIZE = 500 * 1024;
 const HERO_IMAGE_TARGET_MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const INSPECTION_SECTION_TARGET_MIN_IMAGE_SIZE = 450 * 1024;
@@ -380,6 +383,16 @@ export const validateFinanceSupportImageFile = async (file: File) => {
   }
 };
 
+export const validateHappyCustomerImageFile = async (file: File) => {
+  if (!allowedImageTypes.has(file.type)) {
+    throw new Error('Only JPG, PNG, and WEBP customer images are allowed.');
+  }
+
+  if (file.size > MAX_HAPPY_CUSTOMER_IMAGE_INPUT_SIZE) {
+    throw new Error(`Customer image size must be ${bytesToReadableLimit(MAX_HAPPY_CUSTOMER_IMAGE_INPUT_SIZE)} or smaller.`);
+  }
+};
+
 export const compressImageForUpload = async (
   file: File,
   options?: {
@@ -460,6 +473,15 @@ export const prepareFinanceSupportImageForUpload = async (file: File) => {
   return compressImageForUpload(file, {
     targetMinBytes: FINANCE_SUPPORT_TARGET_MIN_IMAGE_SIZE,
     targetMaxBytes: FINANCE_SUPPORT_TARGET_MAX_IMAGE_SIZE,
+  });
+};
+
+export const prepareHappyCustomerImageForUpload = async (file: File) => {
+  await validateHappyCustomerImageFile(file);
+
+  return compressImageForUpload(file, {
+    targetMinBytes: HAPPY_CUSTOMER_TARGET_MIN_IMAGE_SIZE,
+    targetMaxBytes: HAPPY_CUSTOMER_TARGET_MAX_IMAGE_SIZE,
   });
 };
 
@@ -693,6 +715,24 @@ export const uploadFinanceSupportImageToServer = async (file: File) => {
 
   const response = await api.post<{ file: UploadedFileResult }>(
     '/documents/upload/public/finance-support',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+
+  return response.data.file;
+};
+
+export const uploadHappyCustomerImageToServer = async (file: File) => {
+  const preparedFile = await prepareHappyCustomerImageForUpload(file);
+  const formData = new FormData();
+  formData.append('file', preparedFile);
+
+  const response = await api.post<{ file: UploadedFileResult }>(
+    '/documents/upload/public/happy-customers',
     formData,
     {
       headers: {

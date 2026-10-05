@@ -5,6 +5,7 @@ import prisma from '../lib/prisma';
 import {
   getSecureDocumentUrl,
   MAX_FINANCE_SUPPORT_IMAGE_UPLOAD_SIZE,
+  MAX_HAPPY_CUSTOMER_IMAGE_UPLOAD_SIZE,
   MAX_HERO_IMAGE_UPLOAD_SIZE,
   MAX_INSPECTION_SECTION_IMAGE_UPLOAD_SIZE,
   MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE,
@@ -19,7 +20,9 @@ import {
 } from '../utils/documentUpload';
 import { getDriveMediaStream, toDrivePublicUrl, uploadFileToDrive, uploadPrivateFileToDrive, uploadReceiptFileToDrive } from '../services/googleDrive.service';
 import { randomUUID } from 'crypto';
-import { persistPublicBrandingAsset } from '../utils/appSettings';
+import { getAppSettings, persistPublicBrandingAsset } from '../utils/appSettings';
+import { getAbsoluteUploadUrl } from '../utils/uploadResponse';
+import { getHappyCustomerDriveProxyUrl } from '../utils/happyCustomerSettings';
 
 /**
  * Save a branding image buffer to the server's public upload directory.
@@ -76,7 +79,7 @@ const saveSecureFile = async (file: Express.Multer.File) => {
 
 const enforceStoredFileSizePolicy = async (
   file: Express.Multer.File,
-  purpose: 'document' | 'listing-media' | 'finance-support' | 'hero-image' | 'inspection-section' | 'site-logo' | 'site-dark-logo' | 'site-footer-logo' | 'site-favicon' | 'site-manifest-icon' = 'document'
+  purpose: 'document' | 'listing-media' | 'finance-support' | 'happy-customers' | 'hero-image' | 'inspection-section' | 'site-logo' | 'site-dark-logo' | 'site-footer-logo' | 'site-favicon' | 'site-manifest-icon' = 'document'
 ) => {
   if (isPdfMimeType(file.mimetype) && file.size > 3 * 1024 * 1024) {
     await cleanupFile(file.path);
@@ -123,6 +126,11 @@ const enforceStoredFileSizePolicy = async (
   if (purpose === 'site-dark-logo' && file.size > MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE) {
     await cleanupFile(file.path);
     throw new Error('Dark logo image must be 2MB or smaller.');
+  }
+
+  if (purpose === 'happy-customers' && file.size > MAX_HAPPY_CUSTOMER_IMAGE_UPLOAD_SIZE) {
+    await cleanupFile(file.path);
+    throw new Error('Happy customer image must be 2MB or smaller.');
   }
 
   if (purpose === 'site-footer-logo' && file.size > MAX_SITE_LOGO_IMAGE_UPLOAD_SIZE) {
@@ -192,7 +200,7 @@ const buildUploadResponse = (
       mimeType: file.mimetype,
       size: file.size,
       fileUrl,
-      absoluteUrl: fileUrl, // Drive URL is already absolute
+      absoluteUrl: getAbsoluteUploadUrl({ protocol: req.protocol, host: req.get('host') || '' }, fileUrl),
     },
   };
 };
@@ -377,6 +385,81 @@ export const uploadPublicSiteDarkLogoImage = async (req: Request, res: Response,
     const localPath = await saveBrandingImageToDisk(file, 'site-dark-logo');
     res.status(201).json(buildUploadResponse(req, file, 'public', localPath, path.basename(localPath)));
   } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadPublicHappyCustomerImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const file = getUploadedFile(req);
+
+    if (!file) {
+      return res.status(400).json({ error: 'A file is required.' });
+    }
+
+    await enforceStoredFileSizePolicy(file, 'happy-customers');
+    const driveSettings = (await getAppSettings()).googleDrive;
+    const hasDriveStorage = Boolean(
+      driveSettings.enabled && driveSettings.clientId && driveSettings.clientSecret && driveSettings.refreshToken,
+    );
+
+    if (!hasDriveStorage) {
+      const error = new Error(
+        'Google Drive is required for Happy Customer images. Enable and configure Google Drive before uploading.',
+      ) as Error & { code?: string; statusCode?: number };
+      error.code = 'DRIVE_STORAGE_UNAVAILABLE';
+      error.statusCode = 503;
+      throw error;
+    }
+
+    const remote = await uploadFileToDrive(file.buffer, file.mimetype, file.originalname);
+    if (!/^https:\/\/drive\.google\.com\/uc\?id=/i.test(remote.viewLink)) {
+      const error = new Error('Happy Customer image was not saved to Google Drive.') as Error & { code?: string; statusCode?: number };
+      error.code = 'DRIVE_STORAGE_UNAVAILABLE';
+      error.statusCode = 503;
+      throw error;
+    }
+
+    // Keep the upload preview on the public Drive URL. After the card is
+    // saved, settings normalization stores the protected application proxy.
+    res.status(201).json(buildUploadResponse(req, file, 'public', remote.viewLink, remote.fileId));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPublicDriveHappyCustomerImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fileId = String(req.params.fileId || '');
+    if (!/^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
+      return res.status(400).json({ error: 'Invalid Drive file ID.' });
+    }
+
+    const settings = await getAppSettings();
+    const proxyUrl = getHappyCustomerDriveProxyUrl(fileId);
+    const isConfiguredHappyCustomerImage = settings.happyCustomers.items.some((item) => item.imageUrl === proxyUrl);
+    if (!isConfiguredHappyCustomerImage) {
+      return res.status(404).json({ error: 'Happy Customer image not found.' });
+    }
+
+    const media = await getDriveMediaStream(fileId, req.headers.range);
+    res.setHeader('Content-Type', media.mimeType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    if (req.headers.range) {
+      const contentLength = Math.max(media.end - media.start + 1, 0);
+      res.status(206);
+      res.setHeader('Content-Length', String(contentLength));
+      res.setHeader('Content-Range', `bytes ${media.start}-${media.end}/${media.size}`);
+    } else if (media.size > 0) {
+      res.setHeader('Content-Length', String(media.size));
+    }
+    media.stream.on('error', next);
+    media.stream.pipe(res);
+  } catch (error) {
+    if ((error as { statusCode?: number }).statusCode === 416) {
+      return res.status(416).setHeader('Content-Range', 'bytes */*').end();
+    }
     next(error);
   }
 };

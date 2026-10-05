@@ -8,6 +8,7 @@ import {
   deletePartnerUser,
   getAdminListings,
   getFinanceSupportContent,
+  getHappyCustomerContent,
   getFooterContent,
   getHeroImageContent,
   getInspectionSectionContent,
@@ -37,6 +38,7 @@ import {
   updateAdminListingStatus,
   updateAdminUserStatus,
   updateFinanceSupportContent,
+  updateHappyCustomerContent,
   updateFooterContent,
   updateHeroImageContent,
   updateInspectionSectionContent,
@@ -85,6 +87,8 @@ router.get('/dashboard', canViewDashboard, getDashboardSummary);
 router.get('/badges', canViewDashboard, getModuleBadges);
 router.get('/finance-support', canManageSettings, getFinanceSupportContent);
 router.put('/finance-support', canManageSettings, updateFinanceSupportContent);
+router.get('/happy-customers', canManageSettings, getHappyCustomerContent);
+router.put('/happy-customers', canManageSettings, updateHappyCustomerContent);
 router.get('/footer', canManageFooter, getFooterContent);
 router.put('/footer', canManageFooter, updateFooterContent);
 router.get('/hero-image', canManageSettings, getHeroImageContent);

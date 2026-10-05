@@ -9,6 +9,7 @@ import BrandLoader from '@/components/ui/BrandLoader';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import { useTranslation } from '@/hooks/useTranslation';
 import { APP_NAME, SUPPORT_EMAIL } from '@/lib/appConfig';
+import { getLegalEditorToolbarButtonClass } from '@/lib/legalEditorToolbar.mjs';
 
 type FooterSocialLink = {
   id: string;
@@ -58,6 +59,24 @@ const TEXT_BLOCK_OPTIONS: Option[] = [
   { id: 'H2', name: 'Heading 2' },
   { id: 'H3', name: 'Heading 3' },
 ];
+
+type EditorToolbarState = {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  unorderedList: boolean;
+  textBlock: string;
+  fontSize: string;
+};
+
+const DEFAULT_EDITOR_TOOLBAR_STATE: EditorToolbarState = {
+  bold: false,
+  italic: false,
+  underline: false,
+  unorderedList: false,
+  textBlock: 'P',
+  fontSize: '16',
+};
 
 const DEFAULT_PRIVACY_POLICY = `<h2>1. Information We Collect</h2>
 <p>At <strong>${APP_NAME}</strong>, we collect personal information such as name, phone number, email address, and equipment listing details when you register as a buyer, seller, or dealer.</p>
@@ -307,6 +326,7 @@ export default function FooterContentSettings() {
   const [editorViewMode, setEditorViewMode] = useState<'editor' | 'preview'>('editor');
   const [selectedFontSize, setSelectedFontSize] = useState('16');
   const [selectedTextBlock, setSelectedTextBlock] = useState('P');
+  const [editorToolbarState, setEditorToolbarState] = useState<EditorToolbarState>(DEFAULT_EDITOR_TOOLBAR_STATE);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const savedSelectionRef = useRef<Range | null>(null);
   const activeLegalField = getLegalPageField(activeUsefulSubTab);
@@ -419,6 +439,107 @@ export default function FooterContentSettings() {
     }
   }, [activeLegalContent, activeTab, editorViewMode]);
 
+  const updateEditorToolbarState = () => {
+    const editor = editorRef.current;
+    if (!editor || typeof window === 'undefined') {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !editor.contains(selection.anchorNode)) {
+      return;
+    }
+
+    const anchorElement = selection.anchorNode instanceof HTMLElement
+      ? selection.anchorNode
+      : selection.anchorNode?.parentElement;
+    if (!anchorElement) {
+      return;
+    }
+
+    const readCommandState = (command: string) => {
+      try {
+        return document.queryCommandState(command);
+      } catch {
+        return false;
+      }
+    };
+
+    let textBlock = 'P';
+    try {
+      const commandValue = document.queryCommandValue('formatBlock').replace(/[<>]/g, '').toUpperCase();
+      if (TEXT_BLOCK_OPTIONS.some((option) => option.id === commandValue)) {
+        textBlock = commandValue;
+      }
+    } catch {
+      // Keep paragraph as the safe default when the browser has no block value.
+    }
+
+    let fontSize = '';
+    let currentElement: HTMLElement | null = anchorElement;
+    while (currentElement && currentElement !== editor) {
+      if (currentElement.style.fontSize) {
+        const parsedFontSize = Number.parseFloat(currentElement.style.fontSize);
+        if (Number.isFinite(parsedFontSize)) {
+          fontSize = String(Math.round(parsedFontSize));
+        }
+        break;
+      }
+      currentElement = currentElement.parentElement;
+    }
+
+    if (!fontSize) {
+      const computedFontSize = Number.parseFloat(window.getComputedStyle(anchorElement).fontSize);
+      if (Number.isFinite(computedFontSize)) {
+        fontSize = String(Math.round(computedFontSize));
+      }
+    }
+
+    const nextState: EditorToolbarState = {
+      bold: readCommandState('bold'),
+      italic: readCommandState('italic'),
+      underline: readCommandState('underline'),
+      unorderedList: readCommandState('insertUnorderedList'),
+      textBlock,
+      fontSize,
+    };
+
+    setEditorToolbarState((current) => (
+      current.bold === nextState.bold
+      && current.italic === nextState.italic
+      && current.underline === nextState.underline
+      && current.unorderedList === nextState.unorderedList
+      && current.textBlock === nextState.textBlock
+      && current.fontSize === nextState.fontSize
+        ? current
+        : nextState
+    ));
+    setSelectedTextBlock(textBlock);
+    setSelectedFontSize(fontSize);
+  };
+
+  useEffect(() => {
+    if (!editorRef.current || activeTab !== 'useful' || editorViewMode !== 'editor') {
+      setEditorToolbarState(DEFAULT_EDITOR_TOOLBAR_STATE);
+      return;
+    }
+
+    const editor = editorRef.current;
+    const syncToolbar = () => updateEditorToolbarState();
+    document.addEventListener('selectionchange', syncToolbar);
+    editor.addEventListener('focus', syncToolbar);
+    editor.addEventListener('keyup', syncToolbar);
+    editor.addEventListener('mouseup', syncToolbar);
+    syncToolbar();
+
+    return () => {
+      document.removeEventListener('selectionchange', syncToolbar);
+      editor.removeEventListener('focus', syncToolbar);
+      editor.removeEventListener('keyup', syncToolbar);
+      editor.removeEventListener('mouseup', syncToolbar);
+    };
+  }, [activeTab, editorViewMode, activeUsefulSubTab]);
+
   const saveSelection = () => {
     if (!editorRef.current || typeof window === 'undefined') {
       return;
@@ -454,6 +575,7 @@ export default function FooterContentSettings() {
 
     updateLegalPageContent(activeLegalField, editorRef.current.innerHTML);
     saveSelection();
+    updateEditorToolbarState();
   };
 
   const runEditorCommand = (command: string, value?: string) => {
@@ -468,8 +590,6 @@ export default function FooterContentSettings() {
   };
 
   const applyTextBlock = (value: string) => {
-    setSelectedTextBlock(value);
-
     if (value === 'P') {
       runEditorCommand('formatBlock', '<p>');
       return;
@@ -479,8 +599,6 @@ export default function FooterContentSettings() {
   };
 
   const applyFontSize = (value: string) => {
-    setSelectedFontSize(value);
-
     if (!editorRef.current || typeof window === 'undefined') {
       return;
     }
@@ -505,6 +623,7 @@ export default function FooterContentSettings() {
     selection.addRange(nextRange);
     savedSelectionRef.current = nextRange.cloneRange();
     handleEditorInput();
+    updateEditorToolbarState();
   };
 
   const handleResetToDefault = () => {
@@ -915,10 +1034,10 @@ export default function FooterContentSettings() {
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <span className="font-medium text-gray-700 shrink-0">{t('footerSettings.fontSize', 'Font Size:')}</span>
                       <div className="w-full sm:w-[150px]">
-                        <SearchableSelect
-                          options={FONT_SIZE_OPTIONS}
-                          value={selectedFontSize}
-                          displayValue={FONT_SIZE_OPTIONS.find((opt) => opt.id === selectedFontSize)?.name || '16 px (Normal)'}
+                          <SearchableSelect
+                            options={FONT_SIZE_OPTIONS}
+                            value={selectedFontSize}
+                          displayValue={FONT_SIZE_OPTIONS.find((opt) => opt.id === selectedFontSize)?.name || (selectedFontSize ? `${selectedFontSize} px` : 'Mixed / custom')}
                           onChange={(option) => applyFontSize(String(option.id))}
                           placeholder={t('footerSettings.fontSizePlaceholder', 'Font size')}
                           searchable={false}
@@ -932,7 +1051,8 @@ export default function FooterContentSettings() {
                         type="button"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => runEditorCommand('bold')}
-                        className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 font-bold text-gray-800 hover:border-amber-300 hover:bg-amber-100"
+                        aria-pressed={editorToolbarState.bold}
+                        className={`${getLegalEditorToolbarButtonClass(editorToolbarState.bold)} font-bold`}
                         title={t('footerSettings.boldText', 'Bold text')}
                       >
                         B
@@ -942,7 +1062,8 @@ export default function FooterContentSettings() {
                         type="button"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => runEditorCommand('italic')}
-                        className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 font-semibold italic text-gray-800 hover:border-amber-300 hover:bg-amber-100"
+                        aria-pressed={editorToolbarState.italic}
+                        className={`${getLegalEditorToolbarButtonClass(editorToolbarState.italic)} font-semibold italic`}
                         title={t('footerSettings.italicText', 'Italic text')}
                       >
                         I
@@ -952,7 +1073,8 @@ export default function FooterContentSettings() {
                         type="button"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => runEditorCommand('underline')}
-                        className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 font-semibold underline text-gray-800 hover:border-amber-300 hover:bg-amber-100"
+                        aria-pressed={editorToolbarState.underline}
+                        className={`${getLegalEditorToolbarButtonClass(editorToolbarState.underline)} font-semibold underline`}
                         title={t('footerSettings.underlineText', 'Underline text')}
                       >
                         U
@@ -962,7 +1084,8 @@ export default function FooterContentSettings() {
                         type="button"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => runEditorCommand('insertUnorderedList')}
-                        className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 font-medium text-gray-800 hover:border-amber-300 hover:bg-amber-100"
+                        aria-pressed={editorToolbarState.unorderedList}
+                        className={`${getLegalEditorToolbarButtonClass(editorToolbarState.unorderedList)} font-medium`}
                         title={t('footerSettings.bulletList', 'Bullet list')}>`r`n                        {`? ${t('footerSettings.bulletListLabel', 'Bullet List')}`}`r`n                      </button>
                     </div>
                   </div>

@@ -11,12 +11,14 @@ import {
 } from './auth.controller';
 import {
   FinanceSupportItem,
+  HappyCustomerItem,
   FooterSocialLink,
   ListingPaymentSettings,
   getAppSettings,
   updateGoogleDriveSettings,
   updatePlatformRuntimeSettings,
   updateFinanceSupportSettings,
+  updateHappyCustomerSettings,
   updateFooterSettings,
   updateHeroImageSettings,
   updateInspectionSectionSettings,
@@ -1230,6 +1232,41 @@ export const updateFinanceSupportContent = async (req: Request, res: Response, n
     res.json({
       message: 'Finance support items updated successfully.',
       items: settings.financeSupport.items,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHappyCustomerContent = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAppSettings();
+
+    res.json({
+      items: settings.happyCustomers.items,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateHappyCustomerContent = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const items = Array.isArray(req.body?.items) ? (req.body.items as Array<Partial<HappyCustomerItem>>) : [];
+
+    const invalidItem = items.find((item) => !item?.name?.trim() || !item?.imageUrl?.trim());
+    if (invalidItem) {
+      return res.status(400).json({ error: 'Each happy customer card must include a name and image.' });
+    }
+
+    const settings = await updateHappyCustomerSettings({
+      items,
+      updatedByUserId: req.user?.id || null,
+    });
+
+    res.json({
+      message: 'Happy customers updated successfully.',
+      items: settings.happyCustomers.items,
     });
   } catch (error) {
     next(error);
