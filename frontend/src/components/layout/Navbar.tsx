@@ -10,7 +10,7 @@ import CustomerPrimePaymentModal from '@/components/payments/CustomerPrimePaymen
 import SiteBrand from '@/components/layout/SiteBrand';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { getPortalMenuLabel, getPortalTarget, getPublicRoleLabel, PORTAL_ROLES } from '@/lib/portal';
+import { getPortalMenuLabel, getPortalProfilePath, getPortalTarget, getPublicRoleLabel, PORTAL_ROLES } from '@/lib/portal';
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { formatDateTime } from '@/lib/i18n/formatters';
@@ -225,7 +225,7 @@ export default function Navbar() {
   const portalTarget = getPortalTarget({
     role: user?.role,
     token,
-    fallbackPath: user?.portalHomeRoute || '/profile',
+    fallbackPath: getPortalProfilePath(user?.role),
   });
   const handlePortalNavigation = () => {
     setIsProfileDropdownOpen(false);

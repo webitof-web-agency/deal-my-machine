@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ACCOUNT_INACTIVE_CODE, ACCOUNT_REVOKED_CODE } from '@/lib/sessionAccess';
-import { getEmployeeLandingPath, resolveEmployeeRouteRedirect } from '@/lib/portalRoutes';
+import { getEmployeeLandingPath, resolveEmployeeRouteRedirect, resolvePortalNextRoute } from '@/lib/portalRoutes';
 import PortalBrand from '@/components/layout/PortalBrand';
 
 import { formatPortalLabel } from '@/lib/partnerPortal';
@@ -69,19 +69,23 @@ function LoginPageInner() {
 
     if (user.role === 'SUPER_ADMIN') {
       showLoginSuccessToast(user);
-      router.push(nextRoute || '/superadmin/dashboard');
+      router.push(resolvePortalNextRoute(user.role, nextRoute) || '/superadmin/dashboard');
       return;
     }
 
     if (user.role === 'ADMIN') {
       showLoginSuccessToast(user);
-      router.push(nextRoute || '/admin/dashboard');
+      router.push(resolvePortalNextRoute(user.role, nextRoute) || '/admin/dashboard');
       return;
     }
 
     if (user.role === 'EMPLOYEE') {
       showLoginSuccessToast(user);
-      router.push(resolveEmployeeRouteRedirect(nextRoute || '', user.permissions) || getEmployeeLandingPath(user.permissions));
+      router.push(
+        resolvePortalNextRoute(user.role, nextRoute)
+          || resolveEmployeeRouteRedirect(nextRoute || '', user.permissions)
+          || getEmployeeLandingPath(user.permissions),
+      );
       return;
     }
 
@@ -92,7 +96,7 @@ function LoginPageInner() {
         user.onboardingStatus === 'APPROVED' &&
         user.kycStatus === 'APPROVED'
       ) {
-        router.push(nextRoute || '/partner/dashboard');
+        router.push(resolvePortalNextRoute(user.role, nextRoute) || '/partner/dashboard');
       } else {
         router.push('/partner/kyc');
       }

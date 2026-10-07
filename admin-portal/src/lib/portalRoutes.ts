@@ -125,6 +125,48 @@ export const getEmployeeLandingPath = (userPermissions: string[] | undefined) =>
   return firstAccessibleRoute?.employeePath || '/employee/dashboard';
 };
 
+const portalProfilePaths: Record<string, string> = {
+  SUPER_ADMIN: '/superadmin/profile',
+  ADMIN: '/admin/profile',
+  EMPLOYEE: '/employee/profile',
+  PARTNER: '/partner/profile',
+};
+
+const portalRoutePrefixes: Record<string, string> = {
+  SUPER_ADMIN: '/superadmin',
+  ADMIN: '/admin',
+  EMPLOYEE: '/employee',
+  PARTNER: '/partner',
+};
+
+/**
+ * Keep SSO handoff destinations inside the authenticated user's portal.
+ * The public frontend historically sent `/profile`, which does not exist in
+ * this app and caused a 404 after a successful handoff.
+ */
+export const resolvePortalNextRoute = (role: string, pathname?: string | null) => {
+  const normalizedPath = pathname?.trim();
+  const prefix = portalRoutePrefixes[role];
+
+  if (!normalizedPath || !prefix || !normalizedPath.startsWith(`${prefix}/`)) {
+    return null;
+  }
+
+  if (normalizedPath === portalProfilePaths[role]) {
+    return normalizedPath;
+  }
+
+  if (role === 'EMPLOYEE') {
+    const employeeRoute = employeeRoutePermissions.find(
+      (route) => normalizedPath === route.employeePath || normalizedPath.startsWith(`${route.employeePath}/`),
+    );
+
+    return employeeRoute ? normalizedPath : null;
+  }
+
+  return normalizedPath;
+};
+
 export const resolveEmployeeRouteRedirect = (pathname: string, userPermissions: string[] | undefined) => {
   const matchedRoute = [...employeeRoutePermissions]
     .sort((a, b) => b.superadminPath.length - a.superadminPath.length)
