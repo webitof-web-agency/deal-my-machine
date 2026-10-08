@@ -10,6 +10,10 @@ import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect'
 import { useTranslation } from '@/hooks/useTranslation';
 import { APP_NAME, SUPPORT_EMAIL } from '@/lib/appConfig';
 import { getLegalEditorToolbarButtonClass } from '@/lib/legalEditorToolbar.mjs';
+import {
+  FOOTER_SOCIAL_PLATFORMS,
+  getAvailableFooterSocialPlatforms,
+} from '@/lib/footerSocialPlatforms.mjs';
 
 type FooterSocialLink = {
   id: string;
@@ -40,11 +44,7 @@ type FooterResponse = {
   legalPages?: FooterLegalPages;
 };
 
-const SOCIAL_PLATFORM_OPTIONS: Option[] = [
-  { id: 'FACEBOOK', name: 'Facebook' },
-  { id: 'INSTAGRAM', name: 'Instagram' },
-  { id: 'TWITTER', name: 'Twitter' },
-];
+const SOCIAL_PLATFORM_OPTIONS: Option[] = [...FOOTER_SOCIAL_PLATFORMS];
 
 const FONT_SIZE_OPTIONS: Option[] = [
   { id: '14', name: '14 px' },
@@ -151,9 +151,9 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
   return axiosError.response?.data?.error || fallbackMessage;
 };
 
-const createEmptySocialLink = (): FooterSocialLink => ({
+const createEmptySocialLink = (platform = 'FACEBOOK'): FooterSocialLink => ({
   id: globalThis.crypto?.randomUUID?.() || `footer-social-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  platform: 'FACEBOOK',
+  platform,
   url: '',
   displayOrder: 0,
 });
@@ -402,13 +402,24 @@ export default function FooterContentSettings() {
   };
 
   const handleAddSocialLink = () => {
-    setSocialLinks((current) => [
-      ...current,
-      {
-        ...createEmptySocialLink(),
-        displayOrder: current.length,
-      },
-    ]);
+    setSocialLinks((current) => {
+      const nextPlatform = getAvailableFooterSocialPlatforms(
+        current.map((item) => item.platform),
+      )[0];
+
+      if (!nextPlatform) {
+        toast.info('All supported social platforms have already been added.');
+        return current;
+      }
+
+      return [
+        ...current,
+        {
+          ...createEmptySocialLink(nextPlatform.id),
+          displayOrder: current.length,
+        },
+      ];
+    });
   };
 
   const handleRemoveSocialLink = (id: string) => {
@@ -639,6 +650,12 @@ export default function FooterContentSettings() {
       displayOrder: index,
     }));
 
+    const selectedPlatforms = normalizedSocialLinks.map((item) => item.platform.toUpperCase());
+    if (new Set(selectedPlatforms).size !== selectedPlatforms.length) {
+      toast.error('Each social media platform can be added only once.');
+      return;
+    }
+
     const hasInvalidUrl = normalizedSocialLinks.some((item) => !item.url);
     if (hasInvalidUrl) {
       toast.error(t('footerSettings.invalidSocialUrl', 'Each social media item needs a valid URL.'));
@@ -796,9 +813,12 @@ export default function FooterContentSettings() {
                     <label className="block">
                       <span className="mb-1.5 block text-sm font-semibold text-gray-700">{t('footerSettings.platform', 'Platform')}</span>
                       <SearchableSelect
-                        options={SOCIAL_PLATFORM_OPTIONS}
+                        options={getAvailableFooterSocialPlatforms(
+                          socialLinks.map((link) => link.platform),
+                          item.platform,
+                        )}
                         value={item.platform}
-                        displayValue={SOCIAL_PLATFORM_OPTIONS.find((option) => option.id === item.platform)?.name || 'Facebook'}
+                        displayValue={SOCIAL_PLATFORM_OPTIONS.find((option) => option.id === item.platform)?.name || item.platform}
                         onChange={(option) => updateSocialLink(item.id, { platform: String(option.id) })}
                         placeholder={t('footerSettings.selectPlatform', 'Select platform')}
                         searchable={false}

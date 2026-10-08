@@ -16,6 +16,10 @@ import { normalizePartnerRegistrationEnabled } from './publicAccessSettings';
 import { APP_NAME } from '../config/appConfig';
 import { createSettingsSnapshotCache } from './settingsSnapshotCache';
 import { normalizeHappyCustomerItems, type HappyCustomerItem } from './happyCustomerSettings';
+import {
+  dedupeFooterSocialPlatforms,
+  SUPPORTED_FOOTER_SOCIAL_PLATFORM_IDS,
+} from './footerSocialPlatforms';
 
 export type { HappyCustomerItem } from './happyCustomerSettings';
 
@@ -322,7 +326,6 @@ const siteDarkLogoPublicUrlPrefix = '/uploads/public/site-dark-logo/';
 const siteFooterLogoPublicUrlPrefix = '/uploads/public/site-footer-logo/';
 const siteFaviconPublicUrlPrefix = '/uploads/public/site-favicon/';
 const siteManifestIconPublicUrlPrefix = '/uploads/public/site-manifest-icon/';
-const supportedFooterSocialPlatforms = new Set(['FACEBOOK', 'INSTAGRAM', 'TWITTER']);
 const APP_SETTINGS_CACHE_TTL_MS = 30_000;
 
 const defaultSettings: AppSettings = {
@@ -739,7 +742,7 @@ const normalizeFooterSocialLinks = (items?: Partial<FooterSocialLink>[]): Footer
 
   for (const [index, item] of (items || []).entries()) {
     const platform = item.platform?.trim().toUpperCase();
-    if (!platform || !supportedFooterSocialPlatforms.has(platform)) {
+    if (!platform || !SUPPORTED_FOOTER_SOCIAL_PLATFORM_IDS.has(platform)) {
       continue;
     }
 
@@ -759,7 +762,7 @@ const normalizeFooterSocialLinks = (items?: Partial<FooterSocialLink>[]): Footer
     });
   }
 
-  return normalizedItems
+  return dedupeFooterSocialPlatforms(normalizedItems)
     .sort((left, right) => left.displayOrder - right.displayOrder)
     .map((item, index) => ({
       ...item,
